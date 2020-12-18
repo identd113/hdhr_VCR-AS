@@ -55,6 +55,11 @@ on run {}
 	--We will try to autodiscover the HDHR device on the network, and throw it into a record.
 	log "run()"
 	
+	(*
+	This really kicks us off.  The will query to see if there are any HDHomeRun devices on the local network.  This script support multiple devices.
+	Once we find some devices, we will query them and pull there lineup data.  This tells us what channels belong to what tags, like "2,4 TPTN"
+	We will then pull guide data.  It should be said here that this data is only given for 4 hours ahead of current time, some stations maybe 6.  Special considerations have been made in this script to make this work.  We call this handler and specify "run0".  This is just a made up string that we pass to the next handler, so we can see the request came in that broke the sceript.  This is commonly repeated in my scripts.
+	*)
 	my HDHRDeviceDiscovery("run0", "")
 	
 	--Main is is the show adding mechanism
@@ -220,7 +225,7 @@ on main()
 	if length of HDHR_DEVICE_LIST > 0 then
 		--gather tuner names
 		set temp_tuners_list to {}
-		set end of temp_tuners_list to "Auto"
+		--set end of temp_tuners_list to "Auto"
 		repeat with i from 1 to length of HDHR_DEVICE_LIST
 			
 			log "main()"
