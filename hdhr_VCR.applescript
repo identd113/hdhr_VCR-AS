@@ -232,15 +232,19 @@ on main()
 			log item i of HDHR_DEVICE_LIST
 			set end of temp_tuners_list to hdhr_model of item i of HDHR_DEVICE_LIST & " " & (device_id of item i of HDHR_DEVICE_LIST)
 		end repeat
-		set preferred_tuner to choose from list temp_tuners_list with prompt "Multiple Devices found, please choose one.  Select \"Auto\" to use first available device." cancel button name "Quit"
-		if preferred_tuner ­ false then
-			set preferred_tuner_offset to last word of item 1 of preferred_tuner
+		if length of HDHR_DEVICE_LIST = 1 then
+			set preferred_tuner_offset to device_id of item 1 of HDHR_DEVICE_LIST
 		else
-			set preferred_tuner to missing value
+			set preferred_tuner to choose from list temp_tuners_list with prompt "Multiple Devices found, please choose one.  Select \"Auto\" to use first available device." cancel button name "Quit"
+			if preferred_tuner ­ false then
+				set preferred_tuner_offset to last word of item 1 of preferred_tuner
+			else
+				set preferred_tuner_offset to missing value
+			end if
 		end if
 	end if
 	
-	if preferred_tuner = missing value then
+	if preferred_tuner_offset = missing value then
 		quit {}
 	end if
 	
@@ -705,7 +709,7 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 			set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:DiscoverURL of item i of hdhr_device_discovery, lineup_url:LineupURL of item i of hdhr_device_discovery, device_id:deviceid of item i of hdhr_device_discovery, does_transcode:Transcode of item i of hdhr_device_discovery, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value}
 		end repeat
 		--Add a fake device entry to make sure we dont break this for multiple devices.
-		set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value}
+		--FIX set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value}
 		log "Length of HDHR_DEVICE_LIST: " & length of HDHR_DEVICE_LIST
 		
 		--We now have a list of tuners, via a list of records in HDHR_TUNERS, now we want to pull a lineup, and a guide.
