@@ -6,10 +6,8 @@ property show_info : {}
 property hdhr_IP : "10.0.1.12"
 property hdhr_PORT : ":5004"
 property hdhr_TUNER_ct : 0
-property channel_mappings : {}
 
 global temp_show_info
-global mappings_temp
 global locale
 global channel_list
 global HDHR_DEVICE_LIST
@@ -61,7 +59,6 @@ on run {}
 	set notify_upnext to 15
 	set notify_recording to 5
 	set locale to user locale of (system info)
-	set mappings_temp to {}
 	set hdhr_setup_folder to "Volumes:"
 	set hdhr_setup_transcode to "No"
 	set hdhr_setup_name_bool to "No"
@@ -112,7 +109,13 @@ on build_channel_list(hdhr_device) -- We need to have the two values in a list, 
 	log "length of temp: " & length of temp
 	set channel_list to {}
 	repeat with i from 1 to length of temp
-		set end of channel_list to GuideNumber of item i of temp & " " & GuideName of item i of temp
+		try
+			if HD of item i of temp = 1 then
+				set end of channel_list to GuideNumber of item i of temp & " " & GuideName of item i of temp & " [HD]"
+			end if
+		on error
+			set end of channel_list to GuideNumber of item i of temp & " " & GuideName of item i of temp
+		end try
 		--set end of channel_list to (item 2 of my stringtolist("channel2name", item i of lineup_temp_list, {"<GuideNumber>", "</GuideNumber>"}) & " (" & channel2name(item 2 of my stringtolist("channel2name", item i of lineup_temp_list, {"<GuideNumber>", "</GuideNumber>"})) & ")")
 	end repeat
 end build_channel_list
@@ -223,11 +226,14 @@ on setup()
 	set hdhr_setup_response to (display dialog "hdhr_VCR Setup." buttons {"Defaults", "Delete", "Run"} default button 1)
 	if button returned of hdhr_setup_response = "Defaults" then
 		set hdhr_setup_folder to choose folder with prompt "Select default Shows Directory" default location hdhr_setup_folder
-		set hdhr_setup_transcode to display dialog "Use transcoding with \"Extend\" devices?" buttons {"Yes", "No"} default button 2
-		set hdhr_setup_name_bool to display dialog "Use custom naming?" buttons {"Yes", "No"} default button 2
-		set hdhr_setup_length_bool to display dialog "Use custom show length? (minutes)" buttons {"Yes", "No"} default button 2 --default answer "30"
-		set notify_upnext to display dialog "How often to show \"Up Next\" update notifications?" default answer notify_upnext
-		set notify_recording to display dialog "How often to show \"Up Next\" update notifications?" default answer notify_recording
+		--write data here
+		display dialog "We need to allow notifications." & return & "Click \"Next\" to continue." buttons {"Next"} default button 1
+		display notification "Yay!" with title name of me subtitle "Notifications Enabled!"
+		set hdhr_setup_transcode to button returned of (display dialog "Use transcoding with \"Extend\" devices?" buttons {"Yes", "No"} default button 2)
+		set hdhr_setup_name_bool to button returned of (display dialog "Use custom naming?" buttons {"Yes", "No"} default button 2)
+		set hdhr_setup_length_bool to button returned of (display dialog "Use custom show length? (minutes)" buttons {"Yes", "No"} default button 2) --default answer "30"
+		set notify_upnext to text returned of (display dialog "How often to show \"Up Next\" update notifications?" default answer notify_upnext)
+		set notify_recording to text returned of (display dialog "How often to show \"Up Next\" update notifications?" default answer notify_recording)
 		set hdhr_setup_ran to true
 	end if
 	if button returned of hdhr_setup_response = "Delete" then
@@ -399,7 +405,13 @@ on add_show_info(hdhr_device)
 	
 	set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} with prompt "Please choose the days this show airs." default items default_record_day with multiple selections allowed without empty selection allowed)
 	
-	set show_dir of temp_show_info to choose folder with prompt "Select Shows Directory" default location alias "Volumes:"
+	set temp_dir to alias "Volumes:"
+	repeat until temp_dir ­ alias "Volumes:"
+		set show_dir of temp_show_info to choose folder with prompt "Select Shows Directory" default location temp_dir
+		if show_dir of temp_show_info ­ temp_dir then
+			set temp_dir to show_dir of temp_show_info
+		end if
+	end repeat
 	--We attempt to write a small file to shows folder.  This will prompt the user in the OS to allow this app to write data there. 
 	do shell script "touch " & POSIX path of (show_dir of temp_show_info) & "hdhr_test_write"
 	delay 0.1
@@ -415,9 +427,9 @@ on add_show_info(hdhr_device)
 	
 	if does_transcode of item tuner_offset of HDHR_DEVICE_LIST = 1 then
 		set show_transcode of temp_show_info to word 1 of item 1 of (choose from list {"None: Does not transcode, will save as MPEG2 stream.", "heavy: Transcode with same settings", "mobile: Transcode not exceeding 1280x720 30fps", "intenet720: Low bit rate, not exceeding 1280x720 30fps", "internet480: Low bit rate not exceeding 848x480/640x480 for 16:9/4:3 30fps", "internet360: Low bit rate not exceeding 640x360/480x360 for 16:9/4:3 30fps", "internet240: Low bit rate not exceeding 432x240/320x240 for 16:9/4:3 30fps"} with prompt "Please choose the transcode level on the file" default items {"None: Does not transcode, will save as MPEG2 stream."})
-		else
+	else
 		set show_transcode of temp_show_info to missing value
-		end if
+	end if
 	
 	set show_temp_dir of temp_show_info to show_dir of temp_show_info
 	--	end if
@@ -428,17 +440,17 @@ on add_show_info(hdhr_device)
 end add_show_info
 
 on idle
+	set cd_object to (current date) + 15
 	--Re run auto discover every 2 hours. 
 	if length of HDHR_DEVICE_LIST > 0 then
 		repeat with i2 from 1 to length of HDHR_DEVICE_LIST
-			if ((current date) - (hdhr_guide_update of item i2 of HDHR_DEVICE_LIST)) div 60 ³ 120 then
+			if ((cd_object) - (hdhr_guide_update of item i2 of HDHR_DEVICE_LIST)) div 60 ³ 120 then
 				my HDHRDeviceDiscovery("idle0", "")
 			end if
 		end repeat
 	end if
 	if length of show_info > 0 then
 		--	display notification "1.5"
-		set cd_object to (current date) + 15
 		repeat with i from 1 to length of show_info
 			
 			if show_recording of item i of show_info = true then
@@ -459,7 +471,7 @@ on idle
 						set show_runtime to (show_end of item i of show_info) - (current date)
 						my record_now((show_id of item i of show_info), show_runtime)
 						display notification "Ends " & my short_date("rec started", show_end of item i of show_info, false) with title "Started Recording... (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
-						
+						set notify_recording_time of item i of show_info to (current date) + (2 * minutes)
 						--display notification show_title of item i of show_info & " on channel " & show_channel of item i of show_info & " started for " & show_runtime of item i of show_info & " minutes."
 					else
 						--display notification show_title of item i of show_info & " is recording until " & my short_date("recording", show_end of item i of show_info)
@@ -730,7 +742,7 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 		repeat with i from 1 to length of hdhr_device_discovery
 			set progress completed steps to i
 			set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:DiscoverURL of item i of hdhr_device_discovery, lineup_url:LineupURL of item i of hdhr_device_discovery, device_id:deviceid of item i of hdhr_device_discovery, does_transcode:Transcode of item i of hdhr_device_discovery, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value}
-		log last item of HDHR_DEVICE_LIST
+			log last item of HDHR_DEVICE_LIST
 		end repeat
 		--Add a fake device entry to make sure we dont break this for multiple devices.
 		--FIX set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value}
