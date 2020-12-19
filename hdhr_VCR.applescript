@@ -41,7 +41,7 @@ use application "JSON Helper"
 --Done. Only offer trascode options on extend
 -- Done Do a temp write to the destination directory when selected, so we can have the user accept OS security warning now, instead of when the show starts.
 --We need a better way to show the user 
---	set progress description to "Loading ZDHelperAUTH..."
+--	set progress description to "Loading ..."
 --  set progress additional description to
 --	set progress completed steps to 0
 --	set progress total steps to 1
@@ -127,17 +127,6 @@ on channel2name(the_channel, hdhr_device)
 		end if
 	end repeat
 end channel2name
-
-on channel2name_old(the_chan)
-	set lineup_temp_list to my stringtolist("channel2name", mappings_temp, {"<Program>", "</Program>"})
-	repeat with i from 1 to length of lineup_temp_list
-		if item i of lineup_temp_list ­ return and item i of lineup_temp_list contains ("<GuideNumber>") then
-			if item i of lineup_temp_list contains ("<GuideNumber>" & the_chan) then
-				return item 2 of my stringtolist("channel2name2", item i of lineup_temp_list, {"<GuideName>", "</GuideName>"})
-			end if
-		end if
-	end repeat
-end channel2name_old
 
 --show_next should only return the next record time, considering recording and not a list of all record times, if a show is recording, that time should remain as returned
 on nextday(the_show_id)
@@ -411,6 +400,7 @@ on add_show_info(hdhr_device)
 	set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} with prompt "Please choose the days this show airs." default items default_record_day with multiple selections allowed without empty selection allowed)
 	
 	set show_dir of temp_show_info to choose folder with prompt "Select Shows Directory" default location alias "Volumes:"
+	--We attempt to write a small file to shows folder.  This will prompt the user in the OS to allow this app to write data there. 
 	do shell script "touch " & POSIX path of (show_dir of temp_show_info) & "hdhr_test_write"
 	delay 0.1
 	do shell script "rm " & POSIX path of (show_dir of temp_show_info) & "hdhr_test_write"
@@ -425,11 +415,9 @@ on add_show_info(hdhr_device)
 	
 	if does_transcode of item tuner_offset of HDHR_DEVICE_LIST = 1 then
 		set show_transcode of temp_show_info to word 1 of item 1 of (choose from list {"None: Does not transcode, will save as MPEG2 stream.", "heavy: Transcode with same settings", "mobile: Transcode not exceeding 1280x720 30fps", "intenet720: Low bit rate, not exceeding 1280x720 30fps", "internet480: Low bit rate not exceeding 848x480/640x480 for 16:9/4:3 30fps", "internet360: Low bit rate not exceeding 640x360/480x360 for 16:9/4:3 30fps", "internet240: Low bit rate not exceeding 432x240/320x240 for 16:9/4:3 30fps"} with prompt "Please choose the transcode level on the file" default items {"None: Does not transcode, will save as MPEG2 stream."})
-		
-	else
+		else
 		set show_transcode of temp_show_info to missing value
-		
-	end if
+		end if
 	
 	set show_temp_dir of temp_show_info to show_dir of temp_show_info
 	--	end if
@@ -492,7 +480,7 @@ on idle
 				if notify_upnext_time of item i of show_info < (current date) or notify_upnext_time of item i of show_info = missing value then
 					--This line is a hot mess, as it reports too often.  Lets try some progress bar hacks.
 					
-					--	set progress description to "Loading ZDHelperAUTH..."
+					--	set progress description to "Loading ..."
 					--  set progress additional description to
 					--	set progress completed steps to 0
 					--	set progress total steps to 1
@@ -742,6 +730,7 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 		repeat with i from 1 to length of hdhr_device_discovery
 			set progress completed steps to i
 			set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:DiscoverURL of item i of hdhr_device_discovery, lineup_url:LineupURL of item i of hdhr_device_discovery, device_id:deviceid of item i of hdhr_device_discovery, does_transcode:Transcode of item i of hdhr_device_discovery, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value}
+		log last item of HDHR_DEVICE_LIST
 		end repeat
 		--Add a fake device entry to make sure we dont break this for multiple devices.
 		--FIX set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value}
