@@ -7,14 +7,22 @@ property hdhr_IP : "10.0.1.12"
 property hdhr_PORT : ":5004"
 property hdhr_TUNER_ct : 0
 property channel_mappings : {}
-property notify_upnext : 15
-property notify_recording : 5
 
 global temp_show_info
 global mappings_temp
 global locale
 global channel_list
 global HDHR_DEVICE_LIST
+
+
+global hdhr_setup_folder
+global hdhr_setup_transcode
+global hdhr_setup_name_bool
+global hdhr_setup_length_bool
+global notify_upnext
+global notify_recording
+global hdhr_setup_ran
+
 --{hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value}
 -- nextup is currently a property, so this value persists through application restarts.  Big Sir will disallow this ability.  I need to be make this a global.  Does one really need to write 
 
@@ -45,13 +53,19 @@ on hdhr_prepare_record(hdhr_device)
 end hdhr_prepare_record
 
 on notify_user(the_showid)
-	
 end notify_user
 
 on run {}
 	set progress description to "Loading " & name of me
+	--set global vars
+	set notify_upnext to 15
+	set notify_recording to 5
 	set locale to user locale of (system info)
 	set mappings_temp to {}
+	set hdhr_setup_folder to "Volumes:"
+	set hdhr_setup_transcode to "No"
+	set hdhr_setup_name_bool to "No"
+	set hdhr_setup_length_bool to "No"
 	--We will try to autodiscover the HDHR device on the network, and throw it into a record.
 	log "run()"
 	
@@ -216,12 +230,23 @@ on validate_show_info(show_to_check, should_edit)
 	end if
 end validate_show_info
 
+on setup()
+	set hdhr_setup_response to (display dialog "hdhr_VCR Setup." buttons {"Defaults", "Delete", "Run"} default button 1)
+	if button returned of hdhr_setup_response = "Defaults" then
+		set hdhr_setup_folder to choose folder with prompt "Select default Shows Directory" default location hdhr_setup_folder
+		set hdhr_setup_transcode to display dialog "Use transcoding with \"Extend\" devices?" buttons {"Yes", "No"} default button 2
+		set hdhr_setup_name_bool to display dialog "Use custom naming?" buttons {"Yes", "No"} default button 2
+		set hdhr_setup_length_bool to display dialog "Use custom show length? (minutes)" buttons {"Yes", "No"} default button 2 --default answer "30"
+		set notify_upnext to display dialog "How often to show \"Up Next\" update notifications?" default answer notify_upnext
+		set notify_recording to display dialog "How often to show \"Up Next\" update notifications?" default answer notify_recording
+		set hdhr_setup_ran to true
+	end if
+	if button returned of hdhr_setup_response = "Delete" then
+	end if
+	
+end setup
+
 on main()
-	
-	
-	--try
-	
-	--This needs to be done over http, and not https
 	if length of HDHR_DEVICE_LIST > 0 then
 		--gather tuner names
 		set temp_tuners_list to {}
@@ -279,8 +304,13 @@ on main()
 		else if length of show_list = 0 then
 			--	display dialog "2"
 			try
-				display dialog "There are no shows, why don't you add one?" buttons {"Quit", "Add Show"} default button 2
-				my main()
+				set hdhr_no_shows to button returned of (display dialog "There are no shows, why don't you add one?" buttons {"Quit", "Add Show"} default button 2)
+				if hdhr_no_shows = "Add Show" then
+					my main()
+				end if
+				if hdhr_no_shows = "Quit" then
+					quit {}
+				end if
 				--We need a to prompt user for perferred tuner here to make this work. 
 			on error
 				--display dialog "4"
@@ -380,7 +410,7 @@ on add_show_info(hdhr_device)
 	
 	set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} with prompt "Please choose the days this show airs." default items default_record_day with multiple selections allowed without empty selection allowed)
 	
-	set show_dir of temp_show_info to choose folder with prompt "Select Shows Directory"
+	set show_dir of temp_show_info to choose folder with prompt "Select Shows Directory" default location alias "Volumes:"
 	do shell script "touch " & POSIX path of (show_dir of temp_show_info) & "hdhr_test_write"
 	delay 0.1
 	do shell script "rm " & POSIX path of (show_dir of temp_show_info) & "hdhr_test_write"
@@ -467,9 +497,9 @@ on idle
 					--	set progress completed steps to 0
 					--	set progress total steps to 1
 					
-					set progress description to "Next up... (" & hdhr_record of item i of show_info & ")"
-					set progress additional description to "Starts: " & my short_date("is_next", show_next of item i of show_info, false)
-					--display notification "Starts: " & my short_date("is_next", show_next of item i of show_info, false) with title "Next up... (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info, hdhr_record of item i of show_info) & ")"
+					--set progress description to "Next up... (" & hdhr_record of item i of show_info & ")"
+					--set progress additional description to "Starts: " & my short_date("is_next", show_next of item i of show_info, false)
+					display notification "Starts: " & my short_date("is_next", show_next of item i of show_info, false) with title "Next up... (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info, hdhr_record of item i of show_info) & ")"
 					set notify_upnext_time of item i of show_info to (current date) + (notify_upnext * minutes)
 				end if
 				--	set delay_count to 0 
@@ -671,17 +701,22 @@ end list_position
 
 on quit {}
 	--add check to see if we are recording.
-	set quit_response to button returned of (display dialog "Do you want to cancel the ongoing jobs?" buttons {"Go Back", "No", "Yes"} default button 3)
-	if quit_response = "Yes" then
-		try
-			do shell script "pkill curl"
-			repeat with i from 1 to length of show_info
-				set show_recording of item i of show_info to false
-			end repeat
-		end try
-	end if
-	if quit_response = "Go Back" then
-		my main()
+	set hdhr_quit_record to false
+	repeat with i from 1 to length of show_info
+		if show_recording of item i of show_info = true then
+			set hdhr_quit_record to true
+		end if
+	end repeat
+	if hdhr_quit_record = true then
+		set quit_response to button returned of (display dialog "Do you want to cancel the ongoing jobs?" buttons {"Go Back", "No", "Yes"} default button 3)
+		if quit_response = "Yes" then
+			try
+				do shell script "pkill curl"
+				repeat with i from 1 to length of show_info
+					set show_recording of item i of show_info to false
+				end repeat
+			end try
+		end if
 	end if
 	continue quit
 end quit
