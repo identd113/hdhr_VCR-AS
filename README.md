@@ -10,8 +10,8 @@ Requirements
 1. Requires JSONHelper, avilable for free at https://apps.apple.com/us/app/json-helper-for-applescript/id453114608
 
 Features
-Auto disocovery of all HDHomeRun devices on your network
-  Support multipe tuners on the network!
+Auto discovery of all HDHomeRun devices on your network
+  Support multiple tuners on the network!
 Uses built-in guide data, to automatically name the shows you are recording. 
   The free guide data is only for the next 4-6 hours. We will attempt to pull fresh data right before a show starts, so in most cases, the information does get pulled correctly. I believe if you pay for HDHomeRuns own DVR software, the guide data is much longer, and the script would handle that.
 Runs in the background, but allows easy editing of existing saved shows
@@ -21,9 +21,9 @@ Add a show or series in 10 seconds.
 
 Written in AppleScript. 
   This script uses the idle() handler, so the script itself uses almost no CPU.
-    The idle handler uses scheduling in the OS, rather then a lazy implmentation with a repeat loop.
-    The idle handler is also very touchy.  You can break the idle "ticking" by having a script error occur.  This script uses logic to avoid errors occuring.
-  The script uses many of handlers that may be useful to others.  These have been written in a manner that makes their use extremtly easy to use in other scripts.
+    The idle handler uses scheduling in the OS, rather than a lazy implementation with a repeat loop.
+    The idle handler is also very touchy.  You can break the idle "ticking" by having a script error occur.  This script uses logic to avoid errors occurring.
+  The script uses many of handlers that may be useful to others.  These have been written in a manner that makes their use extremely easy to use in other scripts.
   
   Uses records to store complex data sets. This is an example of a what data of a show recording contains:
 ```
@@ -40,14 +40,14 @@ Special considerations
 The "heavy lifting" is done with curl, which downloads the data to a local drive.  The script manages the show and device logic.
 When the app is opened, you will be presented with options to add a show, edit a show, or run
   If you choose "run", the UI will disappear, and we will run in the background. If you click the app again in the dock (a reopen event), you will be presented with the UI again.
-When you enter the time to start a recording, it is done a bit strangly. For example, if you wanted to record a show at 6:45 PM, you would enter 18.75.
-  We use 24 hour decimel time.  .5 of an hour, is 30 minutes.  .75 of an hour is 45 minutes.
-If you have a HDHomeRun Extend device, this will allow you to set a transcode level per show.  A future version will allow a deatult for all shows
+When you enter the time to start a recording, it is done a bit strangely. For example, if you wanted to record a show at 6:45 PM, you would enter 18.75.
+  We use 24 hour decimal time.  .5 of an hour, is 30 minutes.  .75 of an hour is 45 minutes.
+If you have a HDHomeRun Extend device, this will allow you to set a transcode level per show.  A future version will allow a default for all shows
 Uses caffentite to kick off the recording
   This prevents the device from going to sleep.
 If there are multiple HDHR device on the network, you will be asked which one you want to use.
   I am trying ot figure out how to make this better, but as is, asks.
-Heavily use notifications to pass along information to the user, as we run more or less faceless.  Future versions will allow you to specify you get a mesage such as:
+Heavily use notifications to pass along information to the user, as we run more or less faceless.  Future versions will allow you to specify you get a message such as:
   Shows that are scheduled in the future "Up Next"
   Starting recording
   Recording in progress
@@ -61,8 +61,8 @@ When adding channels, you are presented with a list of avilable channels, with s
   ...
   ...
   
-When adding a show, we will attempt ot write a test file to that location (and remove it) right away, so we can get through any of the OSX disk access prompts.
+When adding a show, we will attempt to write a test file to that location (and remove it) right away, so we can get through any of the OSX disk access prompts.
 
-I hope this can be colabortive project, so other options that you use can be added.
+I hope this can be collaborative project, so other options that you use can be added.
 
 
