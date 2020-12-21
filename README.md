@@ -9,6 +9,12 @@ I call it a VCR app, as while it does use guide data to pull name / season / epi
 Requirements
 1. Requires JSONHelper, avilable for free at https://apps.apple.com/us/app/json-helper-for-applescript/id453114608
 
+How to install:
+1. Download the script, and open in Script Editor.
+2. File -> Save and select "Application".  It is also very important that "Stay open after run handler" is checked.
+3, Save this file somewhere.
+4. Exit Scritp Editor, and double click on the newly saved Application. 
+
 Features
 Auto discovery of all HDHomeRun devices on your network
   Support multiple tuners on the network!
