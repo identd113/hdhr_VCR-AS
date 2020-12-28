@@ -1,15 +1,15 @@
-# hdhr_VCR
+## hdhr_VCR
 A pretty damn good VCR "plus" script that works on all HDHomeRun devices.
 A faceless/background script that makes recording TV shows and Movies on HDHomeRun very easy.
 
-Why?
+#### Why?
 I wanted to allow a quick way to record a TV show, without needing to setup a large system like Plex or HDHomeRuns' own DVR software.
 I call it a VCR app, as while it does use guide data to pull name / season / episode number / episode name / show length, it does not present like a normal DVR.  It is more of a Smart VCR
 
-Requirements
-1. Requires JSONHelper, avilable for free at https://apps.apple.com/us/app/json-helper-for-applescript/id453114608
+#### Requirements
+1. JSONHelper is required, avilable for free at https://apps.apple.com/us/app/json-helper-for-applescript/id453114608
 
-Features
+#### Features
 Auto discovery of all HDHomeRun devices on your network
   Support multiple tuners on the network!
 Uses built-in guide data, to automatically name the shows you are recording. 
@@ -17,26 +17,26 @@ Uses built-in guide data, to automatically name the shows you are recording.
 Runs in the background, but allows easy editing of existing saved shows
 Add a show or series in 10 seconds.
 
-
-
-Written in AppleScript. 
+#### Written in AppleScript. 
   This script uses the idle() handler, so the script itself uses almost no CPU.
     The idle handler uses scheduling in the OS, rather than a lazy implementation with a repeat loop.
     The idle handler is also very touchy.  You can break the idle "ticking" by having a script error occur.  This script uses logic to avoid errors occurring.
   The script uses many of handlers that may be useful to others.  These have been written in a manner that makes their use extremely easy to use in other scripts.
   
   Uses records to store complex data sets. This is an example of a what data of a show recording contains:
+
 ```
 (show_title:In Living Color, show_time:1, show_length:60, show_air_date:Saturday, show_transcode:None, show_temp_dir:alias Backups:, show_dir:alias Backups:, show_channel:5.1, show_active:true, show_id:17420a68e161e3def68e6111876f5dc6, show_recording:false, show_last:date Saturday, December 19, 2020 at 1:03:04 AM, show_next:date Saturday, December 19, 2020 at 1:00:00 AM, show_end:date Saturday, December 19, 2020 at 2:00:00 AM, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:1054271E)
 ```
 
 Example of a tuner record:
+
 ```
 (hdhr_lineup_update:Saturday, December 19, 2020 at 1:21:46 AM, hdhr_guide_update:Saturday, December 19, 2020 at 1:21:48 AM, discover_url:http://10.0.1.101/discover.json, lineup_url:http://10.0.1.101/lineup.json, device_id:1054271E, does_transcode:1, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:"HDTC-2US")
 ```
 The hdhr_guide and hdhr_lineup contain the entire json result of the lineup, and guide data.  We use this as a cache, so we only make a "new" API call every 2 hours, or when a show starts recording.
 
-Special considerations
+## Special considerations
 The "heavy lifting" is done with curl, which downloads the data to a local drive.  The script manages the show and device logic.
 When the app is opened, you will be presented with options to add a show, edit a show, or run
   If you choose "run", the UI will disappear, and we will run in the background. If you click the app again in the dock (a reopen event), you will be presented with the UI again.
