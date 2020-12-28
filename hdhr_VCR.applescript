@@ -12,7 +12,7 @@ global temp_show_info
 global locale
 global channel_list
 global HDHR_DEVICE_LIST
-
+global hdhr_VCR_version
 
 global hdhr_setup_folder
 global hdhr_setup_transcode
@@ -48,18 +48,41 @@ use application "JSON Helper"
 --	set progress completed steps to 0
 --	set progress total steps to 1
 --If you select a record time in the middle of the show, we will adjust the start time to match guide data.  We may also need to update record time, and end time.  
+
 on hdhr_prepare_record(hdhr_device)
 	set tuner_offset to my HDHRDeviceSearch("hdhr_prepare_record0", hdhr_device)
 	set temp to my stringtolist("hdhr_prepare_record", discover_url of item tuner_offset of HDHR_DEVICE_LIST, "/")
 	return my listtostring(items 1 thru -2 of temp, "/")
 end hdhr_prepare_record
 
+on remove_show(caller, show_id, should_edit)
+	log "remove_show: " & caller
+	log "before_run: " & length of show_info
+	if should_edit = false then
+		try
+			set item (my check_offset(show_id) of show_info) to {}
+			set show_info to my emptylist(show_info)
+			log "after_run1: " & length of show_info
+			return true
+			--We need to notify the user that a show was removed.
+		on error
+			log "after_run2: ERROR"
+			return false
+		end try
+	else if should_edit = true then
+		log "after_run3: "
+		--gather list of shows to ask user which one to remove
+	end if
+end remove_show
+
 on notify_user(the_showid)
+	
 end notify_user
 
 on run {}
 	set progress description to "Loading " & name of me
 	--set global vars
+	set hdhr_VCR_version to (version of me)
 	set notify_upnext to 15
 	set notify_recording to 5
 	set locale to user locale of (system info)
@@ -182,13 +205,20 @@ on validate_show_info(show_to_check, should_edit)
 			my validate_show_info(show_id of item i of show_info, should_edit)
 		end repeat
 	else
-		set i to my check_offset(show_to_check)
+		set i to my check_offset(show_to_check) 
 		log check_offset
 		log i
 		
 		log "Show_air_date: " & show_title of item i of show_info
 		if show_title of item i of show_info = missing value or show_title of item i of show_info = "" or should_edit = true then
-			set show_title of item i of show_info to text returned of (display dialog "What is the title of this show?" default answer show_title of item i of show_info)
+			--fix me
+			set show_title_temp to display dialog "What is the title of this show, and is it a series?" buttons {"Series", "Single"} default button "Single" default answer show_title of item i of show_info
+			--set show_title of item i of show_info to text returned of show_title_temp
+			if button returned of show_title_temp = "Series" then
+				set show_is_series of item i of show_info to true
+			else if button returned of show_title_temp = "Single" then
+				set show_is_series of item i of show_info to false
+			end if
 		end if
 		
 		--repeat until my is_number(show_channel of item i of show_info) or should_edit = true
@@ -242,6 +272,7 @@ on setup()
 		set hdhr_setup_ran to true
 	end if
 	if button returned of hdhr_setup_response = "Delete" then
+		--  if my remove_show("setup0", "?")
 	end if
 	
 end setup
@@ -324,7 +355,7 @@ end main
 on add_show_info(hdhr_device)
 	set tuner_offset to my HDHRDeviceSearch("add_show_info0", hdhr_device)
 	set show_channel to missing value
-	set temp_show_info to {show_title:missing value, show_time:missing value, show_length:missing value, show_air_date:missing value, show_transcode:missing value, show_temp_dir:missing value, show_dir:missing value, show_channel:missing value, show_active:true, show_id:(do shell script "date | md5") as text, show_recording:false, show_last:(current date), show_next:missing value, show_end:missing value, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:hdhr_device, show_is_series:missing value}
+	set temp_show_info to {show_title:missing value, show_time:missing value, show_length:missing value, show_air_date:missing value, show_transcode:missing value, show_temp_dir:missing value, show_dir:missing value, show_channel:missing value, show_active:true, show_id:(do shell script "date | md5") as text, show_recording:false, show_last:(current date), show_next:missing value, show_end:missing value, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:hdhr_device, show_is_series:false}
 	
 	
 	repeat until my is_number(show_channel of temp_show_info)
@@ -405,9 +436,9 @@ on add_show_info(hdhr_device)
 	--set show_title of temp_show_info to text returned of (display dialog "What is the title of this show?" default answer hdhr_response_channel_title)
 	set show_title_temp to display dialog "What is the title of this show, and is it a series?" buttons {"Series", "Single"} default button "Single" default answer hdhr_response_channel_title
 	set show_title of temp_show_info to text returned of show_title_temp
-	if show_title of temp_show_info contains " " then
-		set show_title of temp_show_info to my listtostring(my stringtolist("show title", show_title of temp_show_info, " "), "_")
-	end if
+	--if show_title of temp_show_info contains " " then
+	--set show_title of temp_show_info to my listtostring(my stringtolist("show title", show_title of temp_show_info, " "), "_")
+	--end if
 	if button returned of show_title_temp = "Series" then
 		set show_is_series of temp_show_info to true
 	else if button returned of show_title_temp = "Single" then
@@ -417,12 +448,18 @@ on add_show_info(hdhr_device)
 	log "@!@"
 	--	log hdhr_response_channel
 	set hdhr_response_length to 30
-	try
+	log "StartTime of hdhr_response_channel " & getTfromN(StartTime of hdhr_response_channel)
+	log (my datetime2epoch("add_show0", current date))
+	if my getTfromN(StartTime of hdhr_response_channel) < my datetime2epoch("add_show0", current date) then
+		set hdhr_response_length to (my getTfromN(StartTime of hdhr_response_channel)) - (my datetime2epoch("add_show0", current date))
+	else
+		--try
 		set hdhr_response_length to ((EndTime of hdhr_response_channel) - (StartTime of hdhr_response_channel)) div 60
 		log hdhr_response_length
-	on error
+		--on error
 		--	display notification "OK4: " & hdhr_response_channel
-	end try
+		--end try
+	end if
 	repeat until my is_number(show_length of temp_show_info) and show_length of temp_show_info ³ 1
 		--display notification "OK7: TEST"
 		set show_length of temp_show_info to text returned of (display dialog "How long is this show? (in minutes)" default answer hdhr_response_length)
@@ -492,19 +529,6 @@ on idle
 	if length of show_info > 0 then
 		--	display notification "1.5"
 		repeat with i from 1 to length of show_info
-			
-			if show_recording of item i of show_info = true then
-				if show_end of item i of show_info < (current date) then
-					set show_last of item i of show_info to show_end of item i of show_info
-					set show_next of item i of show_info to my nextday(show_id of item i of show_info)
-					set show_recording of item i of show_info to false
-					--display notification show_title of item i of show_info & " has ended."
-					
-					--Fix channel2name is not used any longer
-					display notification "Next Showing: " & my short_date("rec_end", show_next of item i of show_info, false) with title "Recording Complete." subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
-				end if
-			end if
-			
 			if show_active of item i of show_info = true then
 				if show_next of item i of show_info < cd_object then
 					if show_recording of item i of show_info = false then
@@ -541,12 +565,31 @@ on idle
 					--set progress additional description to "Starts: " & my short_date("is_next", show_next of item i of show_info, false)
 					
 					--We see this message very often, lets make sure we only display up next shows just for that day, or within ~ 8 hours.
-					display notification "Starts: " & my short_date("is_next", show_next of item i of show_info, false) with title "NextUP on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info, hdhr_record of item i of show_info) & ")"
+					display notification "Starts: " & my short_date("is_next", show_next of item i of show_info, false) with title "Next UP on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info, hdhr_record of item i of show_info) & ")"
 					set notify_upnext_time of item i of show_info to (current date) + (notify_upnext * minutes)
 				end if
 				--	set delay_count to 0 
 				--end if
 				
+			end if
+			
+			if show_recording of item i of show_info = true then
+				if show_end of item i of show_info < (current date) then
+					set show_last of item i of show_info to show_end of item i of show_info
+					set show_next of item i of show_info to my nextday(show_id of item i of show_info)
+					set show_recording of item i of show_info to false
+					--display notification show_title of item i of show_info & " has ended."
+					if show_is_series of item i of show_info = false then
+						if my remove_show("idle1", show_id of item i of show_info) = true then
+							display notification "The show has been removed."
+						else
+							display dialog "We have a problem in idle"
+						end if
+					else
+						--Fix channel2name is not used any longer
+						display notification "Next Showing: " & my short_date("rec_end", show_next of item i of show_info, false) with title "Recording Complete." subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
+					end if
+				end if
 			end if
 			
 		end repeat
@@ -1083,3 +1126,14 @@ on read_data()
 	close access ref_num
 	--set {calendar_name, the_location, Event_name, shift_length} to stringtolist(ienterdata, return)
 end read_data
+
+on emptylist(klist)
+	set nlist to {}
+	set dataLength to length of klist
+	repeat with i from 1 to dataLength
+		if item i of klist is not in {"", {}} then
+			set end of nlist to (item i of klist)
+		end if
+	end repeat
+	return nlist
+end emptylist
