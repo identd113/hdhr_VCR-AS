@@ -9,12 +9,6 @@ I call it a VCR app, as while it does use guide data to pull name / season / epi
 Requirements
 1. Requires JSONHelper, avilable for free at https://apps.apple.com/us/app/json-helper-for-applescript/id453114608
 
-How to install:
-1. Download the script, and open in Script Editor.
-2. File -> Save and select "Application".  It is also very important that "Stay open after run handler" is checked.
-3, Save this file somewhere.
-4. Exit Scritp Editor, and double click on the newly saved Application. 
-
 Features
 Auto discovery of all HDHomeRun devices on your network
   Support multiple tuners on the network!
@@ -33,7 +27,7 @@ Written in AppleScript.
   
   Uses records to store complex data sets. This is an example of a what data of a show recording contains:
 ```
-(show_title:In Living Color, show_time:1, show_length:60, show_air_date:Saturday, show_transcode:None, show_temp_dir:alias Backups:, show_dir:alias Backups:, show_channel:5.1, show_active:true, show_id:17420a68e161e3def68e6111876f5dc6, show_recording:false, show_last:date Saturday, December 19, 2020 at 1:03:04 AM, show_next:date Saturday, December 19, 2020 at 1:00:00 AM, show_end:date Saturday, December 26, 2020 at 2:00:00 AM, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:1054271E)
+(show_title:In Living Color, show_time:1, show_length:60, show_air_date:Saturday, show_transcode:None, show_temp_dir:alias Backups:, show_dir:alias Backups:, show_channel:5.1, show_active:true, show_id:17420a68e161e3def68e6111876f5dc6, show_recording:false, show_last:date Saturday, December 19, 2020 at 1:03:04 AM, show_next:date Saturday, December 19, 2020 at 1:00:00 AM, show_end:date Saturday, December 19, 2020 at 2:00:00 AM, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:1054271E)
 ```
 
 Example of a tuner record:
@@ -61,7 +55,7 @@ Heavily use notifications to pass along information to the user, as we run more 
   Tuner and Lineup updates (On launch, and every two hours.)
   
   I want to make this better as well, but AppleScript has very limited ways to interact with the user.  Notifications make sense to me, as the app is faceless/background app
-When adding channels, you are presented with a list of avilable channels, with station name, example:
+When adding channels, you are presented with a list of available channels, with station name, example:
   2.1 TPT2
   2.3 TPTLife
   ...

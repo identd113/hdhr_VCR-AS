@@ -1,11 +1,12 @@
+--Need to convert all times to date objects.  Currently we use 3 idfferent date formats, and this is a mess
 --Need a way to validate data if wrong in repeat loop, but be able to edit files on demand.
 --Need to setup a helper for notifcations.
 --We need to write a flat file to save the TV shows, as properties will lose their persistence in big sur
 --We should not ask about the tuner until after we click "add"
 property show_info : {}
-property hdhr_IP : "10.0.1.12"
-property hdhr_PORT : ":5004"
-property hdhr_TUNER_ct : 0
+--property hdhr_IP : "10.0.1.12"
+--property hdhr_PORT : ":5004"
+--property hdhr_TUNER_ct : 0
 
 global temp_show_info
 global locale
@@ -20,6 +21,7 @@ global hdhr_setup_length_bool
 global notify_upnext
 global notify_recording
 global hdhr_setup_ran
+global savefilename
 
 --{hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value}
 -- nextup is currently a property, so this value persists through application restarts.  Big Sir will disallow this ability.  I need to be make this a global.  Does one really need to write 
@@ -30,7 +32,9 @@ use application "JSON Helper"
 
 -- Done Use jsonhelper and json querys to get data.
 --show_info model: (*show_title:Happy_Holidays_America, show_time:16, show_length:60, show_air_date:Sunday, show_transcode:missing value, show_temp_dir:alias Backups:, show_dir:alias Backups:, show_channel:5.1, show_active:true, show_id:221fbe1126389e6af35f405aa681cf19, show_recording:false, show_last:date Sunday, December 13, 2020 at 4:04:54 PM, show_next:date Sunday, December 13, 2020 at 4:00:00 PM, show_end:date Sunday, December 13, 2020 at 5:00:00 PM, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:XX105404BE*
+
 -- {show_title:"string", show_time:dateobject, show_length:interger(minutes),show_air_day:list (Sun, Mon, Tue, Wed, Thu, Fri, Sat), show_transcode:true/false, show_temp_dir:alias, show_dir:alias)
+
 --note We will only save data to the temp directory first if the data needs to be transcoded. Once done trancoding, the resulting file will be saved to the show_temp directory
 -- Done We should try to find the HDhomerun, and port on the network.
 -- Done We do this already, but we should use discover.json and parse
@@ -43,7 +47,7 @@ use application "JSON Helper"
 --  set progress additional description to
 --	set progress completed steps to 0
 --	set progress total steps to 1
-
+--If you select a record time in the middle of the show, we will adjust the start time to match guide data.  We may also need to update record time, and end time.  
 on hdhr_prepare_record(hdhr_device)
 	set tuner_offset to my HDHRDeviceSearch("hdhr_prepare_record0", hdhr_device)
 	set temp to my stringtolist("hdhr_prepare_record", discover_url of item tuner_offset of HDHR_DEVICE_LIST, "/")
@@ -63,6 +67,7 @@ on run {}
 	set hdhr_setup_transcode to "No"
 	set hdhr_setup_name_bool to "No"
 	set hdhr_setup_length_bool to "No"
+	set savefilename to "hdhr_VCR.config"
 	--We will try to autodiscover the HDHR device on the network, and throw it into a record.
 	log "run()"
 	
@@ -319,7 +324,7 @@ end main
 on add_show_info(hdhr_device)
 	set tuner_offset to my HDHRDeviceSearch("add_show_info0", hdhr_device)
 	set show_channel to missing value
-	set temp_show_info to {show_title:missing value, show_time:missing value, show_length:missing value, show_air_date:missing value, show_transcode:missing value, show_temp_dir:missing value, show_dir:missing value, show_channel:missing value, show_active:true, show_id:(do shell script "date | md5") as text, show_recording:false, show_last:(current date), show_next:missing value, show_end:missing value, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:hdhr_device}
+	set temp_show_info to {show_title:missing value, show_time:missing value, show_length:missing value, show_air_date:missing value, show_transcode:missing value, show_temp_dir:missing value, show_dir:missing value, show_channel:missing value, show_active:true, show_id:(do shell script "date | md5") as text, show_recording:false, show_last:(current date), show_next:missing value, show_end:missing value, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:hdhr_device, show_is_series:missing value}
 	
 	
 	repeat until my is_number(show_channel of temp_show_info)
@@ -338,7 +343,7 @@ on add_show_info(hdhr_device)
 	end repeat
 	
 	repeat until my is_number(show_time of temp_show_info) and show_time of temp_show_info ³ 0 and show_time of temp_show_info < 24
-		set show_time of temp_show_info to text returned of (display dialog "When does this show air? " & return & "(0-24, use decimals, ie 9.5 for 9:30)" default answer "") as number
+		set show_time of temp_show_info to text returned of (display dialog "When time does this show air? " & return & "(0-24, use decimals, ie 9.5 for 9:30)" default answer "") as number
 		--if my is_number(show_time of temp_show_info) = false then 
 		
 		--set show_time of temp_show_info to missing value
@@ -350,15 +355,44 @@ on add_show_info(hdhr_device)
 	
 	-- We know the channel and time, we can refer to our guid data to pull the name of the show.  If we dont know of it yet, we can ask the user.
 	log "Add_show"
-	--log title of my channel_guide(hdhr_device, show_channel of temp_show_info, show_time of temp_show_info)
+	--log my channel_guide(hdhr_device, show_channel of temp_show_info, show_time of temp_show_info)
 	--fix we error here if we cannot pull guidedata
-	set hdhr_response_channel to my channel_guide(hdhr_device, show_channel of temp_show_info, show_time of temp_show_info)
+	set hdhr_response_channel to my channel_guide("Add_show_info0", hdhr_device, show_channel of temp_show_info, show_time of temp_show_info)
 	log hdhr_response_channel
+	
+	--FIX
+	--if show_time of temp_show_info > StartTime of  hdhr_response_channel then
+	--set show_time of temp_show_info to StartTime of  hdhr_response_channel
+	--end if
+	--repeat this for the end time as well
+	
 	try
 		set hdhr_response_channel_title to title of hdhr_response_channel
 	on error
 		set hdhr_response_channel_title to ""
 	end try
+	(*	
+	
+	try
+		set hdhr_response_channel_start to my getTfromN(StartTime of hdhr_response_channel)
+		--FIX THIS
+		--	set hdhr_proposed_time to my datetime2epoch("add_show", (date (date string of (current date))) + (show_time of temp_show_info) - (time to GMT)) as number
+		set hdhr_proposed_time to my datetime2epoch("channel_guide", (date (date string of (current date))) + (show_time of temp_show_info) * hours - (time to GMT)) as number
+		log "---  hdhr_response_channel_start"
+		
+		if hdhr_response_channel_start < my getTfromN(hdhr_proposed_time) then
+			set hdhr_response_differ_start to button returned of (display dialog "This show starts at " & hdhr_response_channel_start & " and not " & my getTfromN(hdhr_proposed_time) buttons {"Ignore", "Fix"} default button 2)
+		if hdhr_response_differ_start = "Fix" then
+		XXX set show_title of temp_show_info to hdhr_response_channel_start
+		end if
+		log my getTfromN(hdhr_proposed_time)
+		log "---"
+	on error
+		set hdhr_response_channel_start to ""
+		log "hdhr_response_channel: ERROR"
+	end try
+	
+	*)
 	
 	try
 		set hdhr_response_channel_title to hdhr_response_channel_title & " " & EpisodeNumber of hdhr_response_channel
@@ -368,12 +402,17 @@ on add_show_info(hdhr_device)
 		set hdhr_response_channel_title to hdhr_response_channel_title & " " & EpisodeTitle of hdhr_response_channel
 	end try
 	
-	set show_title of temp_show_info to text returned of (display dialog "What is the title of this show?" default answer hdhr_response_channel_title)
-	
+	--set show_title of temp_show_info to text returned of (display dialog "What is the title of this show?" default answer hdhr_response_channel_title)
+	set show_title_temp to display dialog "What is the title of this show, and is it a series?" buttons {"Series", "Single"} default button "Single" default answer hdhr_response_channel_title
+	set show_title of temp_show_info to text returned of show_title_temp
 	if show_title of temp_show_info contains " " then
 		set show_title of temp_show_info to my listtostring(my stringtolist("show title", show_title of temp_show_info, " "), "_")
 	end if
-	
+	if button returned of show_title_temp = "Series" then
+		set show_is_series of temp_show_info to true
+	else if button returned of show_title_temp = "Single" then
+		set show_is_series of temp_show_info to false
+	end if
 	--display notification "OK6: " & show_title of temp_show_info 
 	log "@!@"
 	--	log hdhr_response_channel
@@ -413,9 +452,9 @@ on add_show_info(hdhr_device)
 		end if
 	end repeat
 	--We attempt to write a small file to shows folder.  This will prompt the user in the OS to allow this app to write data there. 
-	do shell script "touch " & POSIX path of (show_dir of temp_show_info) & "hdhr_test_write"
+	do shell script "touch \"" & POSIX path of (show_dir of temp_show_info) & "hdhr_test_write\""
 	delay 0.1
-	do shell script "rm " & POSIX path of (show_dir of temp_show_info) & "hdhr_test_write"
+	do shell script "rm \"" & POSIX path of (show_dir of temp_show_info) & "hdhr_test_write\""
 	set model_response to ""
 	
 	--try
@@ -433,6 +472,7 @@ on add_show_info(hdhr_device)
 	
 	set show_temp_dir of temp_show_info to show_dir of temp_show_info
 	--	end if
+	--commit the temp_show_info to show_info
 	set end of show_info to temp_show_info
 	set show_next of last item of show_info to my nextday(show_id of temp_show_info)
 	my validate_show_info(show_id of last item of show_info, false)
@@ -470,13 +510,13 @@ on idle
 					if show_recording of item i of show_info = false then
 						set show_runtime to (show_end of item i of show_info) - (current date)
 						my record_now((show_id of item i of show_info), show_runtime)
-						display notification "Ends " & my short_date("rec started", show_end of item i of show_info, false) with title "Started Recording... (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
+						display notification "Ends " & my short_date("rec started", show_end of item i of show_info, false) with title "Started Recording on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
 						set notify_recording_time of item i of show_info to (current date) + (2 * minutes)
 						--display notification show_title of item i of show_info & " on channel " & show_channel of item i of show_info & " started for " & show_runtime of item i of show_info & " minutes."
 					else
 						--display notification show_title of item i of show_info & " is recording until " & my short_date("recording", show_end of item i of show_info)
 						if notify_recording_time of item i of show_info < (current date) or notify_recording_time of item i of show_info = missing value then
-							display notification "Ends " & my short_date("rec started", show_end of item i of show_info, false) & " (" & (my sec_to_time((show_end of item i of show_info) - (current date))) & ") " with title "Recording in progress... (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
+							display notification "Ends " & my short_date("rec progress", show_end of item i of show_info, false) & " (" & (my sec_to_time((show_end of item i of show_info) - (current date))) & ") " with title "Recording in progress on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
 							set notify_recording_time of item i of show_info to (current date) + (notify_recording * minutes)
 						end if
 					end if
@@ -487,9 +527,9 @@ on idle
 			if show_recording of item i of show_info = false and show_active of item i of show_info = true then
 				--my update_show(show_id of item i of show_info)
 				--set delay_count to delay_count + 1
-				--if delay_count ³ 36 then -- ~ 10 minutes
+				--if delay_count ³ 36 then -- ~ 10 minutes 
 				--display notification show_title of item i of show_info & " is next at " & my short_date("is_next", show_next of item i of show_info)
-				if notify_upnext_time of item i of show_info < (current date) or notify_upnext_time of item i of show_info = missing value then
+				if (notify_upnext_time of item i of show_info < (current date) or notify_upnext_time of item i of show_info = missing value) and (date (date string of (show_next of item i of show_info))) = (date (date string of (current date))) then
 					--This line is a hot mess, as it reports too often.  Lets try some progress bar hacks.
 					
 					--	set progress description to "Loading ..."
@@ -499,7 +539,9 @@ on idle
 					
 					--set progress description to "Next up... (" & hdhr_record of item i of show_info & ")"
 					--set progress additional description to "Starts: " & my short_date("is_next", show_next of item i of show_info, false)
-					display notification "Starts: " & my short_date("is_next", show_next of item i of show_info, false) with title "Next up... (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info, hdhr_record of item i of show_info) & ")"
+					
+					--We see this message very often, lets make sure we only display up next shows just for that day, or within ~ 8 hours.
+					display notification "Starts: " & my short_date("is_next", show_next of item i of show_info, false) with title "NextUP on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info, hdhr_record of item i of show_info) & ")"
 					set notify_upnext_time of item i of show_info to (current date) + (notify_upnext * minutes)
 				end if
 				--	set delay_count to 0 
@@ -548,7 +590,7 @@ on record_now(the_show_id, opt_show_length)
 	end if
 	--do shell script "curl --max-time " & (temp_show_length) & " http://" & hdhr_IP & "/auto/v" & show_channel of item i of show_info & " -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now", current date) & ".m2ts") & "> /dev/null 2>&1 &"
 	if show_transcode of item i of show_info = missing value or show_transcode of item i of show_info = "None" then
-		--We need to fix this as well, we do not refer to hdhr_ip and port any longer
+		--We need to fix this as well, we do not refer to hdhr_ip and port any longer 
 		do shell script "caffeinate -i curl '" & my hdhr_prepare_record(hdhr_device) & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now", current date, true) & ".m2ts") & "> /dev/null 2>&1 &"
 	else
 		do shell script "caffeinate -i curl '" & my hdhr_prepare_record(hdhr_device) & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "&transcode=" & show_transcode of item i of show_info & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now", current date, true) & ".mkv") & "> /dev/null 2>&1 &"
@@ -702,23 +744,36 @@ end list_position
 on quit {}
 	--add check to see if we are recording.
 	set hdhr_quit_record to false
+	
 	repeat with i from 1 to length of show_info
 		if show_recording of item i of show_info = true then
 			set hdhr_quit_record to true
 		end if
 	end repeat
+	
 	if hdhr_quit_record = true then
 		set quit_response to button returned of (display dialog "Do you want to cancel the ongoing jobs?" buttons {"Go Back", "No", "Yes"} default button 3)
-		if quit_response = "Yes" then
-			try
-				do shell script "pkill curl"
-				repeat with i from 1 to length of show_info
-					set show_recording of item i of show_info to false
-				end repeat
-			end try
-		end if
+	else
+		continue quit
 	end if
-	continue quit
+	
+	if quit_response = "Yes" then
+		try
+			if hdhr_quit_record = true then
+				do shell script "pkill curl"
+			end if
+		end try
+	end if
+	
+	if quit_response = "Go Back" then
+		my main()
+	else
+		repeat with i from 1 to length of show_info
+			set show_recording of item i of show_info to false
+		end repeat
+		continue quit
+	end if
+	
 end quit
 
 
@@ -831,10 +886,14 @@ on getHDHR_Lineup(caller, hdhr_device)
 	set progress completed steps to 1
 end getHDHR_Lineup
 
-on channel_guide(hdhr_device, hdhr_channel, hdhr_time)
-	set hdhr_proposed_time to my datetime2epoch((date (date string of (current date))) + hdhr_time * hours - (time to GMT)) as number
+on channel_guide(caller, hdhr_device, hdhr_channel, hdhr_time)
+	log "channel_guide: " & caller
+	set hdhr_proposed_time to my datetime2epoch("channel_guide", (date (date string of (current date))) + hdhr_time * hours - (time to GMT)) as number
+	set hdhr_proposed_time to my getTfromN(hdhr_proposed_time)
+	
 	log "hdhr_proposed_time"
 	log hdhr_proposed_time
+	log "---"
 	set temp_guide_data to missing value
 	set tuner_offset to my HDHRDeviceSearch("channel_guide0", hdhr_device)
 	if HDHR_DEVICE_LIST ­ missing value then
@@ -848,29 +907,31 @@ on channel_guide(hdhr_device, hdhr_channel, hdhr_time)
 		--We need to now parse the json object and try to get the start and end times.
 		log "length"
 		log length of Guide of temp_guide_data
-		set hdhr_proposed_time to my getTfromN(hdhr_proposed_time)
 		repeat with i2 from 1 to length of Guide of temp_guide_data
 			log "$1: " & my getTfromN(StartTime of item i2 of Guide of temp_guide_data)
 			log "$2: " & hdhr_proposed_time
 			try
 				log "$3 : " & my getTfromN(EndTime of item i2 of Guide of temp_guide_data)
+				log " "
 			on error
 				display notification "NOTOK 1: " & EndTime of item i2 of Guide of temp_guide_data as text
 			end try
 			--log StartTime of item i2 of Guide of temp_guide_data
 			--log EndTime of item i2 of Guide of temp_guide_data
 			--fix We need to also consider if we try to record a show already in progress current date to epoch, and compare.
-			if (hdhr_proposed_time) ³ my getTfromN(StartTime of item i2 of Guide of temp_guide_data) then
+			--FIX THIS
+			--if (hdhr_proposed_time) is between my getTfromN(StartTime of item i2 of Guide of temp_guide_data) and my getTfromN(EndTime of item i2 of Guide of temp_guide_data then
+			if (hdhr_proposed_time) ³ my getTfromN(StartTime of item i2 of Guide of temp_guide_data) and (hdhr_proposed_time) < my getTfromN(EndTime of item i2 of Guide of temp_guide_data) then
 				log "11: " & (hdhr_proposed_time) & "=" & my getTfromN(StartTime of item i2 of Guide of temp_guide_data)
 				try
-					if (hdhr_proposed_time) ² my getTfromN(EndTime of item i2 of Guide of temp_guide_data) then
-						log "2: " & (hdhr_proposed_time) & "²" & my getTfromN(EndTime of item i2 of Guide of temp_guide_data)
-						--try
-						log "$Match"
-						--end try
-						
-						return item i2 of Guide of temp_guide_data
-					end if
+					--					if (hdhr_proposed_time) ² my getTfromN(EndTime of item i2 of Guide of temp_guide_data) then
+					log "2: " & (hdhr_proposed_time) & "²" & my getTfromN(EndTime of item i2 of Guide of temp_guide_data)
+					--try
+					log "$Match"
+					--end try
+					
+					return item i2 of Guide of temp_guide_data
+					--					end if
 				on error
 					display notification "NOT OK 2: " & i2
 				end try
@@ -897,7 +958,7 @@ on update_show(the_show_id)
 	else
 		set i to my check_offset(the_show_id)
 		set hdhr_response_channel to {}
-		set hdhr_response_channel to my channel_guide(hdhr_record of item i of show_info, show_channel of item i of show_info, show_time of item i of show_info)
+		set hdhr_response_channel to my channel_guide("update_show", hdhr_record of item i of show_info, show_channel of item i of show_info, show_time of item i of show_info)
 		try
 			if length of hdhr_response_channel > 0 then
 				try
@@ -932,7 +993,8 @@ on update_show(the_show_id)
 	end if
 end update_show
 
-on datetime2epoch(the_date_object)
+on datetime2epoch(caller, the_date_object)
+	log "datetime2epoch: " & caller & " " & the_date_object
 	return my getTfromN(the_date_object - (my epoch()))
 end datetime2epoch
 
