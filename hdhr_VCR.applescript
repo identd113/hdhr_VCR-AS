@@ -3,11 +3,11 @@
 --Need to setup a helper for notifcations.
 --We need to write a flat file to save the TV shows, as properties will lose their persistence in big sur
 --We should not ask about the tuner until after we click "add"
-property show_info : {}
+--property show_info : {}
 --property hdhr_IP : "10.0.1.12"
 --property hdhr_PORT : ":5004"
 --property hdhr_TUNER_ct : 0
-
+global show_info
 global temp_show_info
 global locale
 global channel_list
@@ -55,13 +55,23 @@ on hdhr_prepare_record(hdhr_device)
 	return my listtostring(items 1 thru -2 of temp, "/")
 end hdhr_prepare_record
 
+on remove_show_info(caller, show_id, should_edit)
+	
+	
+	if show_id is "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF" then
+	end if
+	
+end remove_show_info
+
 on remove_show(caller, show_id, should_edit)
 	log "remove_show: " & caller
 	log "before_run: " & length of show_info
 	if should_edit = false then
 		try
-			set item (my check_offset(show_id) of show_info) to {}
+			set item (my check_offset(show_id)) of show_info to {}
+			display notification "step1"
 			set show_info to my emptylist(show_info)
+			display notification "step2"
 			log "after_run1: " & length of show_info
 			return true
 			--We need to notify the user that a show was removed.
@@ -81,7 +91,8 @@ end notify_user
 
 on run {}
 	set progress description to "Loading " & name of me
-	--set global vars
+	--set global 
+	set show_info to {}
 	set hdhr_VCR_version to (version of me)
 	set notify_upnext to 15
 	set notify_recording to 5
@@ -99,8 +110,15 @@ on run {}
 	Once we find some devices, we will query them and pull there lineup data.  This tells us what channels belong to what tags, like "2,4 TPTN"
 	We will then pull guide data.  It should be said here that this data is only given for 4 hours ahead of current time, some stations maybe 6.  Special considerations have been made in this script to make this work.  We call this handler and specify "run0".  This is just a made up string that we pass to the next handler, so we can see the request came in that broke the sceript.  This is commonly repeated in my scripts.
 	*)
-	my HDHRDeviceDiscovery("run0", "")
+	--Restore any previous state 
 	
+	
+	my HDHRDeviceDiscovery("run0", "")
+	try
+		my read_data()
+	on error
+		display notification "Error when loading data"
+	end try
 	--Main is is the show adding mechanism
 	my main()
 end run
@@ -131,23 +149,32 @@ on check_offset(the_show_id)
 	
 end check_offset
 
-on build_channel_list(hdhr_device) -- We need to have the two values in a list, so we can reference one, and pull the other, replacing channel2name
-	set tuner_offset to my HDHRDeviceSearch("build_channel_list0", hdhr_device)
-	set temp to hdhr_lineup of item tuner_offset of HDHR_DEVICE_LIST
-	log "length of temp: " & length of temp
-	set channel_list to {}
-	repeat with i from 1 to length of temp
-		try
-			if HD of item i of temp = 1 then
-				set end of channel_list to GuideNumber of item i of temp & " " & GuideName of item i of temp & " [HD]"
-			end if
-		on error
-			set end of channel_list to GuideNumber of item i of temp & " " & GuideName of item i of temp
-		end try
-		--set end of channel_list to (item 2 of my stringtolist("channel2name", item i of lineup_temp_list, {"<GuideNumber>", "</GuideNumber>"}) & " (" & channel2name(item 2 of my stringtolist("channel2name", item i of lineup_temp_list, {"<GuideNumber>", "</GuideNumber>"})) & ")")
-	end repeat
+on build_channel_list(caller, hdhr_device) -- We need to have the two values in a list, so we can reference one, and pull the other, replacing channel2name
+	log "build_channel_list: " & caller
+	set channel_list_temp to {}
+	--When we build this list, we need to do it for all tuners at the same time, so we are removing the parameter for specifying a specific device.
+	-- FIX We need to figure out how do do this better, so we can just create this on the fly without having to ask that user which tuner they want to use.
+	if hdhr_device = "" then
+		repeat with i from 1 to length of HDHR_DEVICE_LIST
+			my build_channel_list("build_channel_list0", device_id of item i of HDHR_DEVICE_LIST)
+		end repeat
+	else
+		set tuner_offset to my HDHRDeviceSearch("channel2name0", hdhr_device)
+		set temp to hdhr_lineup of item tuner_offset of HDHR_DEVICE_LIST
+		--set channel_list to {}
+		repeat with i from 1 to length of temp
+			try
+				if HD of item i of temp = 1 then
+					set end of channel_list_temp to GuideNumber of item i of temp & " " & GuideName of item i of temp & " [HD]"
+				end if
+			on error
+				set end of channel_list_temp to GuideNumber of item i of temp & " " & GuideName of item i of temp
+			end try
+		end repeat
+		set channel_mapping of item tuner_offset of HDHR_DEVICE_LIST to channel_list_temp
+		log channel_mapping of item tuner_offset of HDHR_DEVICE_LIST
+	end if
 end build_channel_list
---fix 
 
 on channel2name(the_channel, hdhr_device)
 	set tuner_offset to my HDHRDeviceSearch("channel2name0", hdhr_device)
@@ -205,7 +232,7 @@ on validate_show_info(show_to_check, should_edit)
 			my validate_show_info(show_id of item i of show_info, should_edit)
 		end repeat
 	else
-		set i to my check_offset(show_to_check) 
+		set i to my check_offset(show_to_check)
 		log check_offset
 		log i
 		
@@ -223,14 +250,19 @@ on validate_show_info(show_to_check, should_edit)
 		
 		--repeat until my is_number(show_channel of item i of show_info) or should_edit = true
 		if show_channel of item i of show_info = missing value or my is_number(show_channel of item i of show_info) = false or should_edit = true then
-			--fix
 			--We need to match the recored channel "5.1" with the full list "5.1 WTFC" (channel list) and then have the choose list box jump to that selection.
+			--			FIX We need to lookup the hdhr_device this is using
 			
-			set temp_channel_offset to my list_position(show_channel of item i of show_info, channel_list, false)
-			set channel_temp to word 1 of item 1 of (choose from list channel_list with prompt "What channel does this show air on?" default items item temp_channel_offset of channel_list without empty selection allowed)
+			set temp_tuner to hdhr_record of item i of show_info
+			--display dialog temp_tuner
+			set tuner_offset to my HDHRDeviceSearch("channel2name0", temp_tuner)
+			--display dialog "tuner_offset: " & tuner_offset
+			set temp_channel_offset to my list_position("validate_show_info1", show_channel of item i of show_info, channel_mapping of item tuner_offset of HDHR_DEVICE_LIST, false)
+			set channel_temp to word 1 of item 1 of (choose from list channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with prompt "What channel does this show air on?" default items item temp_channel_offset of channel_mapping of item tuner_offset of HDHR_DEVICE_LIST without empty selection allowed)
+			--	display dialog channel_temp
 			set show_channel of item i of show_info to channel_temp --set show_channel of item i of show_info to word 1 of item 1 of (choose from list channel_list with prompt "What channel does this show air on?" default items show_channel of item i of show_info without empty selection allowed)
 		end if
-		--end repeat 
+		--end repeat  
 		
 		if show_time of item i of show_info = missing value or my is_number(show_time of item i of show_info) = false or show_time of item i of show_info ³ 24 or should_edit = true then
 			set show_time of item i of show_info to text returned of (display dialog "When does this show air? (use 1-24)" default answer show_time of item i of show_info)
@@ -278,8 +310,18 @@ on setup()
 end setup
 
 on main()
-	if length of HDHR_DEVICE_LIST > 0 then
-		--gather tuner names
+	(*
+	if preferred_tuner_offset = missing value then
+		quit {}
+	end if
+	*)
+	-- This gets out list of channel and channel names.  There is a better way to do this (from guide data maybe? bit this is a hold over from v1, and it works.
+	--This will make sure that data we have stored is valid
+	my validate_show_info("", false)
+	my build_channel_list("main0", "")
+	--Collect the temporary name.  This will likely be over written once we can pull guide data
+	set title_response to (display dialog "Would you like to add a show?" buttons {"Shows..", "Add..", "Run.."} default button 2)
+	if button returned of title_response = "Add.." then
 		set temp_tuners_list to {}
 		--set end of temp_tuners_list to "Auto"
 		repeat with i from 1 to length of HDHR_DEVICE_LIST
@@ -288,31 +330,14 @@ on main()
 			log item i of HDHR_DEVICE_LIST
 			set end of temp_tuners_list to hdhr_model of item i of HDHR_DEVICE_LIST & " " & (device_id of item i of HDHR_DEVICE_LIST)
 		end repeat
-		if length of HDHR_DEVICE_LIST = 1 then
-			set preferred_tuner_offset to device_id of item 1 of HDHR_DEVICE_LIST
+		
+		set preferred_tuner to choose from list temp_tuners_list with prompt "Multiple HDHR Devices found, please choose one." cancel button name "Quit"
+		if preferred_tuner ­ false then
+			set hdhr_device to last word of item 1 of preferred_tuner
 		else
-			set preferred_tuner to choose from list temp_tuners_list with prompt "Multiple Devices found, please choose one.  Select \"Auto\" to use first available device." cancel button name "Quit"
-			if preferred_tuner ­ false then
-				set preferred_tuner_offset to last word of item 1 of preferred_tuner
-			else
-				set preferred_tuner_offset to missing value
-			end if
+			set hdhr_device to missing value
 		end if
-	end if
-	
-	if preferred_tuner_offset = missing value then
-		quit {}
-	end if
-	
-	-- This gets out list of channel and channel names.  There is a better way to do this (from guide data maybe? bit this is a hold over from v1, and it works.
-	my build_channel_list(preferred_tuner_offset)
-	--This will make sure that data we have stored is valid
-	my validate_show_info("", false)
-	--Collect the temporary name.  This will likely be over written once we can pull guide data
-	set title_response to (display dialog "Would you like to add a show?" buttons {"Shows..", "Add..", "Run.."} default button 2)
-	
-	if button returned of title_response = "Add.." then
-		my add_show_info(preferred_tuner_offset)
+		my add_show_info(hdhr_device)
 	end if
 	
 	if button returned of title_response = "Shows.." then
@@ -324,15 +349,7 @@ on main()
 			set end of show_list to (show_title of item i of show_info & " on " & show_channel of item i of show_info & " at " & show_time of item i of show_info & " for " & show_length of item i of show_info & " minutes on " & my listtostring(show_air_date of item i of show_info, ", "))
 		end repeat
 		--display dialog length of show_list
-		if length of show_list ³ 1 then
-			--			set YY to (choose from list show_list)
-			-- Fix We cant always match this. 
-			my validate_show_info(show_id of item (my list_position(((choose from list show_list) as text), show_list, true)) of show_info, true)
-			--			set XX to my list_position((YY as text), show_list)
-			--			display dialog "XX: " & XX
-			--			my validate_show_info(show_id of item XX of show_info, true)
-			
-		else if length of show_list = 0 then
+		if length of show_list = 0 then
 			--	display dialog "2"
 			try
 				set hdhr_no_shows to button returned of (display dialog "There are no shows, why don't you add one?" buttons {"Quit", "Add Show"} default button 2)
@@ -347,21 +364,40 @@ on main()
 				--display dialog "4"
 				return
 			end try
+		else if length of show_list > 0 then
+			--Fix Add prompt here
+			set temp_show_list to (choose from list show_list)
+			if temp_show_list ­ false then
+				my validate_show_info(show_id of item (my list_position("main1", (temp_show_list as text), show_list, true)) of show_info, true)
+			else
+				return false
+			end if
+			--my validate_show_info(show_id of item (my list_position("main2", ((choose from list show_list) as text), show_list, true)) of show_info, false)
+			--			set XX to my list_position((YY as text), show_list)
+			--			display dialog "XX: " & XX
+			--			my validate_show_info(show_id of item XX of show_info, true)
 		end if
 	end if
 	
 end main
 
 on add_show_info(hdhr_device)
+	
 	set tuner_offset to my HDHRDeviceSearch("add_show_info0", hdhr_device)
 	set show_channel to missing value
 	set temp_show_info to {show_title:missing value, show_time:missing value, show_length:missing value, show_air_date:missing value, show_transcode:missing value, show_temp_dir:missing value, show_dir:missing value, show_channel:missing value, show_active:true, show_id:(do shell script "date | md5") as text, show_recording:false, show_last:(current date), show_next:missing value, show_end:missing value, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:hdhr_device, show_is_series:false}
+	
+	if hdhr_device = "" then
+		if length of HDHR_DEVICE_LIST = 1 then 
+			set hdhr_device to device_id of item 1 of HDHR_DEVICE_LIST
+		end if
+	end if
 	
 	
 	repeat until my is_number(show_channel of temp_show_info)
 		try
 			--	
-			set show_channel of temp_show_info to word 1 of item 1 of (choose from list channel_list with prompt "What channel does this show air on?" without empty selection allowed)
+			set show_channel of temp_show_info to word 1 of item 1 of (choose from list channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with prompt "What channel does this show air on?" without empty selection allowed)
 			--set show_channel of temp_show_info to text returned of (display dialog "What channel does this show air on?" default answer "") --pull channel kineup, and parse out Channel name/channel.
 			--if my is_number(show_channel of temp_show_info) = false then
 			--	set show_channel of temp_show_info to missing value
@@ -389,7 +425,6 @@ on add_show_info(hdhr_device)
 	--log my channel_guide(hdhr_device, show_channel of temp_show_info, show_time of temp_show_info)
 	--fix we error here if we cannot pull guidedata
 	set hdhr_response_channel to my channel_guide("Add_show_info0", hdhr_device, show_channel of temp_show_info, show_time of temp_show_info)
-	log hdhr_response_channel
 	
 	--FIX
 	--if show_time of temp_show_info > StartTime of  hdhr_response_channel then
@@ -404,6 +439,7 @@ on add_show_info(hdhr_device)
 	end try
 	(*	
 	
+	Fix start time to match the show that is running 
 	try
 		set hdhr_response_channel_start to my getTfromN(StartTime of hdhr_response_channel)
 		--FIX THIS
@@ -514,6 +550,7 @@ on add_show_info(hdhr_device)
 	set show_next of last item of show_info to my nextday(show_id of temp_show_info)
 	my validate_show_info(show_id of last item of show_info, false)
 	log show_info
+	my save_data()
 end add_show_info
 
 on idle
@@ -579,16 +616,20 @@ on idle
 					set show_next of item i of show_info to my nextday(show_id of item i of show_info)
 					set show_recording of item i of show_info to false
 					--display notification show_title of item i of show_info & " has ended."
+					(*
 					if show_is_series of item i of show_info = false then
-						if my remove_show("idle1", show_id of item i of show_info) = true then
+						if my remove_show("idle1", show_id of item i of show_info, false) = true then
 							display notification "The show has been removed."
 						else
-							display dialog "We have a problem in idle"
+							display notification "We have a problem in idle"
 						end if
 					else
 						--Fix channel2name is not used any longer
 						display notification "Next Showing: " & my short_date("rec_end", show_next of item i of show_info, false) with title "Recording Complete." subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
 					end if
+				*)
+					--This needs to happen not in the idle loop.  Since we loop the stored tv shows (show_info), and we are still inside of the repeat loop, we end up trying to walk past the list, kind of a off by 1 error.
+					--We can remove these shows on app start, before we start walking the idle loop.  If we want to remove a show, we have to make sure we are not in a loop inside of the idle handler.  We can create an idle lock bit, which can increase the call back time to a much higer number, run our code, and then "unlock" the loop.  This all sounds very sloppy, and i dont like it.  We may just need to mark the show entries as dirty, likely by making making the show_id a missing value.  We would need to clear this out before we get stuck in a repeat loop.  This sounds cleaner.  This also means we need to remove references of the remove_show_info handler, and stick this in the idle handler, which can have its own host of issues.
 				end if
 			end if
 			
@@ -725,8 +766,11 @@ on short_date(the_caller, the_date_object, twentyfourtime)
 			if twentyfourtime = false then
 				if hours_string ³ 12 then
 					set timeAMPM to " PM"
-					if hours_string > 13 then
+					if hours_string > 12 then
 						set hours_string to (hours_string - 12)
+						if hours_string = 0 then
+							set hours_string to "12"
+						end if
 					end if
 				else
 					set hours_string to (hours_string)
@@ -761,8 +805,9 @@ on list_position_old(this_item, this_list)
 	return 0
 end list_position_old
 
-on list_position(this_item, this_list, is_strict)
-	--	display dialog "!list_post: " & this_item
+on list_position(caller, this_item, this_list, is_strict)
+	log "list_position: " & caller
+	--	display dialog "!list_post: " & this_item 
 	--	display dialog "!list_post2: " & this_list
 	--	display dialog "!list_post3: " & is_strict
 	if this_item ­ false then
@@ -839,11 +884,11 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 		set progress total steps to length of hdhr_device_discovery
 		repeat with i from 1 to length of hdhr_device_discovery
 			set progress completed steps to i
-			set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:DiscoverURL of item i of hdhr_device_discovery, lineup_url:LineupURL of item i of hdhr_device_discovery, device_id:deviceid of item i of hdhr_device_discovery, does_transcode:Transcode of item i of hdhr_device_discovery, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value}
+			set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:DiscoverURL of item i of hdhr_device_discovery, lineup_url:LineupURL of item i of hdhr_device_discovery, device_id:deviceid of item i of hdhr_device_discovery, does_transcode:Transcode of item i of hdhr_device_discovery, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value, channel_mapping:missing value}
 			log last item of HDHR_DEVICE_LIST
 		end repeat
 		--Add a fake device entry to make sure we dont break this for multiple devices.
-		--FIX set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value}
+		set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value, channel_mapping:missing value}
 		log "Length of HDHR_DEVICE_LIST: " & length of HDHR_DEVICE_LIST
 		
 		--We now have a list of tuners, via a list of records in HDHR_TUNERS, now we want to pull a lineup, and a guide.
@@ -949,6 +994,7 @@ on channel_guide(caller, hdhr_device, hdhr_channel, hdhr_time)
 		end repeat
 		--We need to now parse the json object and try to get the start and end times.
 		log "length"
+		--FIX missing value
 		log length of Guide of temp_guide_data
 		repeat with i2 from 1 to length of Guide of temp_guide_data
 			log "$1: " & my getTfromN(StartTime of item i2 of Guide of temp_guide_data)
@@ -1093,7 +1139,7 @@ on save_data()
 	set ref_num to open for access file ((path to documents folder) & savefilename as string) with write permission
 	set eof of ref_num to 0
 	repeat with i from 1 to length of show_info
-		write ("--NEXT SHOW--" & return & show_title of item i of show_info & return & show_time of item i of show_info & return & show_length of item i of show_info & return & my listtostring(show_air_date of item i of show_info, ", ") & return & show_transcode of item i of show_info & return & show_temp_dir of item i of show_info & return & show_dir of item i of show_info & return & show_channel of item i of show_info & return & show_active of item i of show_info & return & show_id of item i of show_info & return & show_recording of item i of show_info & return & show_last of item i of show_info & return & show_next of item i of show_info & return & show_end of item i of show_info & return) & (show_is_series of item i of show_info & return) to ref_num
+		write ("--NEXT SHOW--" & return & show_title of item i of show_info & return & show_time of item i of show_info & return & show_length of item i of show_info & return & my listtostring(show_air_date of item i of show_info, ", ") & return & show_transcode of item i of show_info & return & show_temp_dir of item i of show_info & return & show_dir of item i of show_info & return & show_channel of item i of show_info & return & show_active of item i of show_info & return & show_id of item i of show_info & return & show_recording of item i of show_info & return & show_last of item i of show_info & return & show_next of item i of show_info & return & show_end of item i of show_info & return) & (show_is_series of item i of show_info & return & hdhr_record of item i of show_info) & return to ref_num
 		--write calendar_name & return & the_location & return & Event_name & return & shift_length to ref_num
 	end repeat
 	
@@ -1105,24 +1151,29 @@ on read_data()
 	
 	set ref_num to open for access file hdhr_vcr_config_file --with write permission
 	log ref_num
-	try
-		set hdhr_vcr_config_data to read ref_num
-	on error
-		display dialog "Error"
-		close access ref_num
-		return
-	end try
+	--	try
+	set hdhr_vcr_config_data to read ref_num
+	--on error
+	--	display dialog "Error"
+	--	return
+	-- end try
 	set temp_show_info to {}
 	set hdhr_vcr_config_data_parsed to my stringtolist("read__data", hdhr_vcr_config_data, return)
+	log "read_data"
 	--set temp_show_info_template to {show_title:missing value, show_time:missing value, show_length:missing value, show_air_date:missing value, show_transcode:missing value, show_temp_dir:missing value, show_dir:missing value, show_channel:missing value, show_active:true, show_id:(do shell script "date | md5") as text, show_recording:false, show_last:(current date), show_next:missing value, show_end:missing value, notify_upnext_time:missing value, notify_recording_time:missing value}
 	repeat with i from 1 to length of hdhr_vcr_config_data_parsed
 		if item i of hdhr_vcr_config_data_parsed is "--NEXT SHOW--" then
-			set end of temp_show_info to {show_title:(item (i + 1) of hdhr_vcr_config_data_parsed), show_time:(item (i + 2) of hdhr_vcr_config_data_parsed), show_length:(item (i + 3) of hdhr_vcr_config_data_parsed), show_air_date:my stringtolist("read_data_showairdate", (item (i + 4) of hdhr_vcr_config_data_parsed), ", "), show_transcode:(item (i + 5) of hdhr_vcr_config_data_parsed), show_temp_dir:(item (i + 6) of hdhr_vcr_config_data_parsed) as alias, show_dir:(item (i + 7) of hdhr_vcr_config_data_parsed) as alias, show_channel:(item (i + 8) of hdhr_vcr_config_data_parsed), show_active:(item (i + 9) of hdhr_vcr_config_data_parsed), show_id:(item (i + 10) of hdhr_vcr_config_data_parsed), show_recording:(item (i + 11) of hdhr_vcr_config_data_parsed), show_last:date (item (i + 12) of hdhr_vcr_config_data_parsed), show_next:date (item (i + 13) of hdhr_vcr_config_data_parsed), show_end:date (item (i + 14) of hdhr_vcr_config_data_parsed), notify_upnext_time:missing value, notify_recording_time:missing value, show_is_series:(item (i + 15) of hdhr_vcr_config_data_parsed)}
+			log "read_data_start"
+			log i
+			set end of temp_show_info to {show_title:(item (i + 1) of hdhr_vcr_config_data_parsed), show_time:(item (i + 2) of hdhr_vcr_config_data_parsed), show_length:(item (i + 3) of hdhr_vcr_config_data_parsed), show_air_date:my stringtolist("read_data_showairdate", (item (i + 4) of hdhr_vcr_config_data_parsed), ", "), show_transcode:(item (i + 5) of hdhr_vcr_config_data_parsed), show_temp_dir:(item (i + 6) of hdhr_vcr_config_data_parsed) as alias, show_dir:(item (i + 7) of hdhr_vcr_config_data_parsed) as alias, show_channel:(item (i + 8) of hdhr_vcr_config_data_parsed), show_active:(item (i + 9) of hdhr_vcr_config_data_parsed), show_id:(item (i + 10) of hdhr_vcr_config_data_parsed), show_recording:(item (i + 11) of hdhr_vcr_config_data_parsed), show_last:date (item (i + 12) of hdhr_vcr_config_data_parsed), show_next:date (item (i + 13) of hdhr_vcr_config_data_parsed), show_end:date (item (i + 14) of hdhr_vcr_config_data_parsed), notify_upnext_time:missing value, notify_recording_time:missing value, show_is_series:(item (i + 15) of hdhr_vcr_config_data_parsed), hdhr_record:(item (i + 16) of hdhr_vcr_config_data_parsed)}
 			set show_info to temp_show_info
+			log show_info
 			set show_next of last item of temp_show_info to my nextday(show_id of last item of temp_show_info)
 		end if
 	end repeat
-	log temp_show_info
+	try
+		log "temp_show_info: " & temp_show_info
+	end try
 	close access ref_num
 	--set {calendar_name, the_location, Event_name, shift_length} to stringtolist(ienterdata, return)
 end read_data
@@ -1137,3 +1188,8 @@ on emptylist(klist)
 	end repeat
 	return nlist
 end emptylist
+on get_my_pid()
+	tell application "System Events"
+		return get unix id of (every process whose name is (name of me))
+	end tell
+end get_my_pid
