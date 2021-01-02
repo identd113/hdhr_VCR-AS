@@ -260,14 +260,13 @@ on validate_show_info(show_to_check, should_edit)
 			set temp_channel_offset to my list_position("validate_show_info1", show_channel of item i of show_info, channel_mapping of item tuner_offset of HDHR_DEVICE_LIST, false)
 			set channel_temp to word 1 of item 1 of (choose from list channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with prompt "What channel does this show air on?" default items item temp_channel_offset of channel_mapping of item tuner_offset of HDHR_DEVICE_LIST without empty selection allowed)
 			--	display dialog channel_temp
-			set show_channel of item i of show_info to channel_temp --set show_channel of item i of show_info to word 1 of item 1 of (choose from list channel_list with prompt "What channel does this show air on?" default items show_channel of item i of show_info without empty selection allowed)
+			set show_channel of item i of show_info to channel_temp --set show_channel of item i of show_info to word 1 of item 1 of (choose from list channel_list with prompt "What channel does this show air on?" default items show_channel of item i of show_info without empty selection allowed) 
 		end if
 		--end repeat  
 		
-		if show_time of item i of show_info = missing value or my is_number(show_time of item i of show_info) = false or show_time of item i of show_info ³ 24 or should_edit = true then
+		if show_time of item i of show_info = missing value or show_time of item i of show_info ³ 24 or my is_number(show_time of item i of show_info) = false or should_edit = true then
 			set show_time of item i of show_info to text returned of (display dialog "When does this show air? (use 1-24)" default answer show_time of item i of show_info)
 		end if
-		
 		
 		if show_length of item i of show_info = missing value or my is_number(show_length of item i of show_info) = false or show_length of item i of show_info ² 0 or should_edit = true then
 			set show_length of item i of show_info to text returned of (display dialog "What is the length of this show?" default answer show_length of item i of show_info)
@@ -287,6 +286,7 @@ on validate_show_info(show_to_check, should_edit)
 			set show_next of item i of show_info to my nextday(show_id of item i of show_info)
 		end if
 	end if
+	my save_data()
 end validate_show_info
 
 on setup()
@@ -296,11 +296,19 @@ on setup()
 		--write data here
 		display dialog "We need to allow notifications." & return & "Click \"Next\" to continue." buttons {"Next"} default button 1
 		display notification "Yay!" with title name of me subtitle "Notifications Enabled!"
+		
+		--
+		set temp_dir to alias "Volumes:"
+		repeat until temp_dir ­ alias "Volumes:"
+			set hdhr_setup_alias to choose folder with prompt "Choose default shows directory" default location temp_dir
+		end repeat
+		--
+		
 		set hdhr_setup_transcode to button returned of (display dialog "Use transcoding with \"Extend\" devices?" buttons {"Yes", "No"} default button 2)
 		set hdhr_setup_name_bool to button returned of (display dialog "Use custom naming?" buttons {"Yes", "No"} default button 2)
 		set hdhr_setup_length_bool to button returned of (display dialog "Use custom show length? (minutes)" buttons {"Yes", "No"} default button 2) --default answer "30"
 		set notify_upnext to text returned of (display dialog "How often to show \"Up Next\" update notifications?" default answer notify_upnext)
-		set notify_recording to text returned of (display dialog "How often to show \"Up Next\" update notifications?" default answer notify_recording)
+		set notify_recording to text returned of (display dialog "How often to show \"Recording\" update notifications?" default answer notify_recording)
 		set hdhr_setup_ran to true
 	end if
 	if button returned of hdhr_setup_response = "Delete" then
@@ -388,7 +396,7 @@ on add_show_info(hdhr_device)
 	set temp_show_info to {show_title:missing value, show_time:missing value, show_length:missing value, show_air_date:missing value, show_transcode:missing value, show_temp_dir:missing value, show_dir:missing value, show_channel:missing value, show_active:true, show_id:(do shell script "date | md5") as text, show_recording:false, show_last:(current date), show_next:missing value, show_end:missing value, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:hdhr_device, show_is_series:false}
 	
 	if hdhr_device = "" then
-		if length of HDHR_DEVICE_LIST = 1 then 
+		if length of HDHR_DEVICE_LIST = 1 then
 			set hdhr_device to device_id of item 1 of HDHR_DEVICE_LIST
 		end if
 	end if
@@ -425,18 +433,18 @@ on add_show_info(hdhr_device)
 	--log my channel_guide(hdhr_device, show_channel of temp_show_info, show_time of temp_show_info)
 	--fix we error here if we cannot pull guidedata
 	set hdhr_response_channel to my channel_guide("Add_show_info0", hdhr_device, show_channel of temp_show_info, show_time of temp_show_info)
-	
+	--	log " hdhr_response_channel: " & hdhr_response_channel
 	--FIX
 	--if show_time of temp_show_info > StartTime of  hdhr_response_channel then
 	--set show_time of temp_show_info to StartTime of  hdhr_response_channel
 	--end if
 	--repeat this for the end time as well
 	
-	try
+	if hdhr_response_channel ­ {} then
 		set hdhr_response_channel_title to title of hdhr_response_channel
-	on error
+	else
 		set hdhr_response_channel_title to ""
-	end try
+	end if
 	(*	
 	
 	Fix start time to match the show that is running 
@@ -481,21 +489,21 @@ on add_show_info(hdhr_device)
 		set show_is_series of temp_show_info to false
 	end if
 	--display notification "OK6: " & show_title of temp_show_info 
-	log "@!@"
-	--	log hdhr_response_channel
-	set hdhr_response_length to 30
-	log "StartTime of hdhr_response_channel " & getTfromN(StartTime of hdhr_response_channel)
+	--log "StartTime of hdhr_response_channel " & getTfromN(StartTime of hdhr_response_channel)
 	log (my datetime2epoch("add_show0", current date))
-	if my getTfromN(StartTime of hdhr_response_channel) < my datetime2epoch("add_show0", current date) then
-		set hdhr_response_length to (my getTfromN(StartTime of hdhr_response_channel)) - (my datetime2epoch("add_show0", current date))
+	
+	if hdhr_response_channel ­ {} then
+		if my getTfromN(StartTime of hdhr_response_channel) < my datetime2epoch("add_show0", current date) then
+			set hdhr_response_length to (my getTfromN(StartTime of hdhr_response_channel)) - (my datetime2epoch("add_show0", current date))
+		else
+			set hdhr_response_length to ((EndTime of hdhr_response_channel) - (StartTime of hdhr_response_channel)) div 60
+			log hdhr_response_length
+			
+		end if
 	else
-		--try
-		set hdhr_response_length to ((EndTime of hdhr_response_channel) - (StartTime of hdhr_response_channel)) div 60
-		log hdhr_response_length
-		--on error
-		--	display notification "OK4: " & hdhr_response_channel
-		--end try
+		set hdhr_response_length to 30
 	end if
+	
 	repeat until my is_number(show_length of temp_show_info) and show_length of temp_show_info ³ 1
 		--display notification "OK7: TEST"
 		set show_length of temp_show_info to text returned of (display dialog "How long is this show? (in minutes)" default answer hdhr_response_length)
@@ -1165,7 +1173,7 @@ on read_data()
 		if item i of hdhr_vcr_config_data_parsed is "--NEXT SHOW--" then
 			log "read_data_start"
 			log i
-			set end of temp_show_info to {show_title:(item (i + 1) of hdhr_vcr_config_data_parsed), show_time:(item (i + 2) of hdhr_vcr_config_data_parsed), show_length:(item (i + 3) of hdhr_vcr_config_data_parsed), show_air_date:my stringtolist("read_data_showairdate", (item (i + 4) of hdhr_vcr_config_data_parsed), ", "), show_transcode:(item (i + 5) of hdhr_vcr_config_data_parsed), show_temp_dir:(item (i + 6) of hdhr_vcr_config_data_parsed) as alias, show_dir:(item (i + 7) of hdhr_vcr_config_data_parsed) as alias, show_channel:(item (i + 8) of hdhr_vcr_config_data_parsed), show_active:(item (i + 9) of hdhr_vcr_config_data_parsed), show_id:(item (i + 10) of hdhr_vcr_config_data_parsed), show_recording:(item (i + 11) of hdhr_vcr_config_data_parsed), show_last:date (item (i + 12) of hdhr_vcr_config_data_parsed), show_next:date (item (i + 13) of hdhr_vcr_config_data_parsed), show_end:date (item (i + 14) of hdhr_vcr_config_data_parsed), notify_upnext_time:missing value, notify_recording_time:missing value, show_is_series:(item (i + 15) of hdhr_vcr_config_data_parsed), hdhr_record:(item (i + 16) of hdhr_vcr_config_data_parsed)}
+			set end of temp_show_info to {show_title:(item (i + 1) of hdhr_vcr_config_data_parsed), show_time:(item (i + 2) of hdhr_vcr_config_data_parsed as number), show_length:(item (i + 3) of hdhr_vcr_config_data_parsed), show_air_date:my stringtolist("read_data_showairdate", (item (i + 4) of hdhr_vcr_config_data_parsed), ", "), show_transcode:(item (i + 5) of hdhr_vcr_config_data_parsed), show_temp_dir:(item (i + 6) of hdhr_vcr_config_data_parsed) as alias, show_dir:(item (i + 7) of hdhr_vcr_config_data_parsed) as alias, show_channel:(item (i + 8) of hdhr_vcr_config_data_parsed), show_active:(item (i + 9) of hdhr_vcr_config_data_parsed), show_id:(item (i + 10) of hdhr_vcr_config_data_parsed), show_recording:(item (i + 11) of hdhr_vcr_config_data_parsed), show_last:date (item (i + 12) of hdhr_vcr_config_data_parsed), show_next:date (item (i + 13) of hdhr_vcr_config_data_parsed), show_end:date (item (i + 14) of hdhr_vcr_config_data_parsed), notify_upnext_time:missing value, notify_recording_time:missing value, show_is_series:(item (i + 15) of hdhr_vcr_config_data_parsed), hdhr_record:(item (i + 16) of hdhr_vcr_config_data_parsed)}
 			set show_info to temp_show_info
 			log show_info
 			set show_next of last item of temp_show_info to my nextday(show_id of last item of temp_show_info)
@@ -1175,7 +1183,6 @@ on read_data()
 		log "temp_show_info: " & temp_show_info
 	end try
 	close access ref_num
-	--set {calendar_name, the_location, Event_name, shift_length} to stringtolist(ienterdata, return)
 end read_data
 
 on emptylist(klist)
