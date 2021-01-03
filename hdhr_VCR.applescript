@@ -58,7 +58,7 @@ end hdhr_prepare_record
 on clean_show_info()
 	try
 		repeat with i from 1 to length of show_info
-			if show_id of item i of show_info is "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF" then
+			if show_active of item i of show_info is false then
 				set item (my check_offset(show_id)) of show_info to {}
 			end if
 		end repeat
@@ -113,8 +113,8 @@ on run {}
 	
 	(*
 	This really kicks us off.  The will query to see if there are any HDHomeRun devices on the local network.  This script support multiple devices.
-	Once we find some devices, we will query them and pull there lineup data.  This tells us what channels belong to what tags, like "2,4 TPTN"
-	We will then pull guide data.  It should be said here that this data is only given for 4 hours ahead of current time, some stations maybe 6.  Special considerations have been made in this script to make this work.  We call this handler and specify "run0".  This is just a made up string that we pass to the next handler, so we can see the request came in that broke the sceript.  This is commonly repeated in my scripts.
+	Once we find some devices, we will query them and pull there lineup data.  This tells us what channels belong to what tags, like "2.4 TPTN"
+	We will then pull guide data.  It should be said here that this data is only given for 4 hours ahead of current time, some stations maybe 6.  Special considerations have been made in this script to make this work.  We call this handler and specify "run0".  This is just a made up string that we pass to the next handler, so we can see the request came in that broke the script.  This is commonly repeated in my scripts.
 	*)
 	--Restore any previous state 
 	
@@ -231,7 +231,7 @@ end time_set
 
 on validate_show_info(show_to_check, should_edit)
 	--display dialog show_to_check & " ! " & should_edit
-	--(*show_title:news, show_time:12, show_length:30, show_air_date:Monday, Tuesday, Wednesday, Thursday, show_transcode:false, show_temp_dir:alias Macintosh HD:Users:mike.woodfill:Dropbox:, show_dir:alias Macintosh HD:Users:mike.woodfill:Dropbox:, show_channel:11.1, show_active:true, show_id:bf4fcd8b7ac428594a386b373ef55874, show_recording:false, show_last:date Tuesday, August 30, 2016 at 11:35:04 AM, show_next:date Tuesday, August 30, 2016 at 12:00:00 PM, show_end:date Tuesday, August 30, 2016 at 12:30:00 PM*)
+	--(*show_title:news, show_time:12, show_length:30, show_air_date:Monday, Tuesday, Wednesday, Thursday, show_transcode:false, show_temp_dir:alias Macintosh HD:Users:TEST:Dropbox:, show_dir:alias Macintosh HD:Users:TESTl:Dropbox:, show_channel:11.1, show_active:true, show_id:bf4fcd8b7ac428594a386b373ef55874, show_recording:false, show_last:date Tuesday, August 30, 2016 at 11:35:04 AM, show_next:date Tuesday, August 30, 2016 at 12:00:00 PM, show_end:date Tuesday, August 30, 2016 at 12:30:00 PM*)
 	
 	if show_to_check = "" then
 		repeat with i from 1 to length of show_info
@@ -601,7 +601,7 @@ on idle
 							end try
 							set notify_recording_time of item i of show_info to (current date) + (notify_recording * minutes)
 						end if
-					end if 
+					end if
 				end if
 			end if
 			
@@ -639,7 +639,7 @@ on idle
 					--display notification show_title of item i of show_info & " has ended."
 					--(*
 					if show_is_series of item i of show_info = false then
-						set show_id of item i of show_info to "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+						set show_active of item i of show_info to false
 					end if
 					--Fix channel2name is not used any longer
 					--*)
@@ -996,6 +996,8 @@ end getHDHR_Lineup
 
 on channel_guide(caller, hdhr_device, hdhr_channel, hdhr_time)
 	log "channel_guide: " & caller
+	
+	-- FIX If we try to ebter a show for tomorrow, this will cause guide lookup errors
 	set hdhr_proposed_time to my datetime2epoch("channel_guide", (date (date string of (current date))) + hdhr_time * hours - (time to GMT)) as number
 	set hdhr_proposed_time to my getTfromN(hdhr_proposed_time)
 	
@@ -1159,8 +1161,13 @@ on save_data()
 	set ref_num to open for access file ((path to documents folder) & savefilename as string) with write permission
 	set eof of ref_num to 0
 	repeat with i from 1 to length of show_info
-		write ("--NEXT SHOW--" & return & show_title of item i of show_info & return & show_time of item i of show_info & return & show_length of item i of show_info & return & my listtostring(show_air_date of item i of show_info, ", ") & return & show_transcode of item i of show_info & return & show_temp_dir of item i of show_info & return & show_dir of item i of show_info & return & show_channel of item i of show_info & return & show_active of item i of show_info & return & show_id of item i of show_info & return & show_recording of item i of show_info & return & show_last of item i of show_info & return & show_next of item i of show_info & return & show_end of item i of show_info & return) & (show_is_series of item i of show_info & return & hdhr_record of item i of show_info) & return to ref_num
-		--write calendar_name & return & the_location & return & Event_name & return & shift_length to ref_num
+		if show_active of item i of show_info = true then
+			write ("--NEXT SHOW--" & return & show_title of item i of show_info & return & show_time of item i of show_info & return & show_length of item i of show_info & return & my listtostring(show_air_date of item i of show_info, ", ") & return & show_transcode of item i of show_info & return & show_temp_dir of item i of show_info & return & show_dir of item i of show_info & return & show_channel of item i of show_info & return & show_active of item i of show_info & return & show_id of item i of show_info & return & show_recording of item i of show_info & return & show_last of item i of show_info & return & show_next of item i of show_info & return & show_end of item i of show_info & return) & (show_is_series of item i of show_info & return & hdhr_record of item i of show_info) & return to ref_num
+			--write calendar_name & return & the_location & return & Event_name & return & shift_length to ref_num
+		else
+			log "Removed show."
+		end if
+		
 	end repeat
 	
 	close access ref_num
