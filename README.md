@@ -9,6 +9,9 @@ I call it a VCR app, as while it does use guide data to pull name / season / epi
 #### Requirements
 1. JSONHelper is required, available for free at https://apps.apple.com/us/app/json-helper-for-applescript/id453114608
 
+#### How to use.
+This script needs to be saved as an Application.  The option "Stay open after run handler"  Must be checked for this to work.
+
 #### Features
 * Auto discovery of all HDHomeRun devices on your network
 * Uses built-in guide data, to automatically name the shows you are recording. 
