@@ -55,13 +55,19 @@ on hdhr_prepare_record(hdhr_device)
 	return my listtostring(items 1 thru -2 of temp, "/")
 end hdhr_prepare_record
 
-on remove_show_info(caller, show_id, should_edit)
-	
-	
-	if show_id is "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF" then
-	end if
-	
-end remove_show_info
+on clean_show_info()
+	try
+		repeat with i from 1 to length of show_info
+			if show_id of item i of show_info is "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF" then
+				set item (my check_offset(show_id)) of show_info to {}
+			end if
+		end repeat
+		set show_info to my emptylist(show_info)
+		return true
+	on error
+		return false
+	end try
+end clean_show_info
 
 on remove_show(caller, show_id, should_edit)
 	log "remove_show: " & caller
@@ -264,7 +270,7 @@ on validate_show_info(show_to_check, should_edit)
 		end if
 		--end repeat  
 		
-		if show_time of item i of show_info = missing value or show_time of item i of show_info ³ 24 or my is_number(show_time of item i of show_info) = false or should_edit = true then
+		if show_time of item i of show_info = missing value or (show_time of item i of show_info as number) ³ 24 or my is_number(show_time of item i of show_info) = false or should_edit = true then
 			set show_time of item i of show_info to text returned of (display dialog "When does this show air? (use 1-24)" default answer show_time of item i of show_info)
 		end if
 		
@@ -577,6 +583,7 @@ on idle
 			if show_active of item i of show_info = true then
 				if show_next of item i of show_info < cd_object then
 					if show_recording of item i of show_info = false then
+						--FIX the above line would cause some issues when quitting/re opening.  We should resume more gracefully
 						set show_runtime to (show_end of item i of show_info) - (current date)
 						my record_now((show_id of item i of show_info), show_runtime)
 						display notification "Ends " & my short_date("rec started", show_end of item i of show_info, false) with title "Started Recording on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
@@ -586,9 +593,15 @@ on idle
 						--display notification show_title of item i of show_info & " is recording until " & my short_date("recording", show_end of item i of show_info)
 						if notify_recording_time of item i of show_info < (current date) or notify_recording_time of item i of show_info = missing value then
 							display notification "Ends " & my short_date("rec progress", show_end of item i of show_info, false) & " (" & (my sec_to_time((show_end of item i of show_info) - (current date))) & ") " with title "Recording in progress on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
+							--try to refresh the file, so it shows it refreshes finder.
+							try
+								do shell script "touch \"" & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now", current date, true) & ".m2ts\"")
+							on error
+								display notification "touch \"" & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now", current date, true) & ".m2ts\"")
+							end try
 							set notify_recording_time of item i of show_info to (current date) + (notify_recording * minutes)
 						end if
-					end if
+					end if 
 				end if
 			end if
 			
@@ -609,7 +622,7 @@ on idle
 					--set progress description to "Next up... (" & hdhr_record of item i of show_info & ")"
 					--set progress additional description to "Starts: " & my short_date("is_next", show_next of item i of show_info, false)
 					
-					--We see this message very often, lets make sure we only display up next shows just for that day, or within ~ 8 hours.
+					--We see this message very often, lets make sure we only display up next shows just for today. 
 					display notification "Starts: " & my short_date("is_next", show_next of item i of show_info, false) with title "Next UP on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info, hdhr_record of item i of show_info) & ")"
 					set notify_upnext_time of item i of show_info to (current date) + (notify_upnext * minutes)
 				end if
@@ -624,18 +637,16 @@ on idle
 					set show_next of item i of show_info to my nextday(show_id of item i of show_info)
 					set show_recording of item i of show_info to false
 					--display notification show_title of item i of show_info & " has ended."
-					(*
+					--(*
 					if show_is_series of item i of show_info = false then
-						if my remove_show("idle1", show_id of item i of show_info, false) = true then
-							display notification "The show has been removed."
-						else
-							display notification "We have a problem in idle"
-						end if
-					else
-						--Fix channel2name is not used any longer
-						display notification "Next Showing: " & my short_date("rec_end", show_next of item i of show_info, false) with title "Recording Complete." subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
+						set show_id of item i of show_info to "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
 					end if
-				*)
+					--Fix channel2name is not used any longer
+					--*)
+					display notification "Next Showing: " & my short_date("rec_end", show_next of item i of show_info, false) with title "Recording Complete." subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
+					
+					
+					
 					--This needs to happen not in the idle loop.  Since we loop the stored tv shows (show_info), and we are still inside of the repeat loop, we end up trying to walk past the list, kind of a off by 1 error.
 					--We can remove these shows on app start, before we start walking the idle loop.  If we want to remove a show, we have to make sure we are not in a loop inside of the idle handler.  We can create an idle lock bit, which can increase the call back time to a much higer number, run our code, and then "unlock" the loop.  This all sounds very sloppy, and i dont like it.  We may just need to mark the show entries as dirty, likely by making making the show_id a missing value.  We would need to clear this out before we get stuck in a repeat loop.  This sounds cleaner.  This also means we need to remove references of the remove_show_info handler, and stick this in the idle handler, which can have its own host of issues.
 				end if
@@ -643,6 +654,7 @@ on idle
 			
 		end repeat
 	end if
+	my clean_show_info()
 	return 16
 end idle
 
@@ -1173,7 +1185,7 @@ on read_data()
 		if item i of hdhr_vcr_config_data_parsed is "--NEXT SHOW--" then
 			log "read_data_start"
 			log i
-			set end of temp_show_info to {show_title:(item (i + 1) of hdhr_vcr_config_data_parsed), show_time:(item (i + 2) of hdhr_vcr_config_data_parsed as number), show_length:(item (i + 3) of hdhr_vcr_config_data_parsed), show_air_date:my stringtolist("read_data_showairdate", (item (i + 4) of hdhr_vcr_config_data_parsed), ", "), show_transcode:(item (i + 5) of hdhr_vcr_config_data_parsed), show_temp_dir:(item (i + 6) of hdhr_vcr_config_data_parsed) as alias, show_dir:(item (i + 7) of hdhr_vcr_config_data_parsed) as alias, show_channel:(item (i + 8) of hdhr_vcr_config_data_parsed), show_active:(item (i + 9) of hdhr_vcr_config_data_parsed), show_id:(item (i + 10) of hdhr_vcr_config_data_parsed), show_recording:(item (i + 11) of hdhr_vcr_config_data_parsed), show_last:date (item (i + 12) of hdhr_vcr_config_data_parsed), show_next:date (item (i + 13) of hdhr_vcr_config_data_parsed), show_end:date (item (i + 14) of hdhr_vcr_config_data_parsed), notify_upnext_time:missing value, notify_recording_time:missing value, show_is_series:(item (i + 15) of hdhr_vcr_config_data_parsed), hdhr_record:(item (i + 16) of hdhr_vcr_config_data_parsed)}
+			set end of temp_show_info to {show_title:(item (i + 1) of hdhr_vcr_config_data_parsed), show_time:(item (i + 2) of hdhr_vcr_config_data_parsed), show_length:(item (i + 3) of hdhr_vcr_config_data_parsed), show_air_date:my stringtolist("read_data_showairdate", (item (i + 4) of hdhr_vcr_config_data_parsed), ", "), show_transcode:(item (i + 5) of hdhr_vcr_config_data_parsed), show_temp_dir:(item (i + 6) of hdhr_vcr_config_data_parsed) as alias, show_dir:(item (i + 7) of hdhr_vcr_config_data_parsed) as alias, show_channel:(item (i + 8) of hdhr_vcr_config_data_parsed), show_active:(item (i + 9) of hdhr_vcr_config_data_parsed), show_id:(item (i + 10) of hdhr_vcr_config_data_parsed), show_recording:(item (i + 11) of hdhr_vcr_config_data_parsed), show_last:date (item (i + 12) of hdhr_vcr_config_data_parsed), show_next:date (item (i + 13) of hdhr_vcr_config_data_parsed), show_end:date (item (i + 14) of hdhr_vcr_config_data_parsed), notify_upnext_time:missing value, notify_recording_time:missing value, show_is_series:(item (i + 15) of hdhr_vcr_config_data_parsed), hdhr_record:(item (i + 16) of hdhr_vcr_config_data_parsed)}
 			set show_info to temp_show_info
 			log show_info
 			set show_next of last item of temp_show_info to my nextday(show_id of last item of temp_show_info)
@@ -1195,7 +1207,9 @@ on emptylist(klist)
 	end repeat
 	return nlist
 end emptylist
+
 on get_my_pid()
+	--helpful for debugging, but throws an extra permission ns prompt, so not worth calling to.
 	tell application "System Events"
 		return get unix id of (every process whose name is (name of me))
 	end tell

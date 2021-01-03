@@ -11,7 +11,6 @@ I call it a VCR app, as while it does use guide data to pull name / season / epi
 
 #### Features
 * Auto discovery of all HDHomeRun devices on your network
-* Support multiple tuners on the network!
 * Uses built-in guide data, to automatically name the shows you are recording. 
 * * The free guide data is only for the next 4-6 hours. We will attempt to pull fresh data right before a show starts, so in most cases, the information does get pulled correctly. I believe if you pay for HDHomeRuns own DVR software, the guide data is much longer, and the script would handle that.
 * Runs in the background, but allows easy editing of existing saved shows
@@ -47,7 +46,7 @@ The hdhr_guide and hdhr_lineup contain the entire json result of the lineup, and
 *When you enter the time to start a recording, it is done a bit strangely. For example, if you wanted to record a show at 6:45 PM, you would enter 18.75.
 * * We use 24 hour decimal time.  .5 of an hour, is 30 minutes.  .75 of an hour is 45 minutes.
 * If you have a HDHomeRun Extend device, this will allow you to set a transcode level per show.  A future version will allow a default for all shows
-* Uses caffentite to kick off the recording
+* Uses caffeinate to kick off the recording
 * * This prevents the device from going to sleep.
 * If there are multiple HDHR device on the network, you will be asked which one you want to use.
 * * I am trying to figure out how to make this better, but as is, asks.
@@ -61,12 +60,14 @@ The hdhr_guide and hdhr_lineup contain the entire json result of the lineup, and
 I want to make this better as well, but AppleScript has very limited ways to interact with the user.  Notifications make sense to me, as the app is faceless/background app
 
 When adding channels, you are presented with a list of available channels, with station name, example:
+```
   2.1 TPT2
   2.3 TPTLife
   ...
   ...
-  
-When adding a show, we will attempt to write a test file to that location (and remove it) right away, so we can get through any of the OSX disk access prompts.
+```
+
+When adding a show, we will attempt to write a test file to that location (and remove it) right away, so we can get through any of the OS X disk access prompts.
 
 I hope this can be collaborative project, so other options that you use can be added.
 
