@@ -1,1 +1,2 @@
-*.applescript text
+* text=auto
+*.applescript  diff=astextplain
