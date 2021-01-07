@@ -560,7 +560,11 @@ on add_show_info(hdhr_device)
 		set default_record_day to ""
 	end if
 	
-	set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} with prompt "Please choose the days this show airs." default items default_record_day with multiple selections allowed without empty selection allowed)
+	if show_is_series of temp_show_info = true then
+		set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} with prompt "Please choose the days this series airs." default items default_record_day with multiple selections allowed without empty selection allowed)
+	else
+		set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} with prompt "Please choose the day this show airs." default items default_record_day without empty selection allowed)
+	end if
 	
 	set temp_dir to alias "Volumes:"
 	repeat until temp_dir ­ alias "Volumes:"
@@ -1044,7 +1048,7 @@ on channel_guide(caller, hdhr_device, hdhr_channel, hdhr_time)
 	
 	set hdhr_proposed_time to my datetime2epoch("channel_guide", (date (date string of ((current date) + time_slide * days))) + hdhr_time * hours - (time to GMT)) as number
 	set hdhr_proposed_time to my getTfromN(hdhr_proposed_time)
-	
+	set time_slide to 0
 	log "hdhr_proposed_time"
 	log hdhr_proposed_time
 	log "---"
