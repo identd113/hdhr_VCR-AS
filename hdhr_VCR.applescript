@@ -693,10 +693,13 @@ on idle
 					if show_is_series of item i of show_info = false then
 						set show_active of item i of show_info to false
 					end if
-					--Fix channel2name is not used any longer
-					--*)
-					display notification "Next Showing: " & my short_date("rec_end", show_next of item i of show_info, false) with title character id 9209 & " Recording Complete." subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
-					
+					--Fix channel2name is not used any longer 
+					--*) 
+					if show_is_series of item i of show_info = true then
+						display notification "Next Showing: " & my short_date("rec_end", show_next of item i of show_info, false) with title character id 9209 & " Recording Complete." subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
+					else
+						display notification "Show marked for removal" with title character id 9209 & " Recording Complete." subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
+					end if
 					
 					
 					--This needs to happen not in the idle loop.  Since we loop the stored tv shows (show_info), and we are still inside of the repeat loop, we end up trying to walk past the list, kind of a off by 1 error.
