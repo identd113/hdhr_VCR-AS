@@ -25,6 +25,7 @@ global notify_upnext
 global notify_recording
 global hdhr_setup_ran
 global savefilename
+global time_slide
 
 --{hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value}
 -- nextup is currently a property, so this value persists through application restarts.  Big Sir will disallow this ability.  I need to be make this a global.  Does one really need to write 
@@ -111,6 +112,7 @@ on run {}
 	set hdhr_setup_name_bool to "No"
 	set hdhr_setup_length_bool to "No"
 	set savefilename to "hdhr_VCR.config"
+	set time_slide to 0
 	--We will try to autodiscover the HDHR device on the network, and throw it into a record.
 	log "run()"
 	
@@ -377,6 +379,8 @@ on main()
 			end if
 			if show_is_series of item i of show_info = true then
 				set temp_show_line to character id 128257 & temp_show_line
+			else
+				set temp_show_line to character id {49, 65039, 8419} & temp_show_line
 			end if
 			set end of show_list to temp_show_line
 		end repeat
@@ -423,6 +427,7 @@ on add_show_info(hdhr_device)
 	
 	if hdhr_device = "" then
 		if length of HDHR_DEVICE_LIST = 1 then
+			--fix Add multiple tuner prompt
 			set hdhr_device to device_id of item 1 of HDHR_DEVICE_LIST
 		end if
 	end if
@@ -459,7 +464,13 @@ on add_show_info(hdhr_device)
 	--log my channel_guide(hdhr_device, show_channel of temp_show_info, show_time of temp_show_info)
 	--fix we error here if we cannot pull guidedata
 	set hdhr_response_channel to my channel_guide("Add_show_info0", hdhr_device, show_channel of temp_show_info, show_time of temp_show_info)
-	--	log " hdhr_response_channel: " & hdhr_response_channel
+	--log " hdhr_response_channel: " & hdhr_response_channel
+	--log "start time: " & getTfromN(StartTime of hdhr_response_channel)
+	--fixme!
+	--log "proposed time: " & my datetime2epoch("time_fix1", my time_set((current date), show_time of temp_show_info))
+	--	(*start time: 1.609974E+9*)
+	-- (*proposed time: 17.5*)
+	
 	--FIX
 	--if show_time of temp_show_info > StartTime of  hdhr_response_channel then
 	--set show_time of temp_show_info to StartTime of  hdhr_response_channel
@@ -544,7 +555,7 @@ on add_show_info(hdhr_device)
 	
 	--fix We need to ensure we are able to pull guide data, if not, we set to ""
 	if hdhr_response_channel_title ­ "" then
-		set default_record_day to (weekday of (current date)) as text
+		set default_record_day to (weekday of ((current date) + time_slide * days)) as text
 	else
 		set default_record_day to ""
 	end if
@@ -612,13 +623,13 @@ on idle
 						--FIX the above line would cause some issues when quitting/re opening.  We should resume more gracefully
 						set show_runtime to (show_end of item i of show_info) - (current date)
 						my record_now((show_id of item i of show_info), show_runtime)
-						display notification "Ends " & my short_date("rec started", show_end of item i of show_info, false) with title "Started Recording on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
+						display notification "Ends " & my short_date("rec started", show_end of item i of show_info, false) with title character id 9210 & " Started Recording on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
 						set notify_recording_time of item i of show_info to (current date) + (2 * minutes)
 						--display notification show_title of item i of show_info & " on channel " & show_channel of item i of show_info & " started for " & show_runtime of item i of show_info & " minutes."
 					else
 						--display notification show_title of item i of show_info & " is recording until " & my short_date("recording", show_end of item i of show_info)
 						if notify_recording_time of item i of show_info < (current date) or notify_recording_time of item i of show_info = missing value then
-							display notification "Ends " & my short_date("rec progress", show_end of item i of show_info, false) & " (" & (my sec_to_time((show_end of item i of show_info) - (current date))) & ") " with title "Recording in progress on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
+							display notification "Ends " & my short_date("rec progress", show_end of item i of show_info, false) & " (" & (my sec_to_time((show_end of item i of show_info) - (current date))) & ") " with title character id {9654, 65039} & " Recording in progress on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
 							--try to refresh the file, so it shows it refreshes finder.
 							try
 								my update_folder(show_dir of item i of show_info)
@@ -669,7 +680,7 @@ on idle
 					end if
 					--Fix channel2name is not used any longer
 					--*)
-					display notification "Next Showing: " & my short_date("rec_end", show_next of item i of show_info, false) with title "Recording Complete." subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
+					display notification "Next Showing: " & my short_date("rec_end", show_next of item i of show_info, false) with title character id 9209 & " Recording Complete." subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
 					
 					
 					
@@ -779,7 +790,6 @@ end listtostring
 on short_date(the_caller, the_date_object, twentyfourtime)
 	--	set twentyfourtime to true
 	set timeAMPM to ""
-	--Fix add option to allow for AM/PM times
 	--takes date object, and coverts to a shorter time string
 	if the_date_object ­ "?" then
 		if the_date_object ­ "" then
@@ -1025,9 +1035,14 @@ end getHDHR_Lineup
 
 on channel_guide(caller, hdhr_device, hdhr_channel, hdhr_time)
 	log "channel_guide: " & caller
+	set time_slide to 0
+	if (hdhr_time + 1) < hours of (current date) then
+		set time_slide to 1
+	end if
 	
-	-- FIX If we try to ebter a show for tomorrow, this will cause guide lookup errors
-	set hdhr_proposed_time to my datetime2epoch("channel_guide", (date (date string of (current date))) + hdhr_time * hours - (time to GMT)) as number
+	-- FIX If we try to enter a show for tomorrow, this will cause guide lookup errors, added time_slide to catch this, we will see if it works.
+	
+	set hdhr_proposed_time to my datetime2epoch("channel_guide", (date (date string of ((current date) + time_slide * days))) + hdhr_time * hours - (time to GMT)) as number
 	set hdhr_proposed_time to my getTfromN(hdhr_proposed_time)
 	
 	log "hdhr_proposed_time"
