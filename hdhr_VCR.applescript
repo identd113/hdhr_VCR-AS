@@ -465,9 +465,9 @@ on add_show_info(hdhr_device)
 	--fix we error here if we cannot pull guidedata
 	set hdhr_response_channel to my channel_guide("Add_show_info0", hdhr_device, show_channel of temp_show_info, show_time of temp_show_info)
 	--log " hdhr_response_channel: " & hdhr_response_channel
-	--log "start time: " & getTfromN(StartTime of hdhr_response_channel)
+	log "start time: " & getTfromN(StartTime of hdhr_response_channel)
 	--fixme!
-	--log "proposed time: " & my datetime2epoch("time_fix1", my time_set((current date), show_time of temp_show_info))
+	log "proposed time: " & my datetime2epoch("time_fix1", my time_set((current date), show_time of temp_show_info))
 	--	(*start time: 1.609974E+9*)
 	-- (*proposed time: 17.5*)
 	
@@ -560,10 +560,15 @@ on add_show_info(hdhr_device)
 		set default_record_day to ""
 	end if
 	
+	
 	if show_is_series of temp_show_info = true then
 		set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} with prompt "Please choose the days this series airs." default items default_record_day with multiple selections allowed without empty selection allowed)
 	else
 		set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} with prompt "Please choose the day this show airs." default items default_record_day without empty selection allowed)
+	end if
+	
+	if show_air_date of temp_show_info = false then
+		return
 	end if
 	
 	set temp_dir to alias "Volumes:"
@@ -1211,6 +1216,7 @@ on save_data()
 	--end try
 	set eof of ref_num to 0
 	repeat with i from 1 to length of show_info
+		(*
 		log "show_title of item i of show_info"
 		log class of show_title of item i of show_info
 		log "show_time of item i of show_info"
@@ -1245,6 +1251,7 @@ on save_data()
 		log class of show_is_series of item i of show_info
 		log "hdhr_record of item i of show_info"
 		log class of hdhr_record of item i of show_info
+		*)
 		if show_active of item i of show_info = true then
 			write ("--NEXT SHOW--" & return & show_title of item i of show_info & return & show_time of item i of show_info & return & show_length of item i of show_info & return & my listtostring(show_air_date of item i of show_info, ", ") & return & show_transcode of item i of show_info & return & show_temp_dir of item i of show_info & return & show_dir of item i of show_info & return & show_channel of item i of show_info & return & show_active of item i of show_info & return & show_id of item i of show_info & return & show_recording of item i of show_info & return & show_last of item i of show_info & return & show_next of item i of show_info & return & show_end of item i of show_info & return) & (show_is_series of item i of show_info & return & hdhr_record of item i of show_info) & return to ref_num
 			--write calendar_name & return & the_location & return & Event_name & return & shift_length to ref_num
@@ -1285,6 +1292,7 @@ on read_data()
 		try
 			log "temp_show_info: " & temp_show_info
 		end try
+		(*
 		log "show_title of item 1 of show_info"
 		log class of show_title of item 1 of show_info
 		log "show_time of item 1 of show_info"
@@ -1319,6 +1327,7 @@ on read_data()
 		log class of show_is_series of item 1 of show_info
 		log "hdhr_record of item 1 of show_info"
 		log class of hdhr_record of item 1 of show_info
+	*)
 	end try
 	close access ref_num
 end read_data
