@@ -249,7 +249,7 @@ on validate_show_info(show_to_check, should_edit)
 		log "Show_air_date: " & show_title of item i of show_info
 		if show_title of item i of show_info = missing value or show_title of item i of show_info = "" or should_edit = true then
 			--fix me
-			set show_title_temp to display dialog "What is the title of this show, and is it a series?" & return & "Show Active: " & show_active of item i of show_info & return & "Show Recording: " & show_recording of item i of show_info & return & "Series: " & show_is_series of item i of show_info buttons {"Series", "Single"} default button "Single" default answer show_title of item i of show_info
+			set show_title_temp to display dialog "What is the title of this show, and is it a series?" & return & "Show Active: " & show_active of item i of show_info & return & "Show Recording: " & show_recording of item i of show_info & return & "Series: " & show_is_series of item i of show_info buttons {"Cancel", "Series", "Single"} default button "Single" default answer show_title of item i of show_info
 			--set show_title of item i of show_info to text returned of show_title_temp
 			if button returned of show_title_temp = "Series" then
 				display notification "1"
@@ -465,9 +465,15 @@ on add_show_info(hdhr_device)
 	--fix we error here if we cannot pull guidedata
 	set hdhr_response_channel to my channel_guide("Add_show_info0", hdhr_device, show_channel of temp_show_info, show_time of temp_show_info)
 	--log " hdhr_response_channel: " & hdhr_response_channel
-	log "start time: " & getTfromN(StartTime of hdhr_response_channel)
+	if hdhr_response_channel ­ {} then
+		set show_time_adjusted to my epoch2show_time(getTfromN(StartTime of hdhr_response_channel))
+		if show_time of temp_show_info ­ show_time_adjusted then
+			display notification "Show Time changed to " & show_time_adjusted
+			set show_time of temp_show_info to show_time_adjusted
+		end if
+	end if
+	--	log "start time: " & my epoch2show_time(getTfromN(StartTime of hdhr_response_channel))
 	--fixme!
-	log "proposed time: " & my datetime2epoch("time_fix1", my time_set((current date), show_time of temp_show_info))
 	--	(*start time: 1.609974E+9*)
 	-- (*proposed time: 17.5*)
 	
@@ -515,7 +521,7 @@ on add_show_info(hdhr_device)
 	end try
 	
 	--set show_title of temp_show_info to text returned of (display dialog "What is the title of this show?" default answer hdhr_response_channel_title)
-	set show_title_temp to display dialog "What is the title of this show, and is it a series?" buttons {"Series", "Single"} default button "Single" default answer hdhr_response_channel_title
+	set show_title_temp to display dialog "What is the title of this show, and is it a series?" buttons {"Cancel", "Series", "Single"} default button "Single" default answer hdhr_response_channel_title
 	set show_title of temp_show_info to text returned of show_title_temp
 	--if show_title of temp_show_info contains " " then
 	--set show_title of temp_show_info to my listtostring(my stringtolist("show title", show_title of temp_show_info, " "), "_")
@@ -1209,6 +1215,39 @@ on epoch()
 		return epoch_time
 	end if
 end epoch
+
+on epoch2datetime(epochseconds)
+	
+	try
+		set unix_time to (characters 1 through 10 of epochseconds) as text
+	on error
+		set unix_time to epochseconds
+	end try
+	set epoch_time to my epoch()
+	
+	log "epoch_time: " & epoch_time
+	
+	--epoch_time is now current unix epoch time as a date object
+	set epochOFFSET to (epoch_time + (unix_time as number) + (time to GMT))
+	log "epochOFFSET: " & epochOFFSET & " " & epochseconds
+	return epochOFFSET
+end epoch2datetime
+
+on epoch2show_time(epoch)
+	set show_time_temp to my epoch2datetime(epoch)
+	log "--"
+	log show_time_temp
+	log "--"
+	set show_time_temp_hours to hours of show_time_temp
+	log show_time_temp_hours
+	set show_time_temp_minutes to minutes of show_time_temp
+	if show_time_temp_minutes ­ 0 then
+		return (show_time_temp_hours & "." & (round (100 / (60 / show_time_temp_minutes)) rounding down) as text)
+	else
+		return (show_time_temp_hours)
+	end if
+end epoch2show_time
+
 
 on save_data()
 	--try
