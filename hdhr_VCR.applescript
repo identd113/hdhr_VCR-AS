@@ -337,6 +337,17 @@ on main()
 	--This will make sure that data we have stored is valid
 	my validate_show_info("", false)
 	my build_channel_list("main0", "")
+	
+	--This will mark shows as inactive (single show recording that has already passed)
+	set show_info_length to length of show_info
+	if show_info_length > 0 then
+		repeat with i from 1 to show_info_length
+			if show_last of item i of show_info ­ my epoch() and show_is_series of item i of show_info = false then
+				set show_active of item i of show_info to false
+			end if
+		end repeat
+	end if
+	
 	--Collect the temporary name.  This will likely be over written once we can pull guide data
 	set title_response to (display dialog "Would you like to add a show?" buttons {"Shows..", "Add..", "Run.."} with title hdhr_VCR_version giving up after dialog_timeout with icon note default button 2)
 	if button returned of title_response = "Add.." then
@@ -421,7 +432,7 @@ on add_show_info(hdhr_device)
 	
 	set tuner_offset to my HDHRDeviceSearch("add_show_info0", hdhr_device)
 	set show_channel to missing value
-	set temp_show_info to {show_title:missing value, show_time:missing value, show_length:missing value, show_air_date:missing value, show_transcode:missing value, show_temp_dir:missing value, show_dir:missing value, show_channel:missing value, show_active:true, show_id:(do shell script "date | md5") as text, show_recording:false, show_last:(current date), show_next:missing value, show_end:missing value, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:hdhr_device, show_is_series:false}
+	set temp_show_info to {show_title:missing value, show_time:missing value, show_length:missing value, show_air_date:missing value, show_transcode:missing value, show_temp_dir:missing value, show_dir:missing value, show_channel:missing value, show_active:true, show_id:(do shell script "date | md5") as text, show_recording:false, show_last:my epoch(), show_next:missing value, show_end:missing value, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:hdhr_device, show_is_series:false}
 	
 	if hdhr_device = "" then
 		if length of HDHR_DEVICE_LIST = 1 then
@@ -579,7 +590,7 @@ on add_show_info(hdhr_device)
 		set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title hdhr_VCR_version OK button name "Next.." cancel button name "Run" with prompt "Select the days you wish to record." & return & "If this is a series, you can select multiple days." without empty selection allowed)
 	end if
 	
-	if show_air_date of temp_show_info = false then 
+	if show_air_date of temp_show_info = false then
 		return
 	end if
 	
@@ -675,13 +686,13 @@ on idle
 					--	set progress description to "Loading ..."
 					--  set progress additional description to
 					--	set progress completed steps to 0
-					--	set progress total steps to 1
+					--	set progress total steps to 1 
 					
 					--set progress description to "Next up... (" & hdhr_record of item i of show_info & ")"
 					--set progress additional description to "Starts: " & my short_date("is_next", show_next of item i of show_info, false)
 					
 					--We see this message very often, lets make sure we only display up next shows just for today. 
-					display notification "Starts: " & my short_date("is_next", show_next of item i of show_info, false) with title "Next UP on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info, hdhr_record of item i of show_info) & ")"
+					display notification "Starts: " & my short_date("is_next", show_next of item i of show_info, false) with title character id 128284 & " Next UP on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info, hdhr_record of item i of show_info) & ")"
 					set notify_upnext_time of item i of show_info to (current date) + (notify_upnext * minutes)
 				end if
 				--	set delay_count to 0 
@@ -694,16 +705,11 @@ on idle
 					set show_last of item i of show_info to show_end of item i of show_info
 					set show_next of item i of show_info to my nextday(show_id of item i of show_info)
 					set show_recording of item i of show_info to false
-					--display notification show_title of item i of show_info & " has ended."
-					--(*
-					if show_is_series of item i of show_info = false then
-						set show_active of item i of show_info to false
-					end if
 					--Fix channel2name is not used any longer 
-					--*) 
 					if show_is_series of item i of show_info = true then
 						display notification "Next Showing: " & my short_date("rec_end", show_next of item i of show_info, false) with title character id 9209 & " Recording Complete." subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
 					else
+						set show_active of item i of show_info to false
 						display notification "Show marked for removal" with title character id 9209 & " Recording Complete." subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
 					end if
 					
@@ -712,7 +718,6 @@ on idle
 					--We can remove these shows on app start, before we start walking the idle loop.  If we want to remove a show, we have to make sure we are not in a loop inside of the idle handler.  We can create an idle lock bit, which can increase the call back time to a much higer number, run our code, and then "unlock" the loop.  This all sounds very sloppy, and i dont like it.  We may just need to mark the show entries as dirty, likely by making making the show_id a missing value.  We would need to clear this out before we get stuck in a repeat loop.  This sounds cleaner.  This also means we need to remove references of the remove_show_info handler, and stick this in the idle handler, which can have its own host of issues.
 				end if
 			end if
-			
 		end repeat
 	end if
 	return 16
@@ -731,7 +736,7 @@ on record_now(the_show_id, opt_show_length)
 	on error
 		set hdhr_response_channel_title to ""
 	end try
-	
+	 
 	try
 		set hdhr_response_channel_title to hdhr_response_channel_title & " " & EpisodeNumber of hdhr_response_channel
 	end try
