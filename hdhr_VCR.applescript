@@ -63,7 +63,8 @@ use application "JSON Helper"
 on check_version()
 	set version_response to (fetch JSON from version_url)
 	set version_remote to hdhr_version of item 1 of versions of version_response
-	
+	log "Remote: " & version_remote
+	log "Local: " & version_local
 	if version_remote > version_local then
 		display notification changelog of item 1 of versions of version_response with title character id 127381 & " Update Available!" subtitle name of me & " " & version_remote
 	end if
@@ -116,7 +117,7 @@ on notify_user(the_showid)
 end notify_user
 
 on run {}
-	set version_local to "20200107"
+	set version_local to "20210106"
 	set progress description to "Loading " & name of me & " " & version_local
 	--set globals 
 	set show_info to {}
