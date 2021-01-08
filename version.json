@@ -2,13 +2,11 @@
 	"versions": 
 [
 {
-"hdhr_version": "2.2",
-"release_date": "20210106",
-"changelog": "This is a test"
+"hdhr_version": "20210106",
+"changelog": "* We will alert you if there is a new versions!"
 },
 {
-"hdhr_version":"2.1",
-"release_date":"20210105",
+"hdhr_version":"20210106",
 "changelog":"Moar Tests!"
 }
 
