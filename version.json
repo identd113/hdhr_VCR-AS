@@ -1,7 +1,16 @@
 {
-	"versions": [{
-		"hdhr_version": "2.2",
-		"release_date": "20210106",
-		"changelog": "This is a test"
-	}]
+	"versions": 
+[
+{
+"hdhr_version": "2.2",
+"release_date": "20210106",
+"changelog": "This is a test"
+},
+{
+"hdhr_version":"2.1",
+"release_date":"20210105",
+"changelog":"Moar Tests!"
+}
+
+]
 }
