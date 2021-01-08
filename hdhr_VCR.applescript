@@ -101,7 +101,7 @@ on notify_user(the_showid)
 end notify_user
 
 on run {}
-	set hdhr_VCR_version to name of me & " " & version of me
+	set hdhr_VCR_version to name of me & " " & "2.1"
 	set progress description to "Loading " & hdhr_VCR_version
 	--set globals 
 	set show_info to {}
@@ -940,6 +940,11 @@ on quit {}
 			my save_data()
 			continue quit
 		end try
+	end if
+	
+	if quit_response = "No" then
+		my save_data()
+		continue quit
 	end if
 	
 	if quit_response = "Go Back" then
