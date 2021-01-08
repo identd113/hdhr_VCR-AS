@@ -1,4 +1,7 @@
 {
-	"hdhr_version": "2.2",
-	"changelog": "This is a test"
+	"versions": [{
+		"hdhr_version": "2.2",
+		"release_date": "20210106",
+		"changelog": "This is a test"
+	}]
 }
