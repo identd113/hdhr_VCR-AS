@@ -205,7 +205,7 @@ on nextday(the_show_id)
 	log "length of show info: " & length of show_info
 	repeat with i from 0 to 7
 		if the_show_id = show_id of item show_offset of show_info then
-			log "Shows match"
+			--log "Shows match"
 			if (weekday of (cd_object + i * days) as text) is in show_air_date of item show_offset of show_info then
 				log "1: " & (weekday of (cd_object + i * days)) & " is in " & show_air_date of item show_offset of show_info as string
 				log "2: " & (my time_set((cd_object + i * days), (show_time of item show_offset of show_info))) + ((show_length of item show_offset of show_info) * minutes)
@@ -248,8 +248,8 @@ on validate_show_info(show_to_check, should_edit)
 		log i
 		log "Show_air_date: " & show_title of item i of show_info
 		if show_title of item i of show_info = missing value or show_title of item i of show_info = "" or should_edit = true then
-			--fix me
-			set show_title_temp to display dialog "What is the title of this show, and is it a series?" & return & "Show Active: " & show_active of item i of show_info & return & "Show Recording: " & show_recording of item i of show_info & return & "Series: " & show_is_series of item i of show_info buttons {"Cancel", "Series", "Single"} default button "Single" default answer show_title of item i of show_info
+			--fixme
+			set show_title_temp to display dialog "What is the title of this show, and is it a series?" & return & "Next Showing: " & my short_date("validate_show", show_next of item i of show_info, true) buttons {"Cancel", "Series", "Single"} default button "Single" default answer show_title of item i of show_info
 			--set show_title of item i of show_info to text returned of show_title_temp
 			if button returned of show_title_temp = "Series" then
 				display notification "1"
@@ -922,21 +922,17 @@ on quit {}
 	
 	if quit_response = "Yes" then
 		try
-			if hdhr_quit_record = true then
-				do shell script "pkill curl"
-			end if
+			do shell script "pkill curl"
+			repeat with i from 1 to length of show_info
+				set show_recording of item i of show_info to false
+			end repeat
+			my save_data()
+			continue quit
 		end try
 	end if
 	
 	if quit_response = "Go Back" then
 		my main()
-	else
-		display notification "Go Back ELSE"
-		repeat with i from 1 to length of show_info
-			set show_recording of item i of show_info to false
-		end repeat
-		my save_data()
-		continue quit
 	end if
 	
 end quit
