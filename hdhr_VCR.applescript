@@ -414,7 +414,7 @@ on main()
 			end try
 		else if length of show_list > 0 then
 			--Fix Add prompt here
-			set temp_show_list to (choose from list show_list with title hdhr_VCR_version with prompt "Select show to edit" OK button name character id {9999, 65039} & " Edit.." cancel button name character id {9654, 65039} & " Run" without empty selection allowed)
+			set temp_show_list to (choose from list show_list with title hdhr_VCR_version with prompt "Select show to edit" & return & character id {49, 65039, 8419} & " Single   " & character id 128257 & " Series" & return & character id 9210 & " Recording" & return & character id 9940 & " Inactive" OK button name character id {9999, 65039} & " Edit.." cancel button name character id {9654, 65039} & " Run" without empty selection allowed)
 			if temp_show_list ­ false then
 				my validate_show_info(show_id of item (my list_position("main1", (temp_show_list as text), show_list, true)) of show_info, true)
 				my save_data()
@@ -586,9 +586,9 @@ on add_show_info(hdhr_device)
 	if show_is_series of temp_show_info = true then
 		--set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} with prompt "Please choose the days this series airs." default items default_record_day with multiple selections allowed without empty selection allowed)
 		
-		set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title hdhr_VCR_version OK button name "Next.." cancel button name character id {9654, 65039} & " Run" with prompt "Select the days you wish to record." & return & "If this is a series, you can select multiple days." with multiple selections allowed without empty selection allowed)
+		set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title hdhr_VCR_version OK button name "Next.." cancel button name character id {9654, 65039} & " Run" with prompt "Select the days you wish to record." & return & "You can select multiple days." with multiple selections allowed without empty selection allowed)
 	else
-		set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title hdhr_VCR_version OK button name "Next.." cancel button name character id {9654, 65039} & " Run" with prompt "Select the days you wish to record." & return & "If this is a series, you can select multiple days." without empty selection allowed)
+		set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title hdhr_VCR_version OK button name "Next.." cancel button name character id {9654, 65039} & " Run" with prompt "Select the days you wish to record." & return & "You can only select 1 day." without empty selection allowed)
 	end if
 	
 	if show_air_date of temp_show_info = false then
@@ -1321,7 +1321,7 @@ on save_data()
 		end if
 		
 	end repeat
-	close access ref_num 
+	close access ref_num
 	display notification character id 128190 & " " & length of show_info & " shows saved"
 end save_data
 --takes the the data in the filesystem, and writes to to a variable
