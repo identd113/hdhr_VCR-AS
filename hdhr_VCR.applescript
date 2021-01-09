@@ -52,7 +52,7 @@ use scripting additions
 use application "JSON Helper"
 
 -- Done Use jsonhelper and json querys to get data.
---show_info model: (*show_title:Happy_Holidays_America, show_time:16, show_length:60, show_air_date:Sunday, show_transcode:missing value, show_temp_dir:alias Backups:, show_dir:alias Backups:, show_channel:5.1, show_active:true, show_id:221fbe1126389e6af35f405aa681cf19, show_recording:false, show_last:date Sunday, December 13, 2020 at 4:04:54 PM, show_next:date Sunday, December 13, 2020 at 4:00:00 PM, show_end:date Sunday, December 13, 2020 at 5:00:00 PM, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:XX105404BE*
+--show_info model: (*show_title:Happy_Holidays_America, show_time:16, show_length:60, show_air_date:Sunday, show_transcode:missing value, show_temp_dir:alias Backups:, show_dir:alias Backups:, show_channel:5.1, show_active:true, show_id:221fbe1126389e6af35f405aa681cf19, show_recording:false, show_last:date Sunday, December 13, 2020 at 4:04:54 PM, show_next:date Sunday, December 13, 2020 at 4:00:00 PM, show_end:date Sunday, December 13, 2020 at 5:00:00 PM, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:XX105404BE,show_is_series:false*
 
 -- {show_title:"string", show_time:dateobject, show_length:interger(minutes),show_air_day:list (Sun, Mon, Tue, Wed, Thu, Fri, Sat), show_transcode:true/false, show_temp_dir:alias, show_dir:alias)
 
@@ -66,7 +66,7 @@ use application "JSON Helper"
 --We need a better way to show the user 
 --	set progress description to "Loading ..."
 --  set progress additional description to
---	set progress completed steps to 0
+--	set progress completed steps to 0 
 --	set progress total steps to 1
 --If you select a record time in the middle of the show, we will adjust the start time to match guide data.  We may also need to update record time, and end time.  
 
@@ -88,7 +88,13 @@ on check_version()
 	log "Remote: " & version_remote
 	log "Local: " & version_local
 	if version_remote > version_local then
-		display notification changelog of item 1 of versions of version_response with title character id 127381 & " Update Available!" subtitle name of me & " " & version_remote
+		display notification changelog of item 1 of versions of version_response with title update_icon & " Update Available!" subtitle name of me & " " & version_remote
+	end if
+	if version_remote = version_local then
+		display notification name of me & " is up to date."
+	end if
+	if version_remote < version_local then
+		display notification "You are running a beta version of " & name of me
 	end if
 end check_version
 
@@ -151,9 +157,9 @@ on run {}
 	set edit_icon to character id {9999, 65039}
 	set soon_icon to character id 128284
 	set disk_icon to character id 128190
+	set update_icon to character id 127381
 	
-	
-	set version_local to "20210109"
+	set version_local to "20210110"
 	set progress description to "Loading " & name of me & " " & version_local
 	--set globals 
 	set show_info to {}
@@ -307,12 +313,18 @@ on validate_show_info(show_to_check, should_edit)
 		log "Show_air_date: " & show_title of item i of show_info
 		
 		if should_edit = true then
-			set show_deactivate to (display dialog "Would you like to deactivate: " & return & "\"" & show_title of item i of show_info & "\"" & return & return & "Deactivated shows will be removed on the next save/load." buttons {"Run", "Deactivate", "Next"} cancel button 1 default button 3 with title version_local with icon stop)
-			if button returned of show_deactivate = "Deactivate" then
-				set show_active of item i of show_info to false
+			if show_active of item i of show_info = true then
+				set show_deactivate to (display dialog "Would you like to deactivate: " & return & "\"" & show_title of item i of show_info & "\"" & return & return & "Deactivated shows will be removed on the next save/load." buttons {"Run", "Deactivate", "Next"} cancel button 1 default button 3 with title version_local with icon stop)
+				if button returned of show_deactivate = "Deactivate" then
+					set show_active of item i of show_info to false
+				end if
+			else if show_active of item i of show_info = false then
+				set show_deactivate to (display dialog "Would you like to activate: " & return & "\"" & show_title of item i of show_info & "\"" & return & return & "Active shows can be edited." buttons {"Run", "Activate", "Next"} cancel button 1 default button 3 with title version_local with icon note)
+				if button returned of show_deactivate = "Activate" then
+					set show_active of item i of show_info to true
+				end if
 			end if
 		end if
-		
 		if show_active of item i of show_info = true then
 			if show_title of item i of show_info = missing value or show_title of item i of show_info = "" or should_edit = true then
 				--fixme
@@ -463,7 +475,7 @@ on main()
 		if length of show_list = 0 then
 			--	display dialog "2"
 			try
-				set hdhr_no_shows to button returned of (display dialog "There are no shows, why don't you add one?" buttons {"Quit", "Add Show"} default button 2)
+				set hdhr_no_shows to button returned of (display dialog "There are no shows, why don't you add one?" buttons {"Quit", plus_icon & " Add Show"} default button 2)
 				if hdhr_no_shows = "Add Show" then
 					--This should kick us to the adding a show handler.
 					my main()
@@ -1403,13 +1415,13 @@ end save_data
 on read_data()
 	--set ref_num to missing value
 	set hdhr_vcr_config_file to ((path to documents folder) & savefilename as string)
-	
+	log "Config loaded from " & POSIX path of hdhr_vcr_config_file
 	set ref_num to open for access file hdhr_vcr_config_file
 	log ref_num
 	try
 		set hdhr_vcr_config_data to read ref_num
 		--on error
-		--display dialog "Error" 
+		--display dialog "Error"  
 		--	return 
 		set temp_show_info to {}
 		set hdhr_vcr_config_data_parsed to my stringtolist("read__data", hdhr_vcr_config_data, return)
