@@ -31,6 +31,19 @@ global savefilename
 global time_slide
 global dialog_timeout
 
+--Icons
+global play_icon
+global record_icon
+global tv_icon
+global plus_icon
+global single_icon
+global series_icon
+global inactive_icon
+global edit_icon
+global soon_icon
+global disk_icon
+
+
 --{hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value}
 -- nextup is currently a property, so this value persists through application restarts.  Big Sir will disallow this ability.  I need to be make this a global.  Does one really need to write 
 
@@ -126,7 +139,21 @@ on notify_user(the_showid)
 end notify_user
 
 on run {}
-	set version_local to "20210106"
+	
+	--Icons!	
+	set play_icon to character id {9654, 65039}
+	set record_icon to character id 9210
+	set tv_icon to character id (128250)
+	set plus_icon to character id (10133)
+	set single_icon to character id {49, 65039, 8419}
+	set series_icon to character id 128257
+	set inactive_icon to character id 9940
+	set edit_icon to character id {9999, 65039}
+	set soon_icon to character id 128284
+	set disk_icon to character id 128190
+	
+	
+	set version_local to "20210109"
 	set progress description to "Loading " & name of me & " " & version_local
 	--set globals 
 	set show_info to {}
@@ -274,7 +301,7 @@ on validate_show_info(show_to_check, should_edit)
 			my validate_show_info(show_id of item i of show_info, should_edit)
 		end repeat
 	else
-		set i to my check_offset(show_to_check) 
+		set i to my check_offset(show_to_check)
 		log "check_offset: "
 		log i
 		log "Show_air_date: " & show_title of item i of show_info
@@ -289,7 +316,7 @@ on validate_show_info(show_to_check, should_edit)
 		if show_active of item i of show_info = true then
 			if show_title of item i of show_info = missing value or show_title of item i of show_info = "" or should_edit = true then
 				--fixme
-				set show_title_temp to display dialog "What is the title of this show, and is it a series?" & return & "Next Showing: " & my short_date("validate_show", show_next of item i of show_info, true) buttons {"Cancel", character id 128257 & " Series", character id {49, 65039, 8419} & " Single"} default button character id {49, 65039, 8419} & " Single" default answer show_title of item i of show_info with title version_local giving up after dialog_timeout
+				set show_title_temp to display dialog "What is the title of this show, and is it a series?" & return & "Next Showing: " & my short_date("validate_show", show_next of item i of show_info, true) buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 & " Single" default answer show_title of item i of show_info with title version_local giving up after dialog_timeout
 				--set show_title of item i of show_info to text returned of show_title_temp
 				if button returned of show_title_temp contains "Series" then
 					set show_is_series of item i of show_info to true
@@ -316,15 +343,15 @@ on validate_show_info(show_to_check, should_edit)
 			
 			if show_time of item i of show_info = missing value or (show_time of item i of show_info as number) ³ 24 or my is_number(show_time of item i of show_info) = false or should_edit = true then
 				--set show_time of item i of show_info to text returned of (display dialog "What time does this show air? (use 1-24)" default answer show_time of item i of show_info)
-				set show_time of item i of show_info to text returned of (display dialog "What time does this show air? " & return & "(0-24, use decimals, ie 9.5 for 9:30)" default answer hours of (current date) buttons {character id {9654, 65039} & " Run", "Next.."} with title version_local giving up after dialog_timeout default button 2 cancel button 1) as number
+				set show_time of item i of show_info to text returned of (display dialog "What time does this show air? " & return & "(0-24, use decimals, ie 9.5 for 9:30)" default answer hours of (current date) buttons {play_icon & " Run", "Next.."} with title version_local giving up after dialog_timeout default button 2 cancel button 1) as number
 			end if
-			
+			--fixme
 			if show_length of item i of show_info = missing value or my is_number(show_length of item i of show_info) = false or show_length of item i of show_info ² 0 or should_edit = true then
-				set show_length of item i of show_info to text returned of (display dialog "How long is this show? (in minutes)" default answer show_length of item i of show_info with title version_local buttons {character id {9654, 65039} & " Run", "Next.."} default button 2 cancel button 1 giving up after dialog_timeout)
+				set show_length of item i of show_info to text returned of (display dialog "How long is this show? (in minutes)" default answer show_length of item i of show_info with title version_local buttons {play_icon & " Run", "Next.."} default button 2 cancel button 1 giving up after dialog_timeout)
 			end if
 			
 			if show_air_date of item i of show_info = missing value or length of show_air_date of item i of show_info = 0 or should_edit = true then
-				set show_air_date of item i of show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items show_air_date of item i of show_info with title version_local OK button name "Next.." cancel button name character id {9654, 65039} & " Run" with prompt "Select the days you wish to record." & return & "If this is a series, you can select multiple days." with multiple selections allowed without empty selection allowed)
+				set show_air_date of item i of show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items show_air_date of item i of show_info with title version_local OK button name "Next.." cancel button name play_icon & " Run" with prompt "Select the days you wish to record." & return & "If this is a series, you can select multiple days." with multiple selections allowed without empty selection allowed)
 			end if
 			
 			if show_dir of item i of show_info = missing value or (class of (show_temp_dir of item i of show_info) as text) ­ "alias" or should_edit = true then
@@ -341,7 +368,7 @@ on validate_show_info(show_to_check, should_edit)
 end validate_show_info
 
 on setup()
-	set hdhr_setup_response to (display dialog "hdhr_VCR Setup." buttons {"Defaults", "Delete", character id {9654, 65039} & " Run"} default button 1 cancel button 3 with title version_local giving up after dialog_timeout)
+	set hdhr_setup_response to (display dialog "hdhr_VCR Setup." buttons {"Defaults", "Delete", play_icon & " Run"} default button 1 cancel button 3 with title version_local giving up after dialog_timeout)
 	if button returned of hdhr_setup_response = "Defaults" then
 		set temp_dir to alias "Volumes:"
 		repeat until temp_dir ­ alias "Volumes:"
@@ -388,7 +415,7 @@ on main()
 	end if
 	
 	--Collect the temporary name.  This will likely be over written once we can pull guide data
-	set title_response to (display dialog "Would you like to add a show?" buttons {character id (128250) & " Shows..", character id (10133) & " Add..", character id {9654, 65039} & " Run"} with title version_local giving up after dialog_timeout with icon note default button 2)
+	set title_response to (display dialog "Would you like to add a show?" buttons {tv_icon & " Shows..", plus_icon & " Add..", play_icon & " Run"} with title version_local giving up after dialog_timeout with icon note default button 2)
 	if button returned of title_response contains "Add.." then
 		set temp_tuners_list to {}
 		--set end of temp_tuners_list to "Auto"
@@ -420,15 +447,15 @@ on main()
 			--display notification class of show_recording of item i of show_info
 			set temp_show_line to " " & (show_title of item i of show_info & " on " & show_channel of item i of show_info & " at " & show_time of item i of show_info & " for " & show_length of item i of show_info & " minutes on " & my listtostring(show_air_date of item i of show_info, ", "))
 			if show_recording of item i of show_info = true then
-				set temp_show_line to character id 9210 & temp_show_line
+				set temp_show_line to record_icon & temp_show_line
 			end if
 			if show_active of item i of show_info = false then
-				set temp_show_line to character id 9940 & temp_show_line
+				set temp_show_line to inactive_icon & temp_show_line
 			end if
 			if show_is_series of item i of show_info = true then
-				set temp_show_line to character id 128257 & temp_show_line
+				set temp_show_line to series_icon & temp_show_line
 			else
-				set temp_show_line to character id {49, 65039, 8419} & temp_show_line
+				set temp_show_line to single_icon & temp_show_line
 			end if
 			set end of show_list to temp_show_line
 		end repeat
@@ -451,7 +478,7 @@ on main()
 			end try
 		else if length of show_list > 0 then
 			--Fix Add prompt here
-			set temp_show_list to (choose from list show_list with title version_local with prompt "Select show to edit" & return & character id {49, 65039, 8419} & " Single   " & character id 128257 & " Series" & return & character id 9210 & " Recording" & return & character id 9940 & " Inactive" OK button name character id {9999, 65039} & " Edit.." cancel button name character id {9654, 65039} & " Run" without empty selection allowed)
+			set temp_show_list to (choose from list show_list with title version_local with prompt "Select show to edit" & return & single_icon & " Single   " & series_icon & " Series" & return & record_icon & " Recording" & return & inactive_icon & " Inactive" OK button name edit_icon & " Edit.." cancel button name play_icon & " Run" without empty selection allowed)
 			if temp_show_list ­ false then
 				my validate_show_info(show_id of item (my list_position("main1", (temp_show_list as text), show_list, true)) of show_info, true)
 				my save_data()
@@ -484,7 +511,7 @@ on add_show_info(hdhr_device)
 	repeat until my is_number(show_channel of temp_show_info)
 		try
 			--	
-			set show_channel of temp_show_info to word 1 of item 1 of (choose from list channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with prompt "What channel does this show air on?" with title version_local OK button name "Next.." cancel button name character id {9654, 65039} & " Run" without empty selection allowed)
+			set show_channel of temp_show_info to word 1 of item 1 of (choose from list channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with prompt "What channel does this show air on?" with title version_local OK button name "Next.." cancel button name play_icon & " Run" without empty selection allowed)
 			--set show_channel of temp_show_info to text returned of (display dialog "What channel does this show air on?" default answer "") --pull channel kineup, and parse out Channel name/channel.
 			--if my is_number(show_channel of temp_show_info) = false then
 			--	set show_channel of temp_show_info to missing value
@@ -497,7 +524,7 @@ on add_show_info(hdhr_device)
 	end repeat
 	
 	repeat until my is_number(show_time of temp_show_info) and show_time of temp_show_info ³ 0 and show_time of temp_show_info < 24
-		set show_time of temp_show_info to text returned of (display dialog "What time does this show air? " & return & "(0-24, use decimals, ie 9.5 for 9:30)" default answer hours of (current date) buttons {character id {9654, 65039} & " Run", "Next.."} with title version_local giving up after dialog_timeout default button 2 cancel button 1) as number
+		set show_time of temp_show_info to text returned of (display dialog "What time does this show air? " & return & "(0-24, use decimals, ie 9.5 for 9:30)" default answer hours of (current date) buttons {play_icon & " Run", "Next.."} with title version_local giving up after dialog_timeout default button 2 cancel button 1) as number
 		
 		--if my is_number(show_time of temp_show_info) = false then 
 		
@@ -517,7 +544,7 @@ on add_show_info(hdhr_device)
 	if hdhr_response_channel ­ {} then
 		set show_time_adjusted to my epoch2show_time(getTfromN(StartTime of hdhr_response_channel))
 		if show_time of temp_show_info ­ show_time_adjusted then
-			display notification character id {9999, 65039} & " Show Time changed to " & show_time_adjusted
+			display notification edit_icon & " Show Time changed to " & show_time_adjusted
 			set show_time of temp_show_info to show_time_adjusted
 		end if
 	end if
@@ -569,7 +596,7 @@ on add_show_info(hdhr_device)
 		set hdhr_response_channel_title to hdhr_response_channel_title & " " & EpisodeTitle of hdhr_response_channel
 	end try
 	
-	set show_title_temp to display dialog "What is the title of this show, and is it a series?" buttons {"Cancel", character id 128257 & " Series", character id {49, 65039, 8419} & " Single"} default button 3 default answer hdhr_response_channel_title with title version_local giving up after dialog_timeout
+	set show_title_temp to display dialog "What is the title of this show, and is it a series?" buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 default answer hdhr_response_channel_title with title version_local giving up after dialog_timeout
 	set show_title of temp_show_info to text returned of show_title_temp
 	--if show_title of temp_show_info contains " " then
 	--set show_title of temp_show_info to my listtostring(my stringtolist("show title", show_title of temp_show_info, " "), "_")
@@ -598,7 +625,7 @@ on add_show_info(hdhr_device)
 	repeat until my is_number(show_length of temp_show_info) and show_length of temp_show_info ³ 1
 		--display notification "OK7: TEST"
 		
-		set show_length of temp_show_info to text returned of (display dialog "How long is this show? (in minutes)" default answer hdhr_response_length with title version_local buttons {character id {9654, 65039} & " Run", "Next.."} default button 2 cancel button 1 giving up after dialog_timeout)
+		set show_length of temp_show_info to text returned of (display dialog "How long is this show? (in minutes)" default answer hdhr_response_length with title version_local buttons {play_icon & " Run", "Next.."} default button 2 cancel button 1 giving up after dialog_timeout)
 		
 		
 		
@@ -623,9 +650,9 @@ on add_show_info(hdhr_device)
 	if show_is_series of temp_show_info = true then
 		--set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} with prompt "Please choose the days this series airs." default items default_record_day with multiple selections allowed without empty selection allowed)
 		
-		set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title version_local OK button name "Next.." cancel button name character id {9654, 65039} & " Run" with prompt "Select the days you wish to record." & return & "You can select multiple days." with multiple selections allowed without empty selection allowed)
+		set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title version_local OK button name "Next.." cancel button name play_icon & " Run" with prompt "Select the days you wish to record." & return & "You can select multiple days." with multiple selections allowed without empty selection allowed)
 	else
-		set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title version_local OK button name "Next.." cancel button name character id {9654, 65039} & " Run" with prompt "Select the days you wish to record." & return & "You can only select 1 day." without empty selection allowed)
+		set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title version_local OK button name "Next.." cancel button name play_icon & " Run" with prompt "Select the days you wish to record." & return & "You can only select 1 day." without empty selection allowed)
 	end if
 	
 	if show_air_date of temp_show_info = false then
@@ -652,7 +679,7 @@ on add_show_info(hdhr_device)
 	--end try
 	
 	if does_transcode of item tuner_offset of HDHR_DEVICE_LIST = 1 then
-		set show_transcode of temp_show_info to word 1 of item 1 of (choose from list {"None: Does not transcode, will save as MPEG2 stream.", "heavy: Transcode with same settings", "mobile: Transcode not exceeding 1280x720 30fps", "intenet720: Low bit rate, not exceeding 1280x720 30fps", "internet480: Low bit rate not exceeding 848x480/640x480 for 16:9/4:3 30fps", "internet360: Low bit rate not exceeding 640x360/480x360 for 16:9/4:3 30fps", "internet240: Low bit rate not exceeding 432x240/320x240 for 16:9/4:3 30fps"} with prompt "Please choose the transcode level on the file" with title version_local default items {"None: Does not transcode, will save as MPEG2 stream."} OK button name character id 128190 & " Save Show" cancel button name character id {9654, 65039} & " Run")
+		set show_transcode of temp_show_info to word 1 of item 1 of (choose from list {"None: Does not transcode, will save as MPEG2 stream.", "heavy: Transcode with same settings", "mobile: Transcode not exceeding 1280x720 30fps", "intenet720: Low bit rate, not exceeding 1280x720 30fps", "internet480: Low bit rate not exceeding 848x480/640x480 for 16:9/4:3 30fps", "internet360: Low bit rate not exceeding 640x360/480x360 for 16:9/4:3 30fps", "internet240: Low bit rate not exceeding 432x240/320x240 for 16:9/4:3 30fps"} with prompt "Please choose the transcode level on the file" with title version_local default items {"None: Does not transcode, will save as MPEG2 stream."} OK button name disk_icon & " Save Show" cancel button name play_icon & " Run")
 	else
 		set show_transcode of temp_show_info to missing value
 	end if
@@ -701,13 +728,13 @@ on idle
 						--end try
 						set show_runtime to (show_end of item i of show_info) - (current date)
 						my record_now((show_id of item i of show_info), show_runtime)
-						display notification "Ends " & my short_date("rec started", show_end of item i of show_info, false) with title character id 9210 & " Started Recording on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
+						display notification "Ends " & my short_date("rec started", show_end of item i of show_info, false) with title record_icon & " Started Recording on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
 						set notify_recording_time of item i of show_info to (current date) + (2 * minutes)
 						--display notification show_title of item i of show_info & " on channel " & show_channel of item i of show_info & " started for " & show_runtime of item i of show_info & " minutes."
 					else
 						--display notification show_title of item i of show_info & " is recording until " & my short_date("recording", show_end of item i of show_info)
 						if notify_recording_time of item i of show_info < (current date) or notify_recording_time of item i of show_info = missing value then
-							display notification "Ends " & my short_date("rec progress", show_end of item i of show_info, false) & " (" & (my sec_to_time((show_end of item i of show_info) - (current date))) & ") " with title character id 9210 & " Recording in progress on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
+							display notification "Ends " & my short_date("rec progress", show_end of item i of show_info, false) & " (" & (my sec_to_time((show_end of item i of show_info) - (current date))) & ") " with title record_icon & " Recording in progress on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
 							--try to refresh the file, so it shows it refreshes finder.
 							try
 								my update_folder(show_dir of item i of show_info)
@@ -738,7 +765,7 @@ on idle
 					--set progress additional description to "Starts: " & my short_date("is_next", show_next of item i of show_info, false)
 					
 					--We see this message very often, lets make sure we only display up next shows just for today. 
-					display notification "Starts: " & my short_date("is_next", show_next of item i of show_info, false) with title character id 128284 & " Next UP on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info, hdhr_record of item i of show_info) & ")"
+					display notification "Starts: " & my short_date("is_next", show_next of item i of show_info, false) with title soon_icon & " Next UP on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info, hdhr_record of item i of show_info) & ")"
 					set notify_upnext_time of item i of show_info to (current date) + (notify_upnext * minutes)
 				end if
 				--	set delay_count to 0 
@@ -1370,7 +1397,7 @@ on save_data()
 		log "Save file protected from being wiped."
 	end if
 	close access ref_num
-	display notification character id 128190 & " " & length of show_info & " shows saved"
+	display notification disk_icon & " " & length of show_info & " shows saved"
 end save_data
 --takes the the data in the filesystem, and writes to to a variable
 on read_data()
