@@ -325,10 +325,12 @@ on validate_show_info(show_to_check, should_edit)
 				end if
 			end if
 		end if
+		display notification show_active of item i of show_info
 		if show_active of item i of show_info = true then
+			--display dialog should_edit
 			if show_title of item i of show_info = missing value or show_title of item i of show_info = "" or should_edit = true then
 				--fixme
-				set show_title_temp to display dialog "What is the title of this show, and is it a series?" & return & "Next Showing: " & my short_date("validate_show", show_next of item i of show_info, true) buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 & " Single" default answer show_title of item i of show_info with title version_local giving up after dialog_timeout
+				set show_title_temp to display dialog "What is the title of this show, and is it a series?" & return & "Next Showing: " & my short_date("validate_show", show_next of item i of show_info, true) buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 default answer show_title of item i of show_info with title version_local giving up after dialog_timeout
 				--set show_title of item i of show_info to text returned of show_title_temp
 				if button returned of show_title_temp contains "Series" then
 					set show_is_series of item i of show_info to true
@@ -336,7 +338,7 @@ on validate_show_info(show_to_check, should_edit)
 					set show_is_series of item i of show_info to false
 				end if
 			end if
-			
+			 
 			--repeat until my is_number(show_channel of item i of show_info) or should_edit = true
 			if show_channel of item i of show_info = missing value or my is_number(show_channel of item i of show_info) = false or should_edit = true then
 				--We need to match the recored channel "5.1" with the full list "5.1 WTFC" (channel list) and then have the choose list box jump to that selection.
