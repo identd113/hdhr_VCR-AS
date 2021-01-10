@@ -42,7 +42,9 @@ global inactive_icon
 global edit_icon
 global soon_icon
 global disk_icon
-
+global update_icon
+global trash_icon
+global stop_icon
 
 --{hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value}
 -- nextup is currently a property, so this value persists through application restarts.  Big Sir will disallow this ability.  I need to be make this a global.  Does one really need to write 
@@ -104,46 +106,6 @@ on hdhr_prepare_record(hdhr_device)
 	return my listtostring(items 1 thru -2 of temp, "/")
 end hdhr_prepare_record
 
-on clean_show_info()
-	try
-		repeat with i from 1 to length of show_info
-			if show_active of item i of show_info is false then
-				set item (my check_offset(show_id)) of show_info to {}
-			end if
-		end repeat
-		set show_info to my emptylist(show_info)
-		return true
-	on error
-		return false
-	end try
-end clean_show_info
-
-on remove_show(caller, show_id, should_edit)
-	log "remove_show: " & caller
-	log "before_run: " & length of show_info
-	if should_edit = false then
-		try
-			set item (my check_offset(show_id)) of show_info to {}
-			display notification "step1"
-			set show_info to my emptylist(show_info)
-			display notification "step2"
-			log "after_run1: " & length of show_info
-			return true
-			--We need to notify the user that a show was removed.
-		on error
-			log "after_run2: ERROR"
-			return false
-		end try
-	else if should_edit = true then
-		log "after_run3: "
-		--gather list of shows to ask user which one to remove
-	end if
-end remove_show
-
-on notify_user(the_showid)
-	
-end notify_user
-
 on run {}
 	
 	--Icons!	
@@ -158,6 +120,8 @@ on run {}
 	set soon_icon to character id 128284
 	set disk_icon to character id 128190
 	set update_icon to character id 127381
+	set trash_icon to character id {128465, 65039}
+	set stop_icon to character id 9209
 	
 	set version_local to "20210110"
 	set progress description to "Loading " & name of me & " " & version_local
@@ -313,6 +277,7 @@ on validate_show_info(show_to_check, should_edit)
 		log "Show_air_date: " & show_title of item i of show_info
 		
 		if should_edit = true then
+			--show_recording of item i of show_info = false and show_end of item i of show_info < (current date) and show_is_series of item i of show_info = false
 			if show_active of item i of show_info = true then
 				set show_deactivate to (display dialog "Would you like to deactivate: " & return & "\"" & show_title of item i of show_info & "\"" & return & return & "Deactivated shows will be removed on the next save/load." buttons {"Run", "Deactivate", "Next"} cancel button 1 default button 3 with title version_local with icon stop)
 				if button returned of show_deactivate = "Deactivate" then
@@ -325,7 +290,7 @@ on validate_show_info(show_to_check, should_edit)
 				end if
 			end if
 		end if
-		display notification show_active of item i of show_info
+		
 		if show_active of item i of show_info = true then
 			--display dialog should_edit
 			if show_title of item i of show_info = missing value or show_title of item i of show_info = "" or should_edit = true then
@@ -338,7 +303,7 @@ on validate_show_info(show_to_check, should_edit)
 					set show_is_series of item i of show_info to false
 				end if
 			end if
-			 
+			
 			--repeat until my is_number(show_channel of item i of show_info) or should_edit = true
 			if show_channel of item i of show_info = missing value or my is_number(show_channel of item i of show_info) = false or should_edit = true then
 				--We need to match the recored channel "5.1" with the full list "5.1 WTFC" (channel list) and then have the choose list box jump to that selection.
@@ -374,10 +339,11 @@ on validate_show_info(show_to_check, should_edit)
 			end if
 			
 			if show_next of item i of show_info = missing value or (class of (show_next of item i of show_info) as text) ­ "date" or should_edit = true then
-				set show_next of item i of show_info to my nextday(show_id of item i of show_info)
+				if show_is_series of item i of show_info = true then
+					set show_next of item i of show_info to my nextday(show_id of item i of show_info)
+				end if
 			end if
 		end if
-		log item i of show_info
 	end if
 end validate_show_info
 
@@ -727,9 +693,28 @@ on idle
 	end if
 	if length of show_info > 0 then
 		repeat with i from 1 to length of show_info
+			(*
+						else if show_is_series of item i of show_info = false then
+				if show_end of item i of show_info < (current date) then
+					display notification "TEST"
+				end if
+				display dialog show_end of item i of show_info
+				display notification "Can we delete " & show_title of item i of show_info
+			else
+				display notification "show_rec1: " & class of (show_recording of item i of show_info)
+				display notification "show_rec2: " & (show_recording of item i of show_info)
+				display notification "show_end1:" & class of (show_end of item i of show_info)
+				display notification "show_end2:" & (show_end of item i of show_info)
+				display notification "is_series1:" & class of (show_is_series of item i of show_info)
+				display notification "is_series2:" & (show_is_series of item i of show_info)
+			*)
 			if show_active of item i of show_info = true then
 				if show_next of item i of show_info < cd_object then
+					--if show_next of item i of show_info < cd_object then
 					if show_recording of item i of show_info = false then
+						if show_end of item i of show_info < (current date) then
+							display notification "show_end of item i of show_info < (current date)"
+						end if
 						--FIX the above line would cause some issues when quitting/re opening.  We should resume more gracefully
 						--try
 						set used_tuner_respone to my used_tuner("idle0", hdhr_record of item i of show_info)
@@ -739,7 +724,7 @@ on idle
 						end if
 						--on error
 						--	display notification "Used Tuner Error"
-						--end try
+						--end try 
 						set show_runtime to (show_end of item i of show_info) - (current date)
 						my record_now((show_id of item i of show_info), show_runtime)
 						display notification "Ends " & my short_date("rec started", show_end of item i of show_info, false) with title record_icon & " Started Recording on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
@@ -794,18 +779,20 @@ on idle
 					set show_recording of item i of show_info to false
 					--Fix channel2name is not used any longer 
 					if show_is_series of item i of show_info = true then
-						display notification "Next Showing: " & my short_date("rec_end", show_next of item i of show_info, false) with title character id 9209 & " Recording Complete." subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
+						display notification "Next Showing: " & my short_date("rec_end", show_next of item i of show_info, false) with title stop_icon & " Recording Complete." subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
 					else
 						set show_active of item i of show_info to false
-						display notification "Show marked for removal" with title character id 9209 & " Recording Complete." subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
+						display notification "Show marked for removal" with title stop_icon & " Recording Complete." subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
 					end if
 					
 					
 					--This needs to happen not in the idle loop.  Since we loop the stored tv shows (show_info), and we are still inside of the repeat loop, we end up trying to walk past the list, kind of a off by 1 error.
-					--We can remove these shows on app start, before we start walking the idle loop.  If we want to remove a show, we have to make sure we are not in a loop inside of the idle handler.  We can create an idle lock bit, which can increase the call back time to a much higer number, run our code, and then "unlock" the loop.  This all sounds very sloppy, and i dont like it.  We may just need to mark the show entries as dirty, likely by making making the show_id a missing value.  We would need to clear this out before we get stuck in a repeat loop.  This sounds cleaner.  This also means we need to remove references of the remove_show_info handler, and stick this in the idle handler, which can have its own host of issues.
+					--We can remove these shows on app start, before we start walking the idle loop.  If we want to remove a show, we have to make sure we are not in a loop inside of the idle handler.  We can create an idle lock bit, which can increase the call back time to a much higer number, run our code, and then "unlock" the loop.  This all sounds very sloppy, and i dont like it.  We may just need to mark the show entries as dirty, likely by making making the show_id a missing value.  We would need to clear this out before we get stuck in a repeat loop.  This sounds cleaner.  This also means we need to remove references of the remove_show_info handler,  and stick this in the idle handler, which can have its own host of issues.
 				end if
-			else if show_recording of item i of show_info = false and show_end of item i of show_info < (current date) and show_is_series of item i of show_info = false then
-				display notification "Can we delete " & show_title of item i of show_info
+				--else if show_end of item i of show_info < (current date) and show_is_series of item i of show_info = false then
+			else if show_is_series of item i of show_info = false and show_end of item i of show_info < (current date) then
+				set show_active of item i of show_info to false
+				display notification show_title of item i of show_info & " removed."
 			end if
 		end repeat
 	end if
@@ -846,6 +833,9 @@ on record_now(the_show_id, opt_show_length)
 		set temp_show_length to opt_show_length as number
 	else
 		set temp_show_length to show_length of item i of show_info as number
+	end if 
+	if temp_show_length < 0 then
+		display notification "Negative duration: " & show_title of item i of show_info
 	end if
 	--do shell script "curl --max-time " & (temp_show_length) & " http://" & hdhr_IP & "/auto/v" & show_channel of item i of show_info & " -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now", current date) & ".m2ts") & "> /dev/null 2>&1 &"
 	if show_transcode of item i of show_info = missing value or show_transcode of item i of show_info = "None" then
@@ -1401,9 +1391,9 @@ on save_data()
 		log class of hdhr_record of item i of show_info
 		*)
 			if show_active of item i of show_info = true then
-				write ("--NEXT SHOW--" & return & show_title of item i of show_info & return & show_time of item i of show_info & return & show_length of item i of show_info & return & my listtostring(show_air_date of item i of show_info, ", ") & return & show_transcode of item i of show_info & return & show_temp_dir of item i of show_info & return & show_dir of item i of show_info & return & show_channel of item i of show_info & return & show_active of item i of show_info & return & show_id of item i of show_info & return & show_recording of item i of show_info & return & show_last of item i of show_info & return & show_next of item i of show_info & return & show_end of item i of show_info & return) & (show_is_series of item i of show_info & return & hdhr_record of item i of show_info) & return to ref_num
+				write ("--NEXT SHOW--" & return & show_title of item i of show_info & return & show_time of item i of show_info & return & show_length of item i of show_info & return & my listtostring(show_air_date of item i of show_info, ", ") & return & show_transcode of item i of show_info & return & show_temp_dir of item i of show_info & return & show_dir of item i of show_info & return & show_channel of item i of show_info & return & show_active of item i of show_info & return & show_id of item i of show_info & return & show_recording of item i of show_info & return & show_last of item i of show_info & return & show_next of item i of show_info & return & show_end of item i of show_info & return & show_is_series of item i of show_info & return & hdhr_record of item i of show_info & return) to ref_num
 			else
-				log character id {128465, 65039} & " Removed " & show_title of item i of show_info
+				log trash_icon & " Removed " & show_title of item i of show_info
 			end if
 			
 		end repeat
@@ -1436,7 +1426,9 @@ on read_data()
 				set end of temp_show_info to {show_title:(item (i + 1) of hdhr_vcr_config_data_parsed), show_time:(item (i + 2) of hdhr_vcr_config_data_parsed), show_length:(item (i + 3) of hdhr_vcr_config_data_parsed), show_air_date:my stringtolist("read_data_showairdate", (item (i + 4) of hdhr_vcr_config_data_parsed), ", "), show_transcode:(item (i + 5) of hdhr_vcr_config_data_parsed), show_temp_dir:(item (i + 6) of hdhr_vcr_config_data_parsed) as alias, show_dir:(item (i + 7) of hdhr_vcr_config_data_parsed) as alias, show_channel:(item (i + 8) of hdhr_vcr_config_data_parsed), show_active:((item (i + 9) of hdhr_vcr_config_data_parsed as boolean)), show_id:(item (i + 10) of hdhr_vcr_config_data_parsed), show_recording:((item (i + 11) of hdhr_vcr_config_data_parsed as boolean)), show_last:date (item (i + 12) of hdhr_vcr_config_data_parsed), show_next:date (item (i + 13) of hdhr_vcr_config_data_parsed), show_end:date (item (i + 14) of hdhr_vcr_config_data_parsed), notify_upnext_time:missing value, notify_recording_time:missing value, show_is_series:((item (i + 15) of hdhr_vcr_config_data_parsed as boolean)), hdhr_record:(item (i + 16) of hdhr_vcr_config_data_parsed)}
 				set show_info to temp_show_info
 				log show_info
-				set show_next of last item of temp_show_info to my nextday(show_id of last item of temp_show_info)
+				if show_is_series of last item of temp_show_info = true then
+					set show_next of last item of temp_show_info to my nextday(show_id of last item of temp_show_info)
+				end if
 			end if
 		end repeat
 		try
