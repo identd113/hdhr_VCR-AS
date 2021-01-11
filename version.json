@@ -2,6 +2,10 @@
 	"versions": 
 [
 {
+"hdhr_version":"20210111",
+"changelog":"Made some changes to icons, and other UI elements`."
+},
+{
 "hdhr_version":"20210109",
 "changelog":"Changed how we display icons."
 },

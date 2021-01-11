@@ -620,21 +620,22 @@ on add_show_info(hdhr_device)
 	
 	
 	--fix We need to ensure we are able to pull guide data, if not, we set to ""
-	if hdhr_response_channel_title ­ "" then
-		set default_record_day to (weekday of ((current date) + time_slide * days)) as text
-	else
-		set default_record_day to ""
-	end if
 	
+	--	if hdhr_response_channel_title ­ "" then
+	set default_record_day to (weekday of ((current date) + time_slide * days)) as text
+	--else
+	--set default_record_day to ""
+	-- end if
+	
+	set time_slide to 0
 	
 	if show_is_series of temp_show_info = true then
 		--set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} with prompt "Please choose the days this series airs." default items default_record_day with multiple selections allowed without empty selection allowed)
 		
 		set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title version_local OK button name "Next.." cancel button name play_icon & " Run" with prompt "Select the days you wish to record." & return & "You can select multiple days." with multiple selections allowed without empty selection allowed)
-	else
+	else 
 		set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title version_local OK button name "Next.." cancel button name play_icon & " Run" with prompt "Select the days you wish to record." & return & "You can only select 1 day." without empty selection allowed)
 	end if
-	
 	if show_air_date of temp_show_info = false then
 		return
 	end if
@@ -1156,7 +1157,6 @@ on channel_guide(caller, hdhr_device, hdhr_channel, hdhr_time)
 	
 	set hdhr_proposed_time to my datetime2epoch("channel_guide", (date (date string of ((current date) + time_slide * days))) + hdhr_time * hours - (time to GMT)) as number
 	set hdhr_proposed_time to my getTfromN(hdhr_proposed_time)
-	set time_slide to 0
 	log "hdhr_proposed_time"
 	log hdhr_proposed_time
 	log "---"
