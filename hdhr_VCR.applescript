@@ -458,7 +458,7 @@ on main()
 			end try
 		else if length of show_list > 0 then
 			--Fix Add prompt here
-			set temp_show_list to (choose from list show_list with title version_local with prompt "Select show to edit" & return & single_icon & " Single   " & series_icon & " Series" & return & record_icon & " Recording" & return & inactive_icon & " Inactive" OK button name edit_icon & " Edit.." cancel button name play_icon & " Run" without empty selection allowed)
+			set temp_show_list to (choose from list show_list with title version_local with prompt "Select show to edit: " & return & single_icon & " Single   " & series_icon & " Series" & "   " & record_icon & " Recording" & "   " & inactive_icon & " Inactive" OK button name edit_icon & " Edit.." cancel button name play_icon & " Run" without empty selection allowed)
 			if temp_show_list ­ false then
 				my validate_show_info(show_id of item (my list_position("main1", (temp_show_list as text), show_list, true)) of show_info, true)
 				my save_data()
@@ -833,7 +833,7 @@ on record_now(the_show_id, opt_show_length)
 		set temp_show_length to opt_show_length as number
 	else
 		set temp_show_length to show_length of item i of show_info as number
-	end if 
+	end if
 	if temp_show_length < 0 then
 		display notification "Negative duration: " & show_title of item i of show_info
 	end if
