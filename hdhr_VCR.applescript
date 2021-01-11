@@ -169,8 +169,8 @@ on run {}
 	set progress description to "Loading " & name of me & " " & version_local
 	--set globals 
 	set show_info to {}
-	set notify_upnext to 15
-	set notify_recording to 5
+	set notify_upnext to 30
+	set notify_recording to 10
 	set locale to user locale of (system info)
 	set hdhr_setup_folder to "Volumes:"
 	set hdhr_setup_transcode to "No"
@@ -725,7 +725,7 @@ end update_folder
 
 on idle
 	--display notification time string of (current date)
-	set cd_object to (current date) + 15
+	set cd_object to (current date) + 10
 	--Re run auto discover every 2 hours, or once we flip past midnight
 	if length of HDHR_DEVICE_LIST > 0 then
 		repeat with i2 from 1 to length of HDHR_DEVICE_LIST
@@ -764,10 +764,13 @@ on idle
 						--	display notification "Used Tuner Error"
 						--end try 
 						set show_runtime to (show_end of item i of show_info) - (current date)
-						if my tuner_status("idle5", hdhr_record of item i of show_info) contains "not in use" then
-							display notification "Available Tuner"
-						else
-							display notification "No Tuners: next time out in " & my tuner_end(hdhr_record of item i of show_info)
+						if my tuner_status("idle5", hdhr_record of item i of show_info) does not contain "not in use" then
+							set tuner_end_temp to my tuner_end(hdhr_record of item i of show_info)
+							display notification "No Tuners: next time out in " & tuner_end_temp
+							if tuner_end_temp < 10 then
+								display notification "Pausing idle for " & tuner_end_temp & " seconds."
+								delay (my tuner_end(hdhr_record of item i of show_info)) + 5
+							end if
 							--fixme check to see when the next tuner is given up, and delay a bit to make sure we can hit it
 						end if
 						my record_now((show_id of item i of show_info), show_runtime)
@@ -840,7 +843,7 @@ on idle
 			end if
 		end repeat
 	end if
-	return 16
+	return 9
 end idle
 
 on record_now(the_show_id, opt_show_length)
