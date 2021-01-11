@@ -90,15 +90,28 @@ on check_version()
 	log "Remote: " & version_remote
 	log "Local: " & version_local
 	if version_remote > version_local then
-		display notification changelog of item 1 of versions of version_response with title update_icon & " Update Available!" subtitle name of me & " " & version_remote
+		--	display notification changelog of item 1 of versions of version_response with title update_icon & " Update Available!" subtitle name of me & " " & version_remote
 	end if
 	if version_remote = version_local then
-		display notification name of me & " is up to date."
+		--display notification name of me & " is up to date."
 	end if
 	if version_remote < version_local then
-		display notification "You are running a beta version of " & name of me
+		--	display notification "You are running a beta version of " & name of me
 	end if
 end check_version
+
+on check_version_dialog()
+	if version_remote > version_local then
+		set temp to version_local & " " & update_icon & " " & version_remote
+	end if
+	if version_remote < version_local then
+		set temp to "Beta " & version_local
+	end if
+	if version_remote = version_local then
+		set temp to version_local
+	end if
+	return temp
+end check_version_dialog
 
 on hdhr_prepare_record(hdhr_device)
 	set tuner_offset to my HDHRDeviceSearch("hdhr_prepare_record0", hdhr_device)
@@ -122,8 +135,8 @@ on run {}
 	set update_icon to character id 127381
 	set trash_icon to character id {128465, 65039}
 	set stop_icon to character id 9209
+	set version_local to "20210111"
 	
-	set version_local to "20210110"
 	set progress description to "Loading " & name of me & " " & version_local
 	--set globals 
 	set show_info to {}
@@ -395,7 +408,7 @@ on main()
 	end if
 	
 	--Collect the temporary name.  This will likely be over written once we can pull guide data
-	set title_response to (display dialog "Would you like to add a show?" buttons {tv_icon & " Shows..", plus_icon & " Add..", play_icon & " Run"} with title version_local giving up after dialog_timeout with icon note default button 2)
+	set title_response to (display dialog "Would you like to add a show?" buttons {tv_icon & " Shows..", plus_icon & " Add..", play_icon & " Run"} with title my check_version_dialog() giving up after dialog_timeout with icon note default button 2)
 	if button returned of title_response contains "Add.." then
 		set temp_tuners_list to {}
 		--set end of temp_tuners_list to "Auto"
@@ -633,7 +646,7 @@ on add_show_info(hdhr_device)
 		--set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} with prompt "Please choose the days this series airs." default items default_record_day with multiple selections allowed without empty selection allowed)
 		
 		set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title version_local OK button name "Next.." cancel button name play_icon & " Run" with prompt "Select the days you wish to record." & return & "You can select multiple days." with multiple selections allowed without empty selection allowed)
-	else 
+	else
 		set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title version_local OK button name "Next.." cancel button name play_icon & " Run" with prompt "Select the days you wish to record." & return & "You can only select 1 day." without empty selection allowed)
 	end if
 	if show_air_date of temp_show_info = false then
