@@ -164,14 +164,14 @@ on run {}
 	set update_icon to character id 127381
 	set trash_icon to character id {128465, 65039}
 	set stop_icon to character id 9209
-	set version_local to "20210111"
+	set version_local to "20210111.2"
 	
 	set progress description to "Loading " & name of me & " " & version_local
 	--set globals 
 	set show_info to {}
 	set notify_upnext to 30
 	set notify_recording to 10
-	set locale to user locale of (system info)
+	set locale to user locale of (system info) 
 	set hdhr_setup_folder to "Volumes:"
 	set hdhr_setup_transcode to "No"
 	set hdhr_setup_name_bool to "No"
@@ -448,7 +448,7 @@ on main()
 			set end of temp_tuners_list to hdhr_model of item i of HDHR_DEVICE_LIST & " " & (device_id of item i of HDHR_DEVICE_LIST)
 		end repeat
 		if length of temp_tuners_list > 1 then
-			set preferred_tuner to choose from list temp_tuners_list with prompt "Multiple HDHR Devices found, please choose one." cancel button name "Quit" OK button name "Select" with title my check_version_dialog()
+			set preferred_tuner to choose from list temp_tuners_list with prompt "Multiple HDHR Devices found, please choose one." cancel button name play_icon & " Run" OK button name "Select" with title my check_version_dialog()
 			if preferred_tuner ­ false then
 				set hdhr_device to last word of item 1 of preferred_tuner
 			else
@@ -766,10 +766,11 @@ on idle
 						set show_runtime to (show_end of item i of show_info) - (current date)
 						if my tuner_status("idle5", hdhr_record of item i of show_info) does not contain "not in use" then
 							set tuner_end_temp to my tuner_end(hdhr_record of item i of show_info)
-							display notification "No Tuners: next time out in " & tuner_end_temp
-							if tuner_end_temp < 10 then
+							if tuner_end_temp < 15 then
 								display notification "Pausing idle for " & tuner_end_temp & " seconds."
 								delay (my tuner_end(hdhr_record of item i of show_info)) + 5
+							else
+								display notification "No Tuners: next time out in " & tuner_end_temp & "seconds"
 							end if
 							--fixme check to see when the next tuner is given up, and delay a bit to make sure we can hit it
 						end if
