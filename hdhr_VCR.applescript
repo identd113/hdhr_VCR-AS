@@ -72,17 +72,46 @@ use application "JSON Helper"
 --	set progress total steps to 1
 --If you select a record time in the middle of the show, we will adjust the start time to match guide data.  We may also need to update record time, and end time.  
 
-
-on used_tuner(caller, hdhr_device)
-	log "Caller: " & caller & " " & hdhr_device
-	set tuner_expire_sec to {}
+on tuner_end(hdhr_model)
+	set temp to {}
+	set lowest_number to 99999999
 	repeat with i from 1 to length of show_info
-		if show_recording of item i of show_info = true and hdhr_record of item i of show_info = hdhr_device then
-			set end of tuner_expire_sec to ((show_end of item i of show_info) - (current date))
+		if show_recording of item i of show_info = true and hdhr_record of item i of show_info = hdhr_model then
+			set end of temp to ((show_end of item i of show_info) - (current date))
 		end if
 	end repeat
-	return tuner_expire_sec
-end used_tuner
+	if length of temp ­ 0 then
+		repeat with i2 from 1 to length of temp
+			if item i2 of temp < lowest_number and item i2 of temp > 1 then
+				set lowest_number to item i2 of temp
+			end if
+		end repeat
+	end if
+	return lowest_number
+end tuner_end
+
+on tuner_status(caller, device_id)
+	log "tuner_status: " & caller & " of " & device_id
+	set temp_list to {}
+	set tuner_offset to my HDHRDeviceSearch("hdhr_prepare_record0", device_id)
+	set used_tuner_get to do shell script "curl '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & "/tuners.html'"
+	--set used_tuner_get_response to my stringtolist("used_tuner0", used_tuner_get, {"<td>", "</td>", "<tr>", "</tr>"})
+	set used_tuner_get_response to item 2 of my stringtolist("used_tuner0", used_tuner_get, {"<table>", "</table>"})
+	set used_tuner_get_response to my stringtolist("used_tuner1", used_tuner_get_response, {"<td>", "</td>", "<tr>", "</tr>", return})
+	set used_tuner_get_response to my emptylist(used_tuner_get_response)
+	try
+		if length of used_tuner_get_response > 2 then
+			repeat with i from 1 to length of used_tuner_get_response
+				if item i of used_tuner_get_response contains "Tuner" then
+					set end of temp_list to item (i + 1) of used_tuner_get_response
+				end if
+			end repeat
+		end if
+	on error
+		display notification "ERROR in used_tuner()"
+	end try
+	return temp_list
+end tuner_status
 
 on check_version()
 	set version_response to (fetch JSON from version_url)
@@ -397,7 +426,6 @@ on main()
 	--This will make sure that data we have stored is valid
 	my validate_show_info("", false)
 	my build_channel_list("main0", "")
-	
 	--This will mark shows as inactive (single show recording that has already passed)
 	set show_info_length to length of show_info
 	if show_info_length > 0 then
@@ -537,7 +565,7 @@ on add_show_info(hdhr_device)
 	--log " hdhr_response_channel: " & hdhr_response_channel
 	if hdhr_response_channel ­ {} then
 		set show_time_adjusted to my epoch2show_time(getTfromN(StartTime of hdhr_response_channel))
-		if show_time of temp_show_info ­ show_time_adjusted then
+		if (show_time of temp_show_info as number) ­ (show_time_adjusted as number) then
 			display notification edit_icon & " Show Time changed to " & show_time_adjusted
 			set show_time of temp_show_info to show_time_adjusted
 		end if
@@ -545,7 +573,7 @@ on add_show_info(hdhr_device)
 	--	log "start time: " & my epoch2show_time(getTfromN(StartTime of hdhr_response_channel))
 	--fixme!
 	--	(*start time: 1.609974E+9*)
-	-- (*proposed time: 17.5*)
+	-- (*proposed time: 17.5*) 
 	
 	--FIX
 	--if show_time of temp_show_info > StartTime of  hdhr_response_channel then
@@ -732,15 +760,16 @@ on idle
 						end if
 						--FIX the above line would cause some issues when quitting/re opening.  We should resume more gracefully
 						--try
-						set used_tuner_respone to my used_tuner("idle0", hdhr_record of item i of show_info)
-						log "Used Tuner"
-						if length of used_tuner_respone > 0 then
-							display notification used_tuner_respone
-						end if
 						--on error
 						--	display notification "Used Tuner Error"
 						--end try 
 						set show_runtime to (show_end of item i of show_info) - (current date)
+						if my tuner_status("idle5", hdhr_record of item i of show_info) contains "not in use" then
+							display notification "Available Tuner"
+						else
+							display notification "No Tuners: next time out in " & my tuner_end(hdhr_record of item i of show_info)
+							--fixme check to see when the next tuner is given up, and delay a bit to make sure we can hit it
+						end if
 						my record_now((show_id of item i of show_info), show_runtime)
 						display notification "Ends " & my short_date("rec started", show_end of item i of show_info, false) with title record_icon & " Started Recording on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
 						set notify_recording_time of item i of show_info to (current date) + (2 * minutes)
@@ -815,6 +844,7 @@ on idle
 end idle
 
 on record_now(the_show_id, opt_show_length)
+	-- FIX We need to return a true/false if this is successful
 	display notification opt_show_length
 	set i to my check_offset(the_show_id)
 	my update_show(the_show_id)
@@ -855,9 +885,9 @@ on record_now(the_show_id, opt_show_length)
 	--do shell script "curl --max-time " & (temp_show_length) & " http://" & hdhr_IP & "/auto/v" & show_channel of item i of show_info & " -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now", current date) & ".m2ts") & "> /dev/null 2>&1 &"
 	if show_transcode of item i of show_info = missing value or show_transcode of item i of show_info = "None" then
 		--We need to fix this as well, we do not refer to hdhr_ip and port any longer 
-		do shell script "caffeinate -i curl '" & my hdhr_prepare_record(hdhr_device) & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now", current date, true) & ".m2ts") & "> /dev/null 2>&1 &"
+		do shell script "caffeinate -i curl '" & my hdhr_prepare_record(hdhr_device) & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now0", current date, true) & ".m2ts") & "> /dev/null 2>&1 &"
 	else
-		do shell script "caffeinate -i curl '" & my hdhr_prepare_record(hdhr_device) & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "&transcode=" & show_transcode of item i of show_info & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now", current date, true) & ".mkv") & "> /dev/null 2>&1 &"
+		do shell script "caffeinate -i curl '" & my hdhr_prepare_record(hdhr_device) & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "&transcode=" & show_transcode of item i of show_info & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now1", current date, true) & ".mkv") & "> /dev/null 2>&1 &"
 		--display dialog "caffeinate -i curl '" & my hdhr_prepare_record(hdhr_device) & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now", current date, true) & ".mkv") & "> /dev/null 2>&1 &"
 	end if
 	
@@ -1063,7 +1093,7 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 		set progress total steps to length of hdhr_device_discovery
 		repeat with i from 1 to length of hdhr_device_discovery
 			set progress completed steps to i
-			set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:DiscoverURL of item i of hdhr_device_discovery, lineup_url:LineupURL of item i of hdhr_device_discovery, device_id:deviceid of item i of hdhr_device_discovery, does_transcode:Transcode of item i of hdhr_device_discovery, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value, channel_mapping:missing value}
+			set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:DiscoverURL of item i of hdhr_device_discovery, lineup_url:LineupURL of item i of hdhr_device_discovery, device_id:deviceid of item i of hdhr_device_discovery, does_transcode:Transcode of item i of hdhr_device_discovery, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value, channel_mapping:missing value, BaseURL:BaseURL of item i of hdhr_device_discovery}
 			log last item of HDHR_DEVICE_LIST
 		end repeat
 		--Add a fake device entry to make sure we dont break this for multiple devices.
