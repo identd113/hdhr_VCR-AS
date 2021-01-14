@@ -45,13 +45,21 @@ global disk_icon
 global update_icon
 global trash_icon
 global stop_icon
+global up_icon
+global up2_icon
+global check_icon
+global uncheck_icon
+global calendar_icon
 
---{hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value}
--- nextup is currently a property, so this value persists through application restarts.  Big Sir will disallow this ability.  I need to be make this a global.  Does one really need to write 
 
 use AppleScript version "2.4"
 use scripting additions
 use application "JSON Helper"
+
+--{hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value}
+-- nextup is currently a property, so this value persists through application restarts.  Big Sir will disallow this ability.  I need to be make this a global.  Does one really need to write 
+
+
 
 -- Done Use jsonhelper and json querys to get data.
 --show_info model: (*show_title:Happy_Holidays_America, show_time:16, show_length:60, show_air_date:Sunday, show_transcode:missing value, show_temp_dir:alias Backups:, show_dir:alias Backups:, show_channel:5.1, show_active:true, show_id:221fbe1126389e6af35f405aa681cf19, show_recording:false, show_last:date Sunday, December 13, 2020 at 4:04:54 PM, show_next:date Sunday, December 13, 2020 at 4:00:00 PM, show_end:date Sunday, December 13, 2020 at 5:00:00 PM, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:XX105404BE,show_is_series:false*
@@ -82,7 +90,7 @@ on tuner_end(hdhr_model)
 	end repeat
 	if length of temp ­ 0 then
 		repeat with i2 from 1 to length of temp
-			if item i2 of temp < lowest_number and item i2 of temp > 1 then
+			if item i2 of temp < lowest_number and item i2 of temp > 0 then
 				set lowest_number to item i2 of temp
 			end if
 		end repeat
@@ -118,15 +126,6 @@ on check_version()
 	set version_remote to hdhr_version of item 1 of versions of version_response
 	log "Remote: " & version_remote
 	log "Local: " & version_local
-	if version_remote > version_local then
-		--	display notification changelog of item 1 of versions of version_response with title update_icon & " Update Available!" subtitle name of me & " " & version_remote
-	end if
-	if version_remote = version_local then
-		--display notification name of me & " is up to date."
-	end if
-	if version_remote < version_local then
-		--	display notification "You are running a beta version of " & name of me
-	end if
 end check_version
 
 on check_version_dialog()
@@ -164,6 +163,12 @@ on run {}
 	set update_icon to character id 127381
 	set trash_icon to character id {128465, 65039}
 	set stop_icon to character id 9209
+	set up_icon to character id 128316
+	set up2_icon to character id 9195
+	set check_icon to character id 9989
+	set uncheck_icon to character id 10060
+	set calendar_icon to character id 128197
+	
 	set version_local to "20210111.2"
 	
 	set progress description to "Loading " & name of me & " " & version_local
@@ -171,7 +176,7 @@ on run {}
 	set show_info to {}
 	set notify_upnext to 30
 	set notify_recording to 10
-	set locale to user locale of (system info) 
+	set locale to user locale of (system info)
 	set hdhr_setup_folder to "Volumes:"
 	set hdhr_setup_transcode to "No"
 	set hdhr_setup_name_bool to "No"
@@ -426,6 +431,7 @@ on main()
 	--This will make sure that data we have stored is valid
 	my validate_show_info("", false)
 	my build_channel_list("main0", "")
+	
 	--This will mark shows as inactive (single show recording that has already passed)
 	set show_info_length to length of show_info
 	if show_info_length > 0 then
@@ -437,7 +443,8 @@ on main()
 	end if
 	
 	--Collect the temporary name.  This will likely be over written once we can pull guide data
-	set title_response to (display dialog "Would you like to add a show?" buttons {tv_icon & " Shows..", plus_icon & " Add..", play_icon & " Run"} with title my check_version_dialog() giving up after dialog_timeout with icon note default button 2)
+	activate me
+	set title_response to (display dialog "Would you like to add a show?" buttons {tv_icon & " Shows..", plus_icon & " Add..", play_icon & " Run"} with title my check_version_dialog() giving up after (dialog_timeout - 30) with icon note default button 2)
 	if button returned of title_response contains "Add.." then
 		set temp_tuners_list to {}
 		--set end of temp_tuners_list to "Auto"
@@ -464,23 +471,49 @@ on main()
 		--display dialog button returned of title_response
 		set show_list to {}
 		--display dialog length of show_info
+		-- FIX We need to figure out how to sort this list. ideally the list would be:
+		-- recording
+		-- up next
+		-- up next2
+		-- rest
+		
 		repeat with i from 1 to length of show_info
 			--set end of show_list to (show_title of item i of show_info & "\" on " & show_channel of item i of show_info & " at " & show_time of item i of show_info & " for " & show_length of item i of show_info & " minutes on " & show_air_date)
 			--display notification class of show_recording of item i of show_info
 			set temp_show_line to " " & (show_title of item i of show_info & " on " & show_channel of item i of show_info & " at " & show_time of item i of show_info & " for " & show_length of item i of show_info & " minutes on " & my listtostring(show_air_date of item i of show_info, ", "))
-			if show_recording of item i of show_info = true then
-				set temp_show_line to record_icon & temp_show_line
-			end if
-			if show_active of item i of show_info = false then
-				set temp_show_line to inactive_icon & temp_show_line
-			end if
+			
 			if show_is_series of item i of show_info = true then
 				set temp_show_line to series_icon & temp_show_line
 			else
 				set temp_show_line to single_icon & temp_show_line
 			end if
+			
+			if show_active of item i of show_info = true then
+				set temp_show_line to check_icon & temp_show_line
+			else
+				set temp_show_line to uncheck_icon & temp_show_line
+			end if
+			
+			if ((show_next of item i of show_info) - (current date)) < 4 * hours and show_active of item i of show_info = true and show_recording of item i of show_info = false then
+				set temp_show_line to up_icon & temp_show_line
+			end if
+			
+			if ((show_next of item i of show_info) - (current date)) ³ 4 * hours and (date (date string of (current date))) = (date (date string of (show_next of item i of show_info))) and show_active of item i of show_info = true and show_recording of item i of show_info = false then
+				set temp_show_line to up2_icon & temp_show_line
+			end if
+			
+			if show_recording of item i of show_info = true and show_active of item i of show_info = true then
+				set temp_show_line to record_icon & temp_show_line
+			end if
+			
+			if (date (date string of (current date))) < (date (date string of (show_next of item i of show_info))) and show_active of item i of show_info = true then
+				set temp_show_line to calendar_icon & temp_show_line
+			end if
+			
+			
 			set end of show_list to temp_show_line
 		end repeat
+		
 		--display dialog length of show_list 
 		if length of show_list = 0 then
 			--	display dialog "2"
@@ -500,7 +533,7 @@ on main()
 			end try
 		else if length of show_list > 0 then
 			--Fix Add prompt here
-			set temp_show_list to (choose from list show_list with title my check_version_dialog() with prompt "Select show to edit: " & return & single_icon & " Single   " & series_icon & " Series" & "   " & record_icon & " Recording" & "   " & inactive_icon & " Inactive" OK button name edit_icon & " Edit.." cancel button name play_icon & " Run" without empty selection allowed)
+			set temp_show_list to (choose from list show_list with title my check_version_dialog() with prompt "Select show to edit: " & return & single_icon & " Single   " & series_icon & " Series" & "   " & record_icon & " Recording" & "   " & uncheck_icon & "/" & check_icon & " In/active" & "   " & up_icon & " Up Next" & "  " & up2_icon & " Up Next > 4h" OK button name edit_icon & " Edit.." cancel button name play_icon & " Run" without empty selection allowed)
 			if temp_show_list ­ false then
 				my validate_show_info(show_id of item (my list_position("main1", (temp_show_list as text), show_list, true)) of show_info, true)
 				my save_data()
@@ -766,7 +799,7 @@ on idle
 						set show_runtime to (show_end of item i of show_info) - (current date)
 						if my tuner_status("idle5", hdhr_record of item i of show_info) does not contain "not in use" then
 							set tuner_end_temp to my tuner_end(hdhr_record of item i of show_info)
-							if tuner_end_temp < 15 then
+							if tuner_end_temp ² 15 then
 								display notification "Pausing idle for " & tuner_end_temp & " seconds."
 								delay (my tuner_end(hdhr_record of item i of show_info)) + 5
 							else
@@ -800,19 +833,19 @@ on idle
 				--set delay_count to delay_count + 1
 				--if delay_count ³ 36 then -- ~ 10 minutes 
 				--display notification show_title of item i of show_info & " is next at " & my short_date("is_next", show_next of item i of show_info)
-				if (notify_upnext_time of item i of show_info < (current date) or notify_upnext_time of item i of show_info = missing value) and (date (date string of (show_next of item i of show_info))) = (date (date string of (current date))) then
+				if (notify_upnext_time of item i of show_info < (current date) or notify_upnext_time of item i of show_info = missing value) and (show_next of item i of show_info) - (current date) ² 4 * hours then
 					--This line is a hot mess, as it reports too often.  Lets try some progress bar hacks.
 					
 					--	set progress description to "Loading ..."
 					--  set progress additional description to
-					--	set progress completed steps to 0
+					--	set progress completed steps to 0 
 					--	set progress total steps to 1 
 					
 					--set progress description to "Next up... (" & hdhr_record of item i of show_info & ")"
 					--set progress additional description to "Starts: " & my short_date("is_next", show_next of item i of show_info, false)
 					
 					--We see this message very often, lets make sure we only display up next shows just for today. 
-					display notification "Starts: " & my short_date("is_next", show_next of item i of show_info, false) with title soon_icon & " Next UP on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info, hdhr_record of item i of show_info) & ")"
+					display notification "Starts: " & my short_date("is_next", show_next of item i of show_info, false) & " (" & my sec_to_time(((show_next of item i of show_info) - (current date))) & ")" with title up_icon & " Next Up on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info, hdhr_record of item i of show_info) & ")"
 					set notify_upnext_time of item i of show_info to (current date) + (notify_upnext * minutes)
 				end if
 				--	set delay_count to 0 
@@ -837,19 +870,19 @@ on idle
 					--This needs to happen not in the idle loop.  Since we loop the stored tv shows (show_info), and we are still inside of the repeat loop, we end up trying to walk past the list, kind of a off by 1 error.
 					--We can remove these shows on app start, before we start walking the idle loop.  If we want to remove a show, we have to make sure we are not in a loop inside of the idle handler.  We can create an idle lock bit, which can increase the call back time to a much higer number, run our code, and then "unlock" the loop.  This all sounds very sloppy, and i dont like it.  We may just need to mark the show entries as dirty, likely by making making the show_id a missing value.  We would need to clear this out before we get stuck in a repeat loop.  This sounds cleaner.  This also means we need to remove references of the remove_show_info handler,  and stick this in the idle handler, which can have its own host of issues.
 				end if
-				--else if show_end of item i of show_info < (current date) and show_is_series of item i of show_info = false then
-			else if show_is_series of item i of show_info = false and show_end of item i of show_info < (current date) then
+				--else if show_end of item i of show_info < (current date) and show_is_series of item i of show_info = false then 
+			else if show_is_series of item i of show_info = false and show_end of item i of show_info < (current date) and show_active of item i of show_info = true then
 				set show_active of item i of show_info to false
-				display notification show_title of item i of show_info & " removed."
+				display notification show_title of item i of show_info & " removed"
 			end if
 		end repeat
 	end if
-	return 9
+	return 12
 end idle
 
 on record_now(the_show_id, opt_show_length)
 	-- FIX We need to return a true/false if this is successful
-	display notification opt_show_length
+	--display notification opt_show_length
 	set i to my check_offset(the_show_id)
 	my update_show(the_show_id)
 	
@@ -906,6 +939,7 @@ end record_now
 on sec_to_time(secs)
 	set the_minutes to my padnum((secs div minutes) as text)
 	set the_seconds to my padnum(secs - (the_minutes * minutes) as text)
+	--	set the_hours to my padnum(secs - (the_minutes * minutes) - ("test") as text)
 	return (the_minutes & ":" & the_seconds as text)
 end sec_to_time
 
@@ -1052,7 +1086,7 @@ on quit {}
 	end repeat
 	if hdhr_quit_record = true then
 		--Add currently recorded shows
-		set quit_response to button returned of (display dialog "Do you want to cancel recordings already in progress?" buttons {"Go Back", "No", "Yes"} default button 2 with title my check_version_dialog() giving up after dialog_timeout with icon stop)
+		set quit_response to button returned of (display dialog "Do you want to cancel recordings already in progress?" buttons {"Go Back", "Yes", "No"} default button 3 with title my check_version_dialog() giving up after dialog_timeout with icon stop)
 	else
 		my save_data()
 		continue quit
@@ -1448,6 +1482,14 @@ on save_data()
 	else
 		log "Save file protected from being wiped."
 	end if
+	
+	try
+		set show_info_json to (make JSON from show_info)
+		log show_info_json
+	on error
+		log "json error"
+	end try
+	
 	close access ref_num
 	display notification disk_icon & " " & length of show_info & " shows saved"
 end save_data
