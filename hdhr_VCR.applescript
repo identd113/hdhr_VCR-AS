@@ -156,7 +156,7 @@ on run {}
 	set plus_icon to character id (10133)
 	set single_icon to character id {49, 65039, 8419}
 	set series_icon to character id 128257
-	set inactive_icon to character id 9940
+	set inactive_icon to character id 9940 
 	set edit_icon to character id {9999, 65039}
 	set soon_icon to character id 128284
 	set disk_icon to character id 128190
