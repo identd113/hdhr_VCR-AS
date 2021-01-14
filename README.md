@@ -31,6 +31,13 @@ When you first run this, OSX will prompt multiple times for various system permi
 6. You will then be presented with options to see the existing shows, add a show, or "Run"  More about "Run" later.
 7. If you have multiple tuners, you will be asked which one you would like to use fo this recording.
 8. You will be presented with a channel list.  Select the channel this show is on.
+```
+  2.1 TPT2
+  2.3 TPTLife
+  ...
+  ...
+```
+
 9. You will then be asked to specify a time, it is done a bit strangely. We use 24 hour decimal time
 * For example, if you wanted to record a show at 6:45 PM, you would enter 18.75. (.5 of an hour, is 30 minutes.  .75 of an hour is 45 minutes.)
 * If you attempt to use a time that has already passed for today, it will assuem you mean tomorrow.
@@ -96,13 +103,5 @@ The hdhr_guide and hdhr_lineup contain the entire json result of the lineup, and
 * * Tuner and Lineup updates (On launch, and every two hours.)
   
 I want to make these notifications better, but AppleScript has very limited ways to interact with the user.  Notifications make sense to me, as the app is faceless/background app
-
-When adding channels, you are presented with a list of available channels, with station name, example:
-```
-  2.1 TPT2
-  2.3 TPTLife
-  ...
-  ...
-```
 
 I hope this can be collaborative project, so other options that you use can be added.
