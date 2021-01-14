@@ -156,7 +156,7 @@ on run {}
 	set plus_icon to character id (10133)
 	set single_icon to character id {49, 65039, 8419}
 	set series_icon to character id 128257
-	set inactive_icon to character id 9940 
+	set inactive_icon to character id 9940
 	set edit_icon to character id {9999, 65039}
 	set soon_icon to character id 128284
 	set disk_icon to character id 128190
@@ -175,7 +175,7 @@ on run {}
 	--set globals 
 	set show_info to {}
 	set notify_upnext to 30
-	set notify_recording to 10
+	set notify_recording to 15
 	set locale to user locale of (system info)
 	set hdhr_setup_folder to "Volumes:"
 	set hdhr_setup_transcode to "No"
@@ -585,6 +585,7 @@ on add_show_info(hdhr_device)
 	
 	-- We know the channel and time, we can refer to our guid data to pull the name of the show.  If we dont know of it yet, we can ask the user.
 	log "Add_show"
+	set show_time_changed to false
 	--log my channel_guide(hdhr_device, show_channel of temp_show_info, show_time of temp_show_info)
 	--fix we error here if we cannot pull guidedata
 	set hdhr_response_channel to my channel_guide("Add_show_info0", hdhr_device, show_channel of temp_show_info, show_time of temp_show_info)
@@ -592,7 +593,8 @@ on add_show_info(hdhr_device)
 	if hdhr_response_channel ­ {} then
 		set show_time_adjusted to my epoch2show_time(getTfromN(StartTime of hdhr_response_channel))
 		if (show_time of temp_show_info as number) ­ (show_time_adjusted as number) then
-			display notification edit_icon & " Show Time changed to " & show_time_adjusted
+			set show_time_changed to true
+			--display notification edit_icon & " Show Time changed to " & show_time_adjusted
 			set show_time of temp_show_info to show_time_adjusted
 		end if
 	end if
@@ -621,7 +623,13 @@ on add_show_info(hdhr_device)
 		set hdhr_response_channel_title to hdhr_response_channel_title & " " & EpisodeTitle of hdhr_response_channel
 	end try
 	
-	set show_title_temp to display dialog "What is the title of this show, and is it a series?" buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 default answer hdhr_response_channel_title with title my check_version_dialog() giving up after dialog_timeout
+	-- my short_date(the_caller, the_date_object, twentyfourtime)
+	
+	if show_time_changed = true then
+		set show_title_temp to display dialog "What is the title of this show, and is it a series?" & return & "Show time changed to " & words 2 through end of (my short_date("on_add", my time_set((current date), (show_time of temp_show_info)), false)) buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 default answer hdhr_response_channel_title with title my check_version_dialog() giving up after dialog_timeout
+	else
+		set show_title_temp to display dialog "What is the title of this show, and is it a series?" buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 default answer hdhr_response_channel_title with title my check_version_dialog() giving up after dialog_timeout
+	end if
 	set show_title of temp_show_info to text returned of show_title_temp
 	--if show_title of temp_show_info contains " " then
 	--set show_title of temp_show_info to my listtostring(my stringtolist("show title", show_title of temp_show_info, " "), "_")
@@ -752,7 +760,7 @@ on idle
 						--	display notification "Used Tuner Error"
 						--end try 
 						set show_runtime to (show_end of item i of show_info) - (current date)
-						if my tuner_status("idle5", hdhr_record of item i of show_info) does not contain "not in use" then
+						if my tuner_status("idle1", hdhr_record of item i of show_info) does not contain "not in use" then
 							set tuner_end_temp to my tuner_end(hdhr_record of item i of show_info)
 							if tuner_end_temp ² 15 then
 								display notification "Pausing idle for " & tuner_end_temp & " seconds."
@@ -1061,7 +1069,7 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 			log last item of HDHR_DEVICE_LIST
 		end repeat
 		--Add a fake device entry to make sure we dont break this for multiple devices.
-		set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value, channel_mapping:missing value}
+		-- set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value, channel_mapping:missing value, BaseURL:BaseURL of item 1 of hdhr_device_discovery}
 		log "Length of HDHR_DEVICE_LIST: " & length of HDHR_DEVICE_LIST
 		
 		--We now have a list of tuners, via a list of records in HDHR_TUNERS, now we want to pull a lineup, and a guide.
