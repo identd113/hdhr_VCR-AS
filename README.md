@@ -2,6 +2,7 @@
 A pretty damn good VCR "plus" script that works on all HDHomeRun devices.
 A faceless/background script that makes recording TV shows and Movies on HDHomeRun very easy.
 
+![Show List](show_list.jpg)
 #### Why?
 I wanted to allow a quick way to record a TV show, without needing to setup a large system like Plex or HDHomeRuns' own DVR software.
 I call it a VCR app, as while it does use guide data to pull name / season / episode number / episode name / show length, it does not present like a normal DVR.  It is more of a Smart VCR
