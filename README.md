@@ -80,7 +80,7 @@ This is an example of a what data of a show recording contains:
 Example of a tuner record:
 
 ```
-(hdhr_lineup_update:Saturday, December 19, 2020 at 1:21:46 AM, hdhr_guide_update:Saturday, December 19, 2020 at 1:21:48 AM, discover_url:http://10.0.1.101/discover.json, lineup_url:http://10.0.1.101/lineup.json, device_id:1054271E, does_transcode:1, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:"HDTC-2US")
+(hdhr_lineup_update:Saturday, December 19, 2020 at 1:21:46 AM, hdhr_guide_update:Saturday, December 19, 2020 at 1:21:48 AM, discover_url:http://10.0.1.101/discover.json, lineup_url:http://10.0.1.101/lineup.json, device_id:1054271E, does_transcode:1, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:"HDTC-2US", channel_mapping:missing value, BaseURL:missing value)
 ```
 
 The hdhr_guide and hdhr_lineup contain the entire json result of the lineup, and guide data.  We use this as a cache, so we only make a "new" API call every 2 hours, or when a show starts recording.
@@ -88,14 +88,14 @@ The hdhr_guide and hdhr_lineup contain the entire json result of the lineup, and
 ## Special considerations
 * The "heavy lifting" is done with curl, which downloads the data to a local drive.  The script manages the show and device logic.
 * If there are multiple HDHR device on the network, you will be asked which one you want to use when adding a show.
+* When adding a show, we will attempt to write a test file to that location (and remove it) right away, so we can get through any of the OS X disk access prompts.  This file is written/removed every 5 minutes during a recording.  This will update the file, as seen in Finder.
 * Heavily use notifications to pass along information to the user, as we run more or less faceless.  Future versions will allow you to specify you get a message such as:
-* * Shows that are scheduled in the future "Up Next"
-* * Starting recording
+* *  Starting recording
 * * Recording in progress
 * * End recording.
 * * Tuner and Lineup updates (On launch, and every two hours.)
   
-I want to make this better as well, but AppleScript has very limited ways to interact with the user.  Notifications make sense to me, as the app is faceless/background app
+I want to make these notifications better, but AppleScript has very limited ways to interact with the user.  Notifications make sense to me, as the app is faceless/background app
 
 When adding channels, you are presented with a list of available channels, with station name, example:
 ```
@@ -105,8 +105,4 @@ When adding channels, you are presented with a list of available channels, with 
   ...
 ```
 
-When adding a show, we will attempt to write a test file to that location (and remove it) right away, so we can get through any of the OS X disk access prompts.
-
 I hope this can be collaborative project, so other options that you use can be added.
-
-
