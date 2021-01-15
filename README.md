@@ -62,18 +62,22 @@ Wow, that was alot.  In practice, you can add shows very quickly, and I over des
 The button that shows "Run" in almost all dialogs, will drop you back into the idle() handler.  This allows the script to run as needed.  It is important to know that the idle() is NOT running when a dialog is open.  If a dialog stays open forever, we will never be able to record, or update anything in the script.  Because of this, most dialogs have a timeout of 60 seconds, before auto closing.
 
 "I did that, but nothing happens!"
+
 That is accurate.  When the script is configured with a show, it is faceless, and you do not need to do anything, other then allow it to run.
 
 "I want to add or edit a show"
+
 If you click the icon in the Dock, you will be presented with the main window, so you can do such things."
 
 "How do I know something is happening?
+
 We use notifications to alert the user to recordings being started, in progress, and completing.  This may cause lots of notifications to occur, if a lot of shows are scheduled.  If there is a better way to be able to tell the user something, let me know.
 
 "I need to quit the script, but I have a recording in progess"
-If you want to quit the script, the best way to do so is being in a "run" state (faceless) and then issuing a command q, or selecting "Quit" from the hdhr_VCR FIle menu.
-* If a show is currently recording, you will be prompted to tell you.  You can choose to go back to the main screem, quit, and cancel all recordings, or quit, but do not cancel the shows.  Since the recording is done with "curl", hdhr_VCR does not need to be open once a recording has already started.
-**In almost every case, you should choose to not to cancel the shows. **
+
+If you want to quit the script, the best way to do so is being in a "run" state (faceless) and then issuing a command q, or selecting "Quit" from the hdhr_VCR File menu.
+* If a show is currently recording, you will be prompted regarding if you want to cancel the recordings, before quitting.  You can choose to go back to the main screem, quit, and cancel all recordings, or quit, but do not cancel the shows.  Since the recording is done with "curl", hdhr_VCR does not need to be open once a recording has already started.
+**In almost every case, you should choose "No". **
 
 ## Nitty gritty  
 Uses records to store complex data sets. 
