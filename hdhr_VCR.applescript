@@ -9,6 +9,8 @@
 --property hdhr_TUNER_ct : 0
 -- caffeinate -i curl 'http://10.0.1.101:5004/auto/v2.4?duration=1768' -o '/Volumes/Backups/DVR Tests/Dinosaur Train S02E09 The Lost Bird; The Forest Fire_01.05.21 09.55.mkv'> /dev/null 2>&1 &
 --We need to know how many avilable tuners there are, and perhaps when they expire. I was trying to avoid this, but I have missed recordings because of this.
+--Done.  The handler returns the next tuner timeout in seconds.
+
 
 global show_info
 global temp_show_info
@@ -30,7 +32,7 @@ global hdhr_setup_ran
 global savefilename
 global time_slide
 global dialog_timeout
-
+global temp_dir
 --Icons
 global play_icon
 global record_icon
@@ -51,6 +53,7 @@ global check_icon
 global uncheck_icon
 global calendar_icon
 
+--Since we use JSON helper to do some of the work, we should declare it, so we dont end up having to use tell blocks everywhere.  If we declare 1 thing, we have to declare everything we are using.
 
 use AppleScript version "2.4"
 use scripting additions
@@ -102,7 +105,9 @@ on tuner_status(caller, device_id)
 	log "tuner_status: " & caller & " of " & device_id
 	set temp_list to {}
 	set tuner_offset to my HDHRDeviceSearch("hdhr_prepare_record0", device_id)
-	set used_tuner_get to do shell script "curl '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & "/tuners.html'"
+	--set used_tuner_get to (do shell script "curl '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & "/tuners.html'")
+	display dialog ("curl '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & "/tuners.html'")
+	set used_tuner_get to (do shell script "curl '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & "/tuners.html'")
 	--set used_tuner_get_response to my stringtolist("used_tuner0", used_tuner_get, {"<td>", "</td>", "<tr>", "</tr>"})
 	set used_tuner_get_response to item 2 of my stringtolist("used_tuner0", used_tuner_get, {"<table>", "</table>"})
 	set used_tuner_get_response to my stringtolist("used_tuner1", used_tuner_get_response, {"<td>", "</td>", "<tr>", "</tr>", return})
@@ -175,7 +180,7 @@ on run {}
 	--set globals 
 	set show_info to {}
 	set notify_upnext to 30
-	set notify_recording to 15
+	set notify_recording to 10
 	set locale to user locale of (system info)
 	set hdhr_setup_folder to "Volumes:"
 	set hdhr_setup_transcode to "No"
@@ -186,6 +191,7 @@ on run {}
 	set dialog_timeout to 60
 	set version_url to "https://raw.githubusercontent.com/identd113/hdhr_VCR-AS/master/version.json"
 	set version_remote to "0"
+	set temp_dir to alias "Volumes:"
 	--We will try to autodiscover the HDHR device on the network, and throw it into a record.
 	--Lets check for a new version!
 	my check_version()
@@ -462,13 +468,20 @@ on main()
 	end if
 	
 	if button returned of title_response contains "Shows.." then
+		if option_down of my isModifierKeyPressed("shows", "option") = true then
+			set temp_show_next to {}
+			repeat with i from 1 to length of show_info
+				set end of temp_show_next to show_next of item i of show_info as text
+			end repeat
+			choose from list temp_show_next
+		end if
 		--display dialog button returned of title_response
 		set show_list to {}
 		--display dialog length of show_info
-		-- FIX We need to figure out how to sort this list. ideally the list would be:
+		-- FIX We need to figure out how to sort this list. ideally the list would be: 
 		-- recording
 		-- up next
-		-- up next2
+		-- up next2 
 		-- rest
 		
 		repeat with i from 1 to length of show_info
@@ -626,7 +639,7 @@ on add_show_info(hdhr_device)
 	-- my short_date(the_caller, the_date_object, twentyfourtime)
 	
 	if show_time_changed = true then
-		set show_title_temp to display dialog "What is the title of this show, and is it a series?" & return & "Show time changed to " & words 2 through end of (my short_date("on_add", my time_set((current date), (show_time of temp_show_info)), false)) buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 default answer hdhr_response_channel_title with title my check_version_dialog() giving up after dialog_timeout
+		set show_title_temp to display dialog "What is the title of this show, and is it a series?" & return & "Show time changed to " & items 2 through end of my short_date("on_add", my time_set((current date), (show_time of temp_show_info)), false) buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 default answer hdhr_response_channel_title with title my check_version_dialog() giving up after dialog_timeout
 	else
 		set show_title_temp to display dialog "What is the title of this show, and is it a series?" buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 default answer hdhr_response_channel_title with title my check_version_dialog() giving up after dialog_timeout
 	end if
@@ -670,14 +683,13 @@ on add_show_info(hdhr_device)
 	if show_is_series of temp_show_info = true then
 		--set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} with prompt "Please choose the days this series airs." default items default_record_day with multiple selections allowed without empty selection allowed)
 		
-		set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title my check_version_dialog() OK button name "Next.." cancel button name play_icon & " Run" with prompt "Select the days you wish to record." & return & "You can select multiple days." with multiple selections allowed without empty selection allowed)
+		set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title my check_version_dialog() OK button name "Next.." cancel button name play_icon & " Run" with prompt "Select the days you wish to record." & return & "A \"Series\" can select multiple days." with multiple selections allowed without empty selection allowed)
 	else
-		set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title my check_version_dialog() OK button name "Next.." cancel button name play_icon & " Run" with prompt "Select the days you wish to record." & return & "You can only select 1 day." without empty selection allowed)
+		set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title my check_version_dialog() OK button name "Next.." cancel button name play_icon & " Run" with prompt "Select the days you wish to record." & return & "A \"Single\" can only select 1 day." without empty selection allowed)
 	end if
 	if show_air_date of temp_show_info = false then
 		return
 	end if
-	
 	set temp_dir to alias "Volumes:"
 	repeat until temp_dir ­ alias "Volumes:"
 		set show_dir of temp_show_info to choose folder with prompt "Select Shows Directory" default location temp_dir
@@ -698,7 +710,12 @@ on add_show_info(hdhr_device)
 	--end try
 	
 	if does_transcode of item tuner_offset of HDHR_DEVICE_LIST = 1 then
-		set show_transcode of temp_show_info to word 1 of item 1 of (choose from list {"None: Does not transcode, will save as MPEG2 stream.", "heavy: Transcode with same settings", "mobile: Transcode not exceeding 1280x720 30fps", "intenet720: Low bit rate, not exceeding 1280x720 30fps", "internet480: Low bit rate not exceeding 848x480/640x480 for 16:9/4:3 30fps", "internet360: Low bit rate not exceeding 640x360/480x360 for 16:9/4:3 30fps", "internet240: Low bit rate not exceeding 432x240/320x240 for 16:9/4:3 30fps"} with prompt "Please choose the transcode level on the file" with title my check_version_dialog() default items {"None: Does not transcode, will save as MPEG2 stream."} OK button name disk_icon & " Save Show" cancel button name play_icon & " Run")
+		set show_transcode_response to (choose from list {"None: Does not transcode, will save as MPEG2 stream.", "heavy: Transcode with same settings", "mobile: Transcode not exceeding 1280x720 30fps", "intenet720: Low bit rate, not exceeding 1280x720 30fps", "internet480: Low bit rate not exceeding 848x480/640x480 for 16:9/4:3 30fps", "internet360: Low bit rate not exceeding 640x360/480x360 for 16:9/4:3 30fps", "internet240: Low bit rate not exceeding 432x240/320x240 for 16:9/4:3 30fps"} with prompt "Please choose the transcode level on the file" with title my check_version_dialog() default items {"None: Does not transcode, will save as MPEG2 stream."} OK button name disk_icon & " Save Show" cancel button name play_icon & " Run")
+		try
+			set show_transcode of temp_show_info to word 1 of item 1 of show_transcode_response
+		on error
+			return false
+		end try
 	else
 		set show_transcode of temp_show_info to missing value
 	end if
@@ -722,6 +739,7 @@ end update_folder
 on idle
 	--display notification time string of (current date)
 	set cd_object to (current date) + 10
+	
 	--Re run auto discover every 2 hours, or once we flip past midnight
 	if length of HDHR_DEVICE_LIST > 0 then
 		repeat with i2 from 1 to length of HDHR_DEVICE_LIST
@@ -766,14 +784,14 @@ on idle
 								display notification "Pausing idle for " & tuner_end_temp & " seconds."
 								delay (my tuner_end(hdhr_record of item i of show_info)) + 5
 							else
-								display notification "No Tuners: next time out in " & tuner_end_temp & "seconds"
+								display notification "No Tuners: next time out in " & tuner_end_temp & " seconds"
 							end if
 						end if
 						my record_now((show_id of item i of show_info), show_runtime)
 						display notification "Ends " & my short_date("rec started", show_end of item i of show_info, false) with title record_icon & " Started Recording on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
 						set notify_recording_time of item i of show_info to (current date) + (2 * minutes)
 						--display notification show_title of item i of show_info & " on channel " & show_channel of item i of show_info & " started for " & show_runtime of item i of show_info & " minutes."
-					else
+					else 
 						--display notification show_title of item i of show_info & " is recording until " & my short_date("recording", show_end of item i of show_info)
 						if notify_recording_time of item i of show_info < (current date) or notify_recording_time of item i of show_info = missing value then
 							display notification "Ends " & my short_date("rec progress", show_end of item i of show_info, false) & " (" & (my sec_to_time((show_end of item i of show_info) - (current date))) & ") " with title record_icon & " Recording in progress on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
@@ -818,9 +836,10 @@ on idle
 			if show_recording of item i of show_info = true then
 				if show_end of item i of show_info < (current date) then
 					set show_last of item i of show_info to show_end of item i of show_info
-					set show_next of item i of show_info to my nextday(show_id of item i of show_info)
+					--set show_next of item i of show_info to my nextday(show_id of item i of show_info)
 					set show_recording of item i of show_info to false
 					if show_is_series of item i of show_info = true then
+						set show_next of item i of show_info to my nextday(show_id of item i of show_info)
 						display notification "Next Showing: " & my short_date("rec_end", show_next of item i of show_info, false) with title stop_icon & " Recording Complete." subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
 					else
 						set show_active of item i of show_info to false
@@ -1026,14 +1045,15 @@ on quit {}
 		continue quit
 	end if
 	if quit_response = "Yes" then
-		try
-			do shell script "pkill curl"
-			repeat with i from 1 to length of show_info
-				set show_recording of item i of show_info to false
-			end repeat
-			my save_data()
-			continue quit
-		end try
+		repeat with i from 1 to length of show_info
+			set show_recording of item i of show_info to false
+		end repeat
+		
+		--try
+		do shell script "pkill curl"
+		my save_data()
+		continue quit
+		--end try
 	end if
 	if quit_response = "No" then
 		my save_data()
@@ -1503,9 +1523,76 @@ on emptylist(klist)
 	return nlist
 end emptylist
 
-on get_my_pid()
-	--helpful for debugging, but throws an extra permission ns prompt, so not worth calling to.
-	tell application "System Events"
-		return get unix id of (every process whose name is (name of me))
-	end tell
-end get_my_pid
+on isModifierKeyPressed(source_reason, checkKey)
+	try
+		log "isModifierKeyPressed: " & checkKey & " for " & source_reason
+	end try
+	set modiferKeysDOWN to {command_down:false, option_down:false, control_down:false, shift_down:false, caps_down:false, numlock_down:false, function_down:false}
+	
+	if checkKey is in {"", "option", "alt"} then
+		--if checkKey = "" or checkKey = "option" or checkKey = "alt" then
+		if (do shell script "/usr/bin/python -c 'import Cocoa; print Cocoa.NSEvent.modifierFlags() & Cocoa.NSAlternateKeyMask '") > 1 then
+			set option_down of modiferKeysDOWN to true
+		end if
+	end if
+	
+	if checkKey is in {"", "command"} then
+		if (do shell script "/usr/bin/python -c 'import Cocoa; print Cocoa.NSEvent.modifierFlags() & Cocoa.NSCommandKeyMask '") > 1 then
+			set command_down of modiferKeysDOWN to true
+		end if
+	end if
+	
+	if checkKey is in {"", "shift"} then
+		if (do shell script "/usr/bin/python -c 'import Cocoa; print Cocoa.NSEvent.modifierFlags() & Cocoa.NSShiftKeyMask '") > 1 then
+			set shift_down of modiferKeysDOWN to true
+		end if
+	end if
+	
+	if checkKey is in {"", "control", "ctrl"} then
+		if (do shell script "/usr/bin/python -c 'import Cocoa; print Cocoa.NSEvent.modifierFlags() & Cocoa.NSControlKeyMask '") > 1 then
+			set control_down of modiferKeysDOWN to true
+		end if
+	end if
+	
+	if checkKey is in {"", "caps", "capslock"} then
+		if (do shell script "/usr/bin/python -c 'import Cocoa; print Cocoa.NSEvent.modifierFlags() & Cocoa.NSAlphaShiftKeyMask '") > 1 then
+			set caps_down of modiferKeysDOWN to true
+		end if
+	end if
+	
+	if checkKey is in {"", "numlock"} then
+		if (do shell script "/usr/bin/python -c 'import Cocoa; print Cocoa.NSEvent.modifierFlags() & Cocoa.NSNumericPadKeyMask'") > 1 then
+			set numlock_down of modiferKeysDOWN to true
+		end if
+	end if
+	--Set if any key in the numeric keypad is pressed. The numeric keypad is generally on the right side of the keyboard. This is also set if any of the arrow keys are pressed
+	
+	if checkKey is in {"", "function", "func", "fn"} then
+		if (do shell script "/usr/bin/python -c 'import Cocoa; print Cocoa.NSEvent.modifierFlags() & Cocoa.NSFunctionKeyMask'") > 1 then
+			set function_down of modiferKeysDOWN to true
+		end if
+	end if
+	--Set if any function key is pressed. The function keys include the F keys at the top of most keyboards (F1, F2, and so on) and the navigation keys in the center of most keyboards (Help, Forward Delete, Home, End, Page Up, Page Down, and the arrow keys)
+	
+	return modiferKeysDOWN
+end isModifierKeyPressed
+
+on logger(caller, loglevel, message)
+	--caller can be "init" or "flush"
+	--We dont want to write out everything we write, so lets maintain a buffer
+	set logger_max_queued to 20
+	if caller = "init" then
+		set queued_log_lines to {}
+	end if
+	set end of queued_log_lines to my short_date("test", current date) & " " & loglevel & " " & caller & " " & message
+	if length of queued_log_lines ³ logger_max_queued or caller = "flush" then
+	end if
+	
+	set logfile to open for access file ((path to documents folder) & (name of me) & ".log" as text) with write permission
+	set ref_num to get eof of logfile
+	--set eof of ref_num to 0
+	repeat with i from 1 to length of queued_log_lines
+		write (item i of queued_log_lines & return) to logfile starting at ref_num
+	end repeat
+	close access logfile
+end logger
