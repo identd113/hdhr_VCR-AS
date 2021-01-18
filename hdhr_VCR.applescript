@@ -33,6 +33,7 @@ global savefilename
 global time_slide
 global dialog_timeout
 global temp_dir
+
 --Icons
 global play_icon
 global record_icon
@@ -83,32 +84,42 @@ use application "JSON Helper"
 --	set progress total steps to 1
 --If you select a record time in the middle of the show, we will adjust the start time to match guide data.  We may also need to update record time, and end time.  
 
-on tuner_end(hdhr_model)
-	set temp to {}
-	set lowest_number to 99999999
+on is_recording(caller, hdhr_model, show_time_check)
+	set is_recording_temp to {}
+	set tuner_offset to my HDHRDeviceSearch("is_recording", hdhr_model)
 	repeat with i from 1 to length of show_info
-		if show_recording of item i of show_info = true and hdhr_record of item i of show_info = hdhr_model then
-			set end of temp to ((show_end of item i of show_info) - (current date))
+		if hdhr_record of item i of show_info = hdhr_model then
 		end if
 	end repeat
-	if length of temp ­ 0 then
-		repeat with i2 from 1 to length of temp
-			if item i2 of temp < lowest_number and item i2 of temp > 0 then
-				set lowest_number to item i2 of temp
+end is_recording
+
+on tuner_end(hdhr_model)
+	--Returns the number of seconds to next tuner timeout.
+	set temp to {}
+	set lowest_number to 99999999
+	if length of show_info > 0 then
+		repeat with i from 1 to length of show_info
+			if show_recording of item i of show_info = true and hdhr_record of item i of show_info = hdhr_model then
+				set end of temp to ((show_end of item i of show_info) - (current date))
 			end if
 		end repeat
+		if length of temp > 0 then
+			repeat with i2 from 1 to length of temp
+				if item i2 of temp < lowest_number and item i2 of temp > 0 then
+					set lowest_number to item i2 of temp
+				end if
+			end repeat
+		end if
+		return lowest_number
 	end if
-	return lowest_number
+	return 0
 end tuner_end
 
 on tuner_status(caller, device_id)
 	log "tuner_status: " & caller & " of " & device_id
 	set temp_list to {}
-	set tuner_offset to my HDHRDeviceSearch("hdhr_prepare_record0", device_id)
-	--set used_tuner_get to (do shell script "curl '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & "/tuners.html'")
-	display dialog ("curl '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & "/tuners.html'")
+	set tuner_offset to my HDHRDeviceSearch("tuner_status", device_id)
 	set used_tuner_get to (do shell script "curl '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & "/tuners.html'")
-	--set used_tuner_get_response to my stringtolist("used_tuner0", used_tuner_get, {"<td>", "</td>", "<tr>", "</tr>"})
 	set used_tuner_get_response to item 2 of my stringtolist("used_tuner0", used_tuner_get, {"<table>", "</table>"})
 	set used_tuner_get_response to my stringtolist("used_tuner1", used_tuner_get_response, {"<td>", "</td>", "<tr>", "</tr>", return})
 	set used_tuner_get_response to my emptylist(used_tuner_get_response)
@@ -177,6 +188,7 @@ on run {}
 	set version_local to "20210115"
 	
 	set progress description to "Loading " & name of me & " " & version_local
+	
 	--set globals 
 	set show_info to {}
 	set notify_upnext to 30
@@ -748,6 +760,7 @@ on idle
 			end if
 		end repeat
 	end if
+	--If there are any shows to record, we walk through them all.
 	if length of show_info > 0 then
 		repeat with i from 1 to length of show_info
 			(*
@@ -778,25 +791,38 @@ on idle
 						--	display notification "Used Tuner Error"
 						--end try 
 						set show_runtime to (show_end of item i of show_info) - (current date)
+						
+						(*
+						set tuner_end_temp to 0
 						if my tuner_status("idle1", hdhr_record of item i of show_info) does not contain "not in use" then
 							set tuner_end_temp to my tuner_end(hdhr_record of item i of show_info)
 							if tuner_end_temp ² 15 then
-								display notification "Pausing idle for " & tuner_end_temp & " seconds."
+								display notification "Pausing idle for " & tuner_end_temp & " seconds"
 								delay (my tuner_end(hdhr_record of item i of show_info)) + 5
 							else
 								display notification "No Tuners: next time out in " & tuner_end_temp & " seconds"
 							end if
 						end if
-						my record_now((show_id of item i of show_info), show_runtime)
-						display notification "Ends " & my short_date("rec started", show_end of item i of show_info, false) with title record_icon & " Started Recording on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
-						set notify_recording_time of item i of show_info to (current date) + (2 * minutes)
-						--display notification show_title of item i of show_info & " on channel " & show_channel of item i of show_info & " started for " & show_runtime of item i of show_info & " minutes."
-					else 
+						*)
+						--FIX I think we can remove this, as we will just defer the recording job until the next loop.  Yay, we dont have to pause the queue.
+						
+						--FIX If all the tuners are in use for more then 20 seconds, we need to skip the show. 
+						--display notification tuner_end_temp
+						if my tuner_status("idle2", hdhr_record of item i of show_info) contains "not in use" then
+							-- If we now have no tuner avilable, we skip this "loop" and try again later.
+							my record_now((show_id of item i of show_info), show_runtime)
+							display notification "Ends " & my short_date("rec started", show_end of item i of show_info, false) with title record_icon & " Started Recording on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
+							set notify_recording_time of item i of show_info to (current date) + (2 * minutes)
+							--display notification show_title of item i of show_info & " on channel " & show_channel of item i of show_info & " started for " & show_runtime of item i of show_info & " minutes."
+						else
+							display notification "Tuner unavailable. Recording of " & show_title of item i of show_info & " defered for 8 seconds"
+						end if
+					else
 						--display notification show_title of item i of show_info & " is recording until " & my short_date("recording", show_end of item i of show_info)
 						if notify_recording_time of item i of show_info < (current date) or notify_recording_time of item i of show_info = missing value then
 							display notification "Ends " & my short_date("rec progress", show_end of item i of show_info, false) & " (" & (my sec_to_time((show_end of item i of show_info) - (current date))) & ") " with title record_icon & " Recording in progress on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
 							--try to refresh the file, so it shows it refreshes finder.
-							try
+							try 
 								my update_folder(show_dir of item i of show_info)
 							on error
 								display notification "Touch Update failed"
@@ -840,10 +866,10 @@ on idle
 					set show_recording of item i of show_info to false
 					if show_is_series of item i of show_info = true then
 						set show_next of item i of show_info to my nextday(show_id of item i of show_info)
-						display notification "Next Showing: " & my short_date("rec_end", show_next of item i of show_info, false) with title stop_icon & " Recording Complete." subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
+						display notification "Next Showing: " & my short_date("rec_end", show_next of item i of show_info, false) with title stop_icon & " Recording Complete" subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
 					else
 						set show_active of item i of show_info to false
-						display notification "Show marked for removal" with title stop_icon & " Recording Complete." subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
+						display notification "Show marked for removal" with title stop_icon & " Recording Complete" subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
 					end if
 					
 					
@@ -1079,7 +1105,7 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 		
 	else
 		set HDHR_DEVICE_LIST to {}
-		set progress additional description to "Discovering HDHomeRun Devices."
+		set progress additional description to "Discovering HDHomeRun Devices"
 		set progress completed steps to 0
 		set hdhr_device_discovery to my hdhr_api("", "", "", "/discover")
 		set progress total steps to length of hdhr_device_discovery
@@ -1100,7 +1126,7 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 				my HDHRDeviceDiscovery("HDHRDeviceDiscovery0", device_id of item i2 of HDHR_DEVICE_LIST)
 			end repeat
 		else
-			set HDHRDeviceDiscovery_none to display dialog "No HDHR devices can be found." buttons {"Quit", "Rescan"} default button 2 cancel button 1 with title my check_version_dialog() giving up after dialog_timeout
+			set HDHRDeviceDiscovery_none to display dialog "No HDHR devices can be found" buttons {"Quit", "Rescan"} default button 2 cancel button 1 with title my check_version_dialog() giving up after dialog_timeout
 			if button returned of HDHRDeviceDiscovery_none = "Rescan" then
 				my HDHRDeviceDiscovery("no_devices", "")
 			end if
@@ -1428,7 +1454,7 @@ on save_data()
 			
 		end repeat
 	else
-		log "Save file protected from being wiped."
+		log "Save file protected from being wiped"
 	end if
 	
 	try
@@ -1439,7 +1465,7 @@ on save_data()
 	end try
 	
 	close access ref_num
-	display notification disk_icon & " " & length of show_info & " shows saved"
+	--display notification disk_icon & " " & length of show_info & " shows saved"
 end save_data
 --takes the the data in the filesystem, and writes to to a variable
 on read_data()
