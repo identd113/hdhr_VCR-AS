@@ -9,7 +9,8 @@ I wanted to allow a quick way to record a TV show, without needing to setup a la
 I call it a VCR app, as while it does use guide data to pull name / season / episode number / episode name / show length, it does not present like a normal DVR.  It is more of a Smart VCR
 
 #### Requirements
-1. JSONHelper is required, available for free at https://apps.apple.com/us/app/json-helper-for-applescript/id453114608
+1. JSONHelper is required, available for free at 
+* https://apps.apple.com/us/app/json-helper-for-applescript/id453114608
 
 #### Features
 * Auto discovery of all HDHomeRun devices on your network!
@@ -40,7 +41,7 @@ When you first run this, OSX will prompt multiple times for various system permi
 
 9. You will then be asked to specify a time, it is done a bit strangely. We use 24 hour decimal time
 * For example, if you wanted to record a show at 6:45 PM, you would enter 18.75. (.5 of an hour, is 30 minutes.  .75 of an hour is 45 minutes.)
-* If you attempt to use a time that has already passed for today, it will assuem you mean tomorrow.
+* If you attempt to use a time that has already passed for today, it will assume you mean tomorrow.
 11. How that we have the channel, and the time, we can attempt to pull some guide data.  The free DVR guide provided by SiliconDust only gives us ~ 4 hours.  If we are able to pull this show information down, we will pre populate the next couple of questions with those as the defaults.
 12.  You will now have the ability to set the recordings name.  The name provided is just temporary, as we will try to pull the guide data before the recording starts. Again, we cannot pull guide data for any show that starts more then 4 hours from now.
 13. In this same window, you will also tell the script if this is a a "Single" or a "Series"
