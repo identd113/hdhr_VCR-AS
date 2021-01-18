@@ -53,6 +53,7 @@ global up2_icon
 global check_icon
 global uncheck_icon
 global calendar_icon
+global hourglass_icon
 
 --Since we use JSON helper to do some of the work, we should declare it, so we dont end up having to use tell blocks everywhere.  If we declare 1 thing, we have to declare everything we are using.
 
@@ -115,6 +116,20 @@ on tuner_end(hdhr_model)
 	return 0
 end tuner_end
 
+on tuner_status2(caller, device_id)
+	log "tuner_status: " & caller & " of " & device_id
+	set temp_list to {}
+	set tuner_offset to my HDHRDeviceSearch("tuner_status2", device_id)
+	set hdhr_discover_temp to my hdhr_api(statusURL of item tuner_offset of HDHR_DEVICE_LIST, "", "", "")
+	repeat with i from 1 to length of hdhr_discover_temp
+		if length of item i of hdhr_discover_temp = 1 then
+			return true
+		end if
+	end repeat
+	return false
+	log "tuner_status2: " & length of hdhr_discover_temp
+end tuner_status2
+
 on tuner_status(caller, device_id)
 	log "tuner_status: " & caller & " of " & device_id
 	set temp_list to {}
@@ -134,6 +149,7 @@ on tuner_status(caller, device_id)
 	on error
 		display notification "ERROR in used_tuner()"
 	end try
+	choose from list temp_list
 	return temp_list
 end tuner_status
 
@@ -184,6 +200,7 @@ on run {}
 	set check_icon to character id 9989
 	set uncheck_icon to character id 10060
 	set calendar_icon to character id 128197
+	set hourglass_icon to character id 8987
 	
 	set version_local to "20210115"
 	
@@ -443,7 +460,8 @@ on main()
 	--This will make sure that data we have stored is valid
 	my validate_show_info("", false)
 	my build_channel_list("main0", "")
-	
+	--log "tuner_status2 " & my tuner_status2("main", "105404BE")
+	--my tuner_status("main", "105404BE")
 	--This will mark shows as inactive (single show recording that has already passed)
 	set show_info_length to length of show_info
 	if show_info_length > 0 then
@@ -763,7 +781,8 @@ on idle
 	--If there are any shows to record, we walk through them all.
 	if length of show_info > 0 then
 		repeat with i from 1 to length of show_info
-			(*
+			repeat 1 times
+				(*
 						else if show_is_series of item i of show_info = false then
 				if show_end of item i of show_info < (current date) then
 					display notification "TEST"
@@ -778,22 +797,28 @@ on idle
 				display notification "is_series1:" & class of (show_is_series of item i of show_info)
 				display notification "is_series2:" & (show_is_series of item i of show_info)
 			*)
-			if show_active of item i of show_info = true then
-				if show_next of item i of show_info < cd_object then
-					--if show_next of item i of show_info < cd_object then
-					if show_recording of item i of show_info = false then
-						if show_end of item i of show_info < (current date) then
-							display notification "show_end of item i of show_info < (current date)"
-						end if
-						--FIX the above line would cause some issues when quitting/re opening.  We should resume more gracefully
-						--try
-						--on error
-						--	display notification "Used Tuner Error"
-						--end try 
-						set show_runtime to (show_end of item i of show_info) - (current date)
-						
-						(*
-						set tuner_end_temp to 0
+				if show_active of item i of show_info = true then
+					if show_next of item i of show_info < cd_object then
+						--if show_next of item i of show_info < cd_object then
+						if show_recording of item i of show_info = false then
+							if show_end of item i of show_info < (current date) then
+								if show_is_series of item i of show_info = true then
+									set show_next of item i of show_info to my nextday(show_id of item i of show_info)
+								else
+									set show_active of item i of show_info to false
+								end if
+								exit repeat
+								display notification "show_end of item i of show_info < (current date)"
+							end if
+							--FIX the above line would cause some issues when quitting/re opening.  We should resume more gracefully
+							--try
+							--on error 
+							--	display notification "Used Tuner Error"
+							--end try 
+							set show_runtime to (show_end of item i of show_info) - (current date)
+							
+							(*
+						set tuner_end_temp to 0 
 						if my tuner_status("idle1", hdhr_record of item i of show_info) does not contain "not in use" then
 							set tuner_end_temp to my tuner_end(hdhr_record of item i of show_info)
 							if tuner_end_temp ² 15 then
@@ -804,83 +829,85 @@ on idle
 							end if
 						end if
 						*)
-						--FIX I think we can remove this, as we will just defer the recording job until the next loop.  Yay, we dont have to pause the queue.
-						
-						--FIX If all the tuners are in use for more then 20 seconds, we need to skip the show. 
-						--display notification tuner_end_temp
-						if my tuner_status("idle2", hdhr_record of item i of show_info) contains "not in use" then
-							-- If we now have no tuner avilable, we skip this "loop" and try again later.
-							my record_now((show_id of item i of show_info), show_runtime)
-							display notification "Ends " & my short_date("rec started", show_end of item i of show_info, false) with title record_icon & " Started Recording on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
-							set notify_recording_time of item i of show_info to (current date) + (2 * minutes)
-							--display notification show_title of item i of show_info & " on channel " & show_channel of item i of show_info & " started for " & show_runtime of item i of show_info & " minutes."
+							--FIX I think we can remove this, as we will just defer the recording job until the next loop.  Yay, we dont have to pause the queue.
+							
+							--FIX If all the tuners are in use for more then 20 seconds, we need to skip the show. 
+							--display notification tuner_end_temp
+							if my tuner_status2("idle2", hdhr_record of item i of show_info) is true then
+								-- If we now have no tuner avilable, we skip this "loop" and try again later.
+								my record_now((show_id of item i of show_info), show_runtime)
+								display notification "Ends " & my short_date("rec started", show_end of item i of show_info, false) with title record_icon & " Started Recording on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
+								set notify_recording_time of item i of show_info to (current date) + (2 * minutes)
+								--display notification show_title of item i of show_info & " on channel " & show_channel of item i of show_info & " started for " & show_runtime of item i of show_info & " minutes."
+							else
+								
+								display notification hourglass_icon & " Delaying for for 9 seconds" with title " Tuner unavailable (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info
+							end if
 						else
-							display notification "Tuner unavailable. Recording of " & show_title of item i of show_info & " defered for 8 seconds"
-						end if
-					else
-						--display notification show_title of item i of show_info & " is recording until " & my short_date("recording", show_end of item i of show_info)
-						if notify_recording_time of item i of show_info < (current date) or notify_recording_time of item i of show_info = missing value then
-							display notification "Ends " & my short_date("rec progress", show_end of item i of show_info, false) & " (" & (my sec_to_time((show_end of item i of show_info) - (current date))) & ") " with title record_icon & " Recording in progress on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
-							--try to refresh the file, so it shows it refreshes finder.
-							try 
-								my update_folder(show_dir of item i of show_info)
-							on error
-								display notification "Touch Update failed"
-							end try
-							set notify_recording_time of item i of show_info to (current date) + (notify_recording * minutes)
+							--display notification show_title of item i of show_info & " is recording until " & my short_date("recording", show_end of item i of show_info)
+							if notify_recording_time of item i of show_info < (current date) or notify_recording_time of item i of show_info = missing value then
+								display notification "Ends " & my short_date("rec progress", show_end of item i of show_info, false) & " (" & (my sec_to_time((show_end of item i of show_info) - (current date))) & ") " with title record_icon & " Recording in progress on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
+								--try to refresh the file, so it shows it refreshes finder.
+								try
+									my update_folder(show_dir of item i of show_info)
+								on error
+									display notification "Touch Update failed"
+								end try
+								set notify_recording_time of item i of show_info to (current date) + (notify_recording * minutes)
+							end if
 						end if
 					end if
 				end if
-			end if
-			
-			
-			if show_recording of item i of show_info = false and show_active of item i of show_info = true then
-				--my update_show(show_id of item i of show_info)
-				--set delay_count to delay_count + 1
-				--if delay_count ³ 36 then -- ~ 10 minutes 
-				--display notification show_title of item i of show_info & " is next at " & my short_date("is_next", show_next of item i of show_info)
-				if (notify_upnext_time of item i of show_info < (current date) or notify_upnext_time of item i of show_info = missing value) and (show_next of item i of show_info) - (current date) ² 4 * hours then
-					--This line is a hot mess, as it reports too often.  Lets try some progress bar hacks.
-					
-					--	set progress description to "Loading ..."
-					--  set progress additional description to
-					--	set progress completed steps to 0 
-					--	set progress total steps to 1 
-					
-					--set progress description to "Next up... (" & hdhr_record of item i of show_info & ")"
-					--set progress additional description to "Starts: " & my short_date("is_next", show_next of item i of show_info, false)
-					
-					--We see this message very often, lets make sure we only display up next shows just for today. 
-					display notification "Starts: " & my short_date("is_next", show_next of item i of show_info, false) & " (" & my sec_to_time(((show_next of item i of show_info) - (current date))) & ")" with title up_icon & " Next Up on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info, hdhr_record of item i of show_info) & ")"
-					set notify_upnext_time of item i of show_info to (current date) + (notify_upnext * minutes)
-				end if
-				--	set delay_count to 0 
-				--end if
 				
-			end if
-			
-			if show_recording of item i of show_info = true then
-				if show_end of item i of show_info < (current date) then
-					set show_last of item i of show_info to show_end of item i of show_info
-					--set show_next of item i of show_info to my nextday(show_id of item i of show_info)
-					set show_recording of item i of show_info to false
-					if show_is_series of item i of show_info = true then
-						set show_next of item i of show_info to my nextday(show_id of item i of show_info)
-						display notification "Next Showing: " & my short_date("rec_end", show_next of item i of show_info, false) with title stop_icon & " Recording Complete" subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
-					else
-						set show_active of item i of show_info to false
-						display notification "Show marked for removal" with title stop_icon & " Recording Complete" subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
+				
+				if show_recording of item i of show_info = false and show_active of item i of show_info = true then
+					--my update_show(show_id of item i of show_info)
+					--set delay_count to delay_count + 1
+					--if delay_count ³ 36 then -- ~ 10 minutes 
+					--display notification show_title of item i of show_info & " is next at " & my short_date("is_next", show_next of item i of show_info)
+					if (notify_upnext_time of item i of show_info < (current date) or notify_upnext_time of item i of show_info = missing value) and (show_next of item i of show_info) - (current date) ² 4 * hours then
+						--This line is a hot mess, as it reports too often.  Lets try some progress bar hacks.
+						
+						--	set progress description to "Loading ..."
+						--  set progress additional description to
+						--	set progress completed steps to 0 
+						--	set progress total steps to 1 
+						
+						--set progress description to "Next up... (" & hdhr_record of item i of show_info & ")"
+						--set progress additional description to "Starts: " & my short_date("is_next", show_next of item i of show_info, false)
+						
+						--We see this message very often, lets make sure we only display up next shows just for today. 
+						display notification "Starts: " & my short_date("is_next", show_next of item i of show_info, false) & " (" & my sec_to_time(((show_next of item i of show_info) - (current date))) & ")" with title up_icon & " Next Up on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info, hdhr_record of item i of show_info) & ")"
+						set notify_upnext_time of item i of show_info to (current date) + (notify_upnext * minutes)
 					end if
+					--	set delay_count to 0 
+					--end if
 					
-					
-					--This needs to happen not in the idle loop.  Since we loop the stored tv shows (show_info), and we are still inside of the repeat loop, we end up trying to walk past the list, kind of a off by 1 error.
-					--We can remove these shows on app start, before we start walking the idle loop.  If we want to remove a show, we have to make sure we are not in a loop inside of the idle handler.  We can create an idle lock bit, which can increase the call back time to a much higer number, run our code, and then "unlock" the loop.  This all sounds very sloppy, and i dont like it.  We may just need to mark the show entries as dirty, likely by making making the show_id a missing value.  We would need to clear this out before we get stuck in a repeat loop.  This sounds cleaner.  This also means we need to remove references of the remove_show_info handler,  and stick this in the idle handler, which can have its own host of issues.
 				end if
-				--else if show_end of item i of show_info < (current date) and show_is_series of item i of show_info = false then 
-			else if show_is_series of item i of show_info = false and show_end of item i of show_info < (current date) and show_active of item i of show_info = true then
-				set show_active of item i of show_info to false
-				display notification show_title of item i of show_info & " removed"
-			end if
+				
+				if show_recording of item i of show_info = true then
+					if show_end of item i of show_info < (current date) then
+						set show_last of item i of show_info to show_end of item i of show_info
+						--set show_next of item i of show_info to my nextday(show_id of item i of show_info)
+						set show_recording of item i of show_info to false
+						if show_is_series of item i of show_info = true then
+							set show_next of item i of show_info to my nextday(show_id of item i of show_info)
+							display notification "Next Showing: " & my short_date("rec_end", show_next of item i of show_info, false) with title stop_icon & " Recording Complete" subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
+						else
+							set show_active of item i of show_info to false
+							display notification "Show marked for removal" with title stop_icon & " Recording Complete" subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
+						end if
+						
+						
+						--This needs to happen not in the idle loop.  Since we loop the stored tv shows (show_info), and we are still inside of the repeat loop, we end up trying to walk past the list, kind of a off by 1 error.
+						--We can remove these shows on app start, before we start walking the idle loop.  If we want to remove a show, we have to make sure we are not in a loop inside of the idle handler.  We can create an idle lock bit, which can increase the call back time to a much higer number, run our code, and then "unlock" the loop.  This all sounds very sloppy, and i dont like it.  We may just need to mark the show entries as dirty, likely by making making the show_id a missing value.  We would need to clear this out before we get stuck in a repeat loop.  This sounds cleaner.  This also means we need to remove references of the remove_show_info handler,  and stick this in the idle handler, which can have its own host of issues.
+					end if
+					--else if show_end of item i of show_info < (current date) and show_is_series of item i of show_info = false then 
+				else if show_is_series of item i of show_info = false and show_end of item i of show_info < (current date) and show_active of item i of show_info = true then
+					set show_active of item i of show_info to false
+					display notification show_title of item i of show_info & " removed"
+				end if
+			end repeat
 		end repeat
 	end if
 	return 12
@@ -897,6 +924,7 @@ on record_now(the_show_id, opt_show_length)
 	else
 		set temp_show_length to show_length of item i of show_info as number
 	end if
+	--fix skip recording, and mark it as complete if < 0
 	if temp_show_length < 0 then
 		display notification "Negative duration: " & show_title of item i of show_info
 	end if
@@ -1111,7 +1139,9 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 		set progress total steps to length of hdhr_device_discovery
 		repeat with i from 1 to length of hdhr_device_discovery
 			set progress completed steps to i
-			set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:DiscoverURL of item i of hdhr_device_discovery, lineup_url:LineupURL of item i of hdhr_device_discovery, device_id:deviceid of item i of hdhr_device_discovery, does_transcode:Transcode of item i of hdhr_device_discovery, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value, channel_mapping:missing value, BaseURL:BaseURL of item i of hdhr_device_discovery}
+			set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:DiscoverURL of item i of hdhr_device_discovery, lineup_url:LineupURL of item i of hdhr_device_discovery, device_id:deviceid of item i of hdhr_device_discovery, does_transcode:Transcode of item i of hdhr_device_discovery, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value, channel_mapping:missing value, BaseURL:BaseURL of item i of hdhr_device_discovery, statusURL:(BaseURL of item i of hdhr_device_discovery & "/status.json")}
+			log "!HDHR!"
+			log statusURL of last item of HDHR_DEVICE_LIST
 			log last item of HDHR_DEVICE_LIST
 		end repeat
 		--Add a fake device entry to make sure we dont break this for multiple devices.
