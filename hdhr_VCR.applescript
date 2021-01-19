@@ -202,7 +202,7 @@ on run {}
 	set calendar_icon to character id 128197
 	set hourglass_icon to character id 8987
 	
-	set version_local to "20210115"
+	set version_local to "20210119"
 	
 	set progress description to "Loading " & name of me & " " & version_local
 	
@@ -513,8 +513,14 @@ on main()
 		-- up next
 		-- up next2 
 		-- rest
-		
-		repeat with i from 1 to length of show_info
+		set show_list_deactive to {}
+		set show_list_active to {}
+		set show_list_later to {}
+		set show_list_recording to {}
+		set show_list_up to {}
+		set show_list_up2 to {}
+		set show_list_length to length of show_info
+		repeat with i from 1 to show_list_length
 			--set end of show_list to (show_title of item i of show_info & "\" on " & show_channel of item i of show_info & " at " & show_time of item i of show_info & " for " & show_length of item i of show_info & " minutes on " & show_air_date)
 			--display notification class of show_recording of item i of show_info
 			set temp_show_line to " " & (show_title of item i of show_info & " on " & show_channel of item i of show_info & " at " & show_time of item i of show_info & " for " & show_length of item i of show_info & " minutes on " & my listtostring(show_air_date of item i of show_info, ", "))
@@ -548,9 +554,30 @@ on main()
 			end if
 			
 			
-			set end of show_list to temp_show_line
+			
+			if (date (date string of (current date))) < (date (date string of (show_next of item i of show_info))) and show_active of item i of show_info = true then
+				set end of show_list_later to temp_show_line
+			end if
+			
+			if show_recording of item i of show_info = true and show_active of item i of show_info = true then
+				set end of show_list_recording to temp_show_line
+			end if
+			
+			if show_active of item i of show_info = false then
+				set end of show_list_deactive to temp_show_line
+			end if
+			
+			if ((show_next of item i of show_info) - (current date)) < 4 * hours and show_active of item i of show_info = true and show_recording of item i of show_info = false then
+				set end of show_list_up to temp_show_line
+			end if
+			
+			if ((show_next of item i of show_info) - (current date)) ³ 4 * hours and (date (date string of (current date))) = (date (date string of (show_next of item i of show_info))) and show_active of item i of show_info = true and show_recording of item i of show_info = false then
+				set end of show_list_up2 to temp_show_line
+			end if
+			
+			--set end of show_list to temp_show_line
 		end repeat
-		
+		set show_list to show_list_recording & show_list_up & show_list_up2 & show_list_later & show_list_deactive
 		--display dialog length of show_list 
 		if length of show_list = 0 then
 			--	display dialog "2"
@@ -569,7 +596,7 @@ on main()
 				return
 			end try
 		else if length of show_list > 0 then
-			set temp_show_list to (choose from list show_list with title my check_version_dialog() with prompt "Select show to edit: " & return & single_icon & " Single   " & series_icon & " Series" & "   " & record_icon & " Recording" & "   " & uncheck_icon & "/" & check_icon & " In/active" & "   " & up_icon & " Up Next" & "  " & up2_icon & " Up Next > 4h" & "  " & calendar_icon & " Future Show" OK button name edit_icon & " Edit.." cancel button name play_icon & " Run" without empty selection allowed)
+			set temp_show_list to (choose from list show_list with title my check_version_dialog() with prompt "Select show to edit: " & return & "(" & show_list_length & ")" & return & single_icon & " Single   " & series_icon & " Series" & "   " & record_icon & " Recording" & "   " & uncheck_icon & "/" & check_icon & " In/active" & "   " & up_icon & " Up Next" & "  " & up2_icon & " Up Next > 4h" & "  " & calendar_icon & " Future Show" OK button name edit_icon & " Edit.." cancel button name play_icon & " Run" without empty selection allowed)
 			if temp_show_list ­ false then
 				my validate_show_info(show_id of item (my list_position("main1", (temp_show_list as text), show_list, true)) of show_info, true)
 				my save_data()
@@ -669,7 +696,7 @@ on add_show_info(hdhr_device)
 	-- my short_date(the_caller, the_date_object, twentyfourtime)
 	
 	if show_time_changed = true then
-		set show_title_temp to display dialog "What is the title of this show, and is it a series?" & return & "Show time changed to " & items 2 through end of my short_date("on_add", my time_set((current date), (show_time of temp_show_info)), false) buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 default answer hdhr_response_channel_title with title my check_version_dialog() giving up after dialog_timeout
+		set show_title_temp to display dialog "What is the title of this show, and is it a series?" & return & return & edit_icon & " Show time changed to " & items 2 through end of my short_date("on_add", my time_set((current date), (show_time of temp_show_info)), false) buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 default answer hdhr_response_channel_title with title my check_version_dialog() giving up after dialog_timeout with icon caution
 	else
 		set show_title_temp to display dialog "What is the title of this show, and is it a series?" buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 default answer hdhr_response_channel_title with title my check_version_dialog() giving up after dialog_timeout
 	end if
@@ -807,8 +834,8 @@ on idle
 								else
 									set show_active of item i of show_info to false
 								end if
-								exit repeat
 								display notification "show_end of item i of show_info < (current date)"
+								exit repeat
 							end if
 							--FIX the above line would cause some issues when quitting/re opening.  We should resume more gracefully
 							--try
@@ -1426,7 +1453,8 @@ on epoch2show_time(epoch)
 	log show_time_temp_hours
 	set show_time_temp_minutes to minutes of show_time_temp
 	if show_time_temp_minutes ­ 0 then
-		return (show_time_temp_hours & "." & ((show_time_temp_minutes / 60 * 100) as integer)) as text
+		return (show_time_temp_hours & "." & (round (((show_time_temp_minutes / 60 * 100))) rounding up)) as text
+		--return (show_time_temp_hours & "." & ((show_time_temp_minutes / 60 * 100) as integer)) as text
 	else
 		return (show_time_temp_hours)
 	end if

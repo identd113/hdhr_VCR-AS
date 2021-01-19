@@ -2,11 +2,15 @@
 	"versions": 
 [
 {
+"hdhr_version":"20210119",
+"changelog":"Sorted show list to group shows in same status. Fixed issue when calculating show_time."
+},
+{
 "hdhr_version":"20210115",
 "changelog":"Release!"
 },
 {
-"hdhr_version":"20210115",
+"hdhr_version":"20210114",
 "changelog":"Pre Release of the announced release."
 },
 {
