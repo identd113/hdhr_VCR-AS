@@ -2,6 +2,10 @@
 	"versions": 
 [
 {
+"hdhr_version":"20210120",
+"changelog":"Rolled back previous release, and some small fixes. "
+},
+{
 "hdhr_version":"20210119",
 "changelog":"Sorted show list to group shows in same status. Fixed issue when calculating show_time."
 },

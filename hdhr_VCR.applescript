@@ -505,6 +505,8 @@ on main(emulated_button_press)
 	end if
 	
 	if button returned of title_response contains "Shows" then
+		
+		--my sort_show_list()
 		if option_down of my isModifierKeyPressed("shows", "option") = true then
 			set temp_show_next to {}
 			repeat with i from 1 to length of show_info
@@ -560,7 +562,7 @@ on main(emulated_button_press)
 				set temp_show_line to calendar_icon & temp_show_line
 			end if
 			
-			
+			(*
 			
 			if (date (date string of (current date))) < (date (date string of (show_next of item i of show_info))) and show_active of item i of show_info = true then
 				set end of show_list_later to temp_show_line
@@ -581,7 +583,7 @@ on main(emulated_button_press)
 			if ((show_next of item i of show_info) - (current date)) ³ 4 * hours and (date (date string of (current date))) = (date (date string of (show_next of item i of show_info))) and show_active of item i of show_info = true and show_recording of item i of show_info = false then
 				set end of show_list_up2 to temp_show_line
 			end if
-			
+			*)
 			set end of show_list to temp_show_line
 		end repeat
 		--set show_list to show_list_recording & show_list_up & show_list_up2 & show_list_later & show_list_deactive
@@ -1154,10 +1156,44 @@ on quit {}
 		continue quit
 	end if
 	if quit_response = "Go Back" then
-		my main("") 
+		my main("")
 	end if
 	
 end quit
+
+on sort_show_list()
+	set show_list_deactive to {}
+	set show_list_active to {}
+	set show_list_later to {}
+	set show_list_recording to {}
+	set show_list_up to {}
+	set show_list_up2 to {}
+	
+	repeat with i from 1 to length of show_info
+		set temp_show_line to " " & (show_title of item i of show_info & " on " & show_channel of item i of show_info & " at " & show_time of item i of show_info & " for " & show_length of item i of show_info & " minutes on " & my listtostring(show_air_date of item i of show_info, ", "))
+		if (date (date string of (current date))) < (date (date string of (show_next of item i of show_info))) and show_active of item i of show_info = true then
+			set end of show_list_later to temp_show_line
+		end if
+		
+		if show_recording of item i of show_info = true and show_active of item i of show_info = true then
+			set end of show_list_recording to temp_show_line
+		end if
+		
+		if show_active of item i of show_info = false then
+			set end of show_list_deactive to temp_show_line
+		end if
+		
+		if ((show_next of item i of show_info) - (current date)) < 4 * hours and show_active of item i of show_info = true and show_recording of item i of show_info = false then
+			set end of show_list_up to temp_show_line
+		end if
+		
+		if ((show_next of item i of show_info) - (current date)) ³ 4 * hours and (date (date string of (current date))) = (date (date string of (show_next of item i of show_info))) and show_active of item i of show_info = true and show_recording of item i of show_info = false then
+			set end of show_list_up2 to temp_show_line
+		end if
+	end repeat
+	
+	set show_info to show_list_recording & show_list_up & show_list_up2 & show_list_later & show_list_deactive
+end sort_show_list
 
 
 ------HDHR Disscovery------
@@ -1181,11 +1217,11 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 			set progress completed steps to i
 			set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:DiscoverURL of item i of hdhr_device_discovery, lineup_url:LineupURL of item i of hdhr_device_discovery, device_id:deviceid of item i of hdhr_device_discovery, does_transcode:Transcode of item i of hdhr_device_discovery, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value, channel_mapping:missing value, BaseURL:BaseURL of item i of hdhr_device_discovery, statusURL:(BaseURL of item i of hdhr_device_discovery & "/status.json")}
 			log "!HDHR!"
-			log statusURL of last item of HDHR_DEVICE_LIST
+			--log statusURL of last item of HDHR_DEVICE_LIST
 			log last item of HDHR_DEVICE_LIST
 		end repeat
 		--Add a fake device entry to make sure we dont break this for multiple devices.
-		-- set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value, channel_mapping:missing value, BaseURL:BaseURL of item 1 of hdhr_device_discovery}
+		set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value, channel_mapping:missing value, BaseURL:BaseURL of item 1 of hdhr_device_discovery, statusURL:"http://10.0.1.101/status.json"}
 		log "Length of HDHR_DEVICE_LIST: " & length of HDHR_DEVICE_LIST
 		
 		--We now have a list of tuners, via a list of records in HDHR_TUNERS, now we want to pull a lineup, and a guide.
@@ -1197,7 +1233,7 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 			end repeat
 		else
 			set HDHRDeviceDiscovery_none to display dialog "No HDHR devices can be found" buttons {"Quit", "Rescan"} default button 2 cancel button 1 with title my check_version_dialog() giving up after dialog_timeout
-			if button returned of HDHRDeviceDiscovery_none = "Rescan" then
+			if button returned of HDHRDeviceDiscovery_none = "Rescan" then 
 				my HDHRDeviceDiscovery("no_devices", "")
 			end if
 			
