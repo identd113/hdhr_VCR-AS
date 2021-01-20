@@ -241,11 +241,11 @@ on run {}
 	--display notification "Error when loading data"
 	--end try
 	--Main is is the show adding mechanism
-	my main()
+	my main("")
 end run
 
 on reopen {}
-	my main()
+	my main("")
 end reopen
 
 on daysuntil(thisdate)
@@ -362,6 +362,7 @@ on validate_show_info(show_to_check, should_edit)
 				set show_deactivate to (display dialog "Would you like to deactivate: " & return & "\"" & show_title of item i of show_info & "\"" & return & return & "Deactivated shows will be removed on the next save/load." buttons {play_icon & " Run", "Deactivate", "Next"} cancel button 1 default button 3 with title my check_version_dialog() with icon stop)
 				if button returned of show_deactivate = "Deactivate" then
 					set show_active of item i of show_info to false
+					my main("Shows")
 				end if
 			else if show_active of item i of show_info = false then
 				set show_deactivate to (display dialog "Would you like to activate: " & return & "\"" & show_title of item i of show_info & "\"" & return & return & "Active shows can be edited." buttons {play_icon & " Run", "Activate", "Next"} cancel button 1 default button 3 with title my check_version_dialog() with icon note)
@@ -449,7 +450,7 @@ on setup()
 	
 end setup
 
-on main()
+on main(emulated_button_press)
 	--my read_data()
 	(*
 	if preferred_tuner_offset = missing value then
@@ -474,10 +475,16 @@ on main()
 	
 	--Collect the temporary name.  This will likely be over written once we can pull guide data
 	activate me
-	set title_response to (display dialog "Would you like to add a show?" buttons {tv_icon & " Shows..", plus_icon & " Add..", play_icon & " Run"} with title my check_version_dialog() giving up after (dialog_timeout - 30) with icon note default button 2)
-	if button returned of title_response contains "Add.." then
+	if emulated_button_press = "" then
+		set title_response to (display dialog "Would you like to add a show?" buttons {tv_icon & " Shows..", plus_icon & " Add..", play_icon & " Run"} with title my check_version_dialog() giving up after (dialog_timeout - 30) with icon note default button 2)
+	else
+		set title_response to {button returned:emulated_button_press}
+	end if
+	
+	
+	if button returned of title_response contains "Add" then
 		set temp_tuners_list to {}
-		--set end of temp_tuners_list to "Auto"
+		--set end of temp_tuners_list to "Auto" 
 		repeat with i from 1 to length of HDHR_DEVICE_LIST
 			
 			log "main()"
@@ -497,7 +504,7 @@ on main()
 		my add_show_info(hdhr_device)
 	end if
 	
-	if button returned of title_response contains "Shows.." then
+	if button returned of title_response contains "Shows" then
 		if option_down of my isModifierKeyPressed("shows", "option") = true then
 			set temp_show_next to {}
 			repeat with i from 1 to length of show_info
@@ -575,9 +582,9 @@ on main()
 				set end of show_list_up2 to temp_show_line
 			end if
 			
-			--set end of show_list to temp_show_line
+			set end of show_list to temp_show_line
 		end repeat
-		set show_list to show_list_recording & show_list_up & show_list_up2 & show_list_later & show_list_deactive
+		--set show_list to show_list_recording & show_list_up & show_list_up2 & show_list_later & show_list_deactive
 		--display dialog length of show_list 
 		if length of show_list = 0 then
 			--	display dialog "2"
@@ -585,7 +592,7 @@ on main()
 				set hdhr_no_shows to button returned of (display dialog "There are no shows, why don't you add one?" buttons {"Quit", plus_icon & " Add Show"} default button 2)
 				if hdhr_no_shows = "Add Show" then
 					--This should kick us to the adding a show handler.
-					my main()
+					my main("Add")
 				end if
 				if hdhr_no_shows = "Quit" then
 					quit {}
@@ -613,6 +620,11 @@ on main()
 end main
 
 on add_show_info(hdhr_device)
+	set tuner_status to my tuner_status2("add_show", hdhr_device)
+	set tuner_status_icon to ""
+	if tuner_status = false then
+		set tuner_status_icon to hdhr_device & " has no available tuners" & return & "Next timeout: " & my tuner_end(hdhr_device)
+	end if
 	
 	set tuner_offset to my HDHRDeviceSearch("add_show_info0", hdhr_device)
 	set show_channel to missing value
@@ -629,7 +641,7 @@ on add_show_info(hdhr_device)
 	repeat until my is_number(show_channel of temp_show_info)
 		try
 			--	
-			set show_channel of temp_show_info to word 1 of item 1 of (choose from list channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with prompt "What channel does this show air on?" with title my check_version_dialog() OK button name "Next.." cancel button name play_icon & " Run" without empty selection allowed)
+			set show_channel of temp_show_info to word 1 of item 1 of (choose from list channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with prompt "What channel does this show air on?" & return & return & tuner_status_icon with title my check_version_dialog() OK button name "Next.." cancel button name play_icon & " Run" without empty selection allowed)
 			--set show_channel of temp_show_info to text returned of (display dialog "What channel does this show air on?" default answer "") --pull channel kineup, and parse out Channel name/channel.
 			--if my is_number(show_channel of temp_show_info) = false then
 			--	set show_channel of temp_show_info to missing value
@@ -695,8 +707,9 @@ on add_show_info(hdhr_device)
 	
 	-- my short_date(the_caller, the_date_object, twentyfourtime)
 	
+	
 	if show_time_changed = true then
-		set show_title_temp to display dialog "What is the title of this show, and is it a series?" & return & return & edit_icon & " Show time changed to " & items 2 through end of my short_date("on_add", my time_set((current date), (show_time of temp_show_info)), false) buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 default answer hdhr_response_channel_title with title my check_version_dialog() giving up after dialog_timeout with icon caution
+		set show_title_temp to display dialog "What is the title of this show, and is it a series?" & return & return & edit_icon & " Start changed to " & items 2 through end of my short_date("on_add", my time_set((current date), (show_time of temp_show_info)), false) buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 default answer hdhr_response_channel_title with title my check_version_dialog() giving up after dialog_timeout with icon caution
 	else
 		set show_title_temp to display dialog "What is the title of this show, and is it a series?" buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 default answer hdhr_response_channel_title with title my check_version_dialog() giving up after dialog_timeout
 	end if
@@ -1141,7 +1154,7 @@ on quit {}
 		continue quit
 	end if
 	if quit_response = "Go Back" then
-		my main()
+		my main("") 
 	end if
 	
 end quit
