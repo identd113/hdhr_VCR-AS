@@ -54,7 +54,7 @@ global check_icon
 global uncheck_icon
 global calendar_icon
 global hourglass_icon
-
+global film_icon
 --Since we use JSON helper to do some of the work, we should declare it, so we dont end up having to use tell blocks everywhere.  If we declare 1 thing, we have to declare everything we are using.
 
 use AppleScript version "2.4"
@@ -201,15 +201,15 @@ on run {}
 	set uncheck_icon to character id 10060
 	set calendar_icon to character id 128197
 	set hourglass_icon to character id 8987
-	
-	set version_local to "20210119"
+	set film_icon to character id 127910
+	set version_local to "20210120.2"
 	
 	set progress description to "Loading " & name of me & " " & version_local
 	
 	--set globals 
 	set show_info to {}
 	set notify_upnext to 30
-	set notify_recording to 10
+	set notify_recording to 15
 	set locale to user locale of (system info)
 	set hdhr_setup_folder to "Volumes:"
 	set hdhr_setup_transcode to "No"
@@ -505,8 +505,8 @@ on main(emulated_button_press)
 	end if
 	
 	if button returned of title_response contains "Shows" then
-		
-		--my sort_show_list()
+		set show_info to my sort_show_list()
+		--log "show_info2: " & length of my sort_show_list()
 		if option_down of my isModifierKeyPressed("shows", "option") = true then
 			set temp_show_next to {}
 			repeat with i from 1 to length of show_info
@@ -546,8 +546,13 @@ on main(emulated_button_press)
 				set temp_show_line to uncheck_icon & temp_show_line
 			end if
 			
+			
 			if ((show_next of item i of show_info) - (current date)) < 4 * hours and show_active of item i of show_info = true and show_recording of item i of show_info = false then
-				set temp_show_line to up_icon & temp_show_line
+				if ((show_next of item i of show_info) - (current date)) > 1 * hours then
+					set temp_show_line to up_icon & temp_show_line
+				else
+					set temp_show_line to film_icon & temp_show_line
+				end if
 			end if
 			
 			if ((show_next of item i of show_info) - (current date)) ³ 4 * hours and (date (date string of (current date))) = (date (date string of (show_next of item i of show_info))) and show_active of item i of show_info = true and show_recording of item i of show_info = false then
@@ -605,7 +610,7 @@ on main(emulated_button_press)
 				return
 			end try
 		else if length of show_list > 0 then
-			set temp_show_list to (choose from list show_list with title my check_version_dialog() with prompt "Select show to edit: " & return & "(" & show_list_length & ")" & return & single_icon & " Single   " & series_icon & " Series" & "   " & record_icon & " Recording" & "   " & uncheck_icon & "/" & check_icon & " In/active" & "   " & up_icon & " Up Next" & "  " & up2_icon & " Up Next > 4h" & "  " & calendar_icon & " Future Show" OK button name edit_icon & " Edit.." cancel button name play_icon & " Run" without empty selection allowed)
+			set temp_show_list to (choose from list show_list with title my check_version_dialog() with prompt "Select show to edit: " & return & "(" & show_list_length & ")" & return & single_icon & " Single   " & series_icon & " Series" & "   " & record_icon & " Recording" & "   " & uncheck_icon & "/" & check_icon & " In/active" & "   " & film_icon & " Up Next < 1h" & "  " & up_icon & " Up Next < 4h" & "  " & up2_icon & " Up Next > 4h" & "  " & calendar_icon & " Future Show" OK button name edit_icon & " Edit.." cancel button name play_icon & " Run" without empty selection allowed)
 			if temp_show_list ­ false then
 				my validate_show_info(show_id of item (my list_position("main1", (temp_show_list as text), show_list, true)) of show_info, true)
 				my save_data()
@@ -648,7 +653,7 @@ on add_show_info(hdhr_device)
 			--if my is_number(show_channel of temp_show_info) = false then
 			--	set show_channel of temp_show_info to missing value
 			--else
-			--		set show_channel of temp_show_info to show_channel of temp_show_info as number
+			--		set show_channel of temp_show_info to show_channel of temp_show_info as number 
 			--end if
 		on error
 			error number -128
@@ -710,8 +715,9 @@ on add_show_info(hdhr_device)
 	-- my short_date(the_caller, the_date_object, twentyfourtime)
 	
 	
+	
 	if show_time_changed = true then
-		set show_title_temp to display dialog "What is the title of this show, and is it a series?" & return & return & edit_icon & " Start changed to " & items 2 through end of my short_date("on_add", my time_set((current date), (show_time of temp_show_info)), false) buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 default answer hdhr_response_channel_title with title my check_version_dialog() giving up after dialog_timeout with icon caution
+		set show_title_temp to display dialog "What is the title of this show, and is it a series?" & return & edit_icon & " Start changed to " & items 2 through end of my short_date("on_add", my time_set((current date), (show_time of temp_show_info)), false) buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 default answer hdhr_response_channel_title with title my check_version_dialog() giving up after dialog_timeout with icon caution
 	else
 		set show_title_temp to display dialog "What is the title of this show, and is it a series?" buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 default answer hdhr_response_channel_title with title my check_version_dialog() giving up after dialog_timeout
 	end if
@@ -739,29 +745,37 @@ on add_show_info(hdhr_device)
 	else
 		set hdhr_response_length to 30
 	end if
-	
-	repeat until my is_number(show_length of temp_show_info) and show_length of temp_show_info ³ 1
-		set show_length of temp_show_info to text returned of (display dialog "How long is this show? (in minutes)" default answer hdhr_response_length with title my check_version_dialog() buttons {play_icon & " Run", "Next.."} default button 2 cancel button 1 giving up after dialog_timeout)
-	end repeat
-	
+	if hdhr_response_channel = {} then
+		repeat until my is_number(show_length of temp_show_info) and show_length of temp_show_info ³ 1
+			set show_length of temp_show_info to text returned of (display dialog "How long is this show? (in minutes)" default answer hdhr_response_length with title my check_version_dialog() buttons {play_icon & " Run", "Next.."} default button 2 cancel button 1 giving up after dialog_timeout)
+		end repeat
+	else
+		set show_length of temp_show_info to hdhr_response_length
+		
+	end if
 	--	if hdhr_response_channel_title ­ "" then
 	set default_record_day to (weekday of ((current date) + time_slide * days)) as text
 	--else
 	--set default_record_day to ""
 	-- end if
 	
-	set time_slide to 0
 	
-	if show_is_series of temp_show_info = true then
-		--set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} with prompt "Please choose the days this series airs." default items default_record_day with multiple selections allowed without empty selection allowed)
+	if hdhr_response_channel = {} then
+		if show_is_series of temp_show_info = true then
+			--set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} with prompt "Please choose the days this series airs." default items default_record_day with multiple selections allowed without empty selection allowed)
+			
+			set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title my check_version_dialog() OK button name "Next.." cancel button name play_icon & " Run" with prompt "Select the days you wish to record." & return & "A \"Series\" can select multiple days." with multiple selections allowed without empty selection allowed)
+		else
+			set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title my check_version_dialog() OK button name "Next.." cancel button name play_icon & " Run" with prompt "Select the days you wish to record." & return & "A \"Single\" can only select 1 day." without empty selection allowed)
+		end if
 		
-		set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title my check_version_dialog() OK button name "Next.." cancel button name play_icon & " Run" with prompt "Select the days you wish to record." & return & "A \"Series\" can select multiple days." with multiple selections allowed without empty selection allowed)
+		if show_air_date of temp_show_info = false then
+			return
+		end if
 	else
-		set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title my check_version_dialog() OK button name "Next.." cancel button name play_icon & " Run" with prompt "Select the days you wish to record." & return & "A \"Single\" can only select 1 day." without empty selection allowed)
+		set show_air_date of temp_show_info to default_record_day
 	end if
-	if show_air_date of temp_show_info = false then
-		return
-	end if
+	set time_slide to 0
 	set temp_dir to alias "Volumes:"
 	repeat until temp_dir ­ alias "Volumes:"
 		set show_dir of temp_show_info to choose folder with prompt "Select Shows Directory" default location temp_dir
@@ -1168,6 +1182,46 @@ on sort_show_list()
 	set show_list_recording to {}
 	set show_list_up to {}
 	set show_list_up2 to {}
+	set show_list_soon to {}
+	log "show_info1: " & length of show_info
+	repeat with i from 1 to length of show_info
+		if show_recording of item i of show_info = true then
+			set end of show_list_recording to item i of show_info
+		end if
+		if show_active of item i of show_info = false then
+			set end of show_list_deactive to item i of show_info
+		end if
+		
+		
+		if ((show_next of item i of show_info) - (current date)) < 4 * hours and show_active of item i of show_info = true and show_recording of item i of show_info = false then
+			if ((show_next of item i of show_info) - (current date)) > 1 * hours then
+				set end of show_list_up to item i of show_info
+			else
+				set end of show_list_soon to item i of show_info
+			end if
+			
+		end if
+		
+		if ((show_next of item i of show_info) - (current date)) ³ 4 * hours and (date (date string of (current date))) = (date (date string of (show_next of item i of show_info))) and show_active of item i of show_info = true and show_recording of item i of show_info = false then
+			set end of show_list_up2 to item i of show_info
+		end if
+		
+		if (date (date string of (current date))) < (date (date string of (show_next of item i of show_info))) and show_active of item i of show_info = true then
+			set end of show_list_later to item i of show_info
+		end if
+		
+	end repeat
+	
+	return show_list_recording & show_list_soon & show_list_up & show_list_up2 & show_list_later & show_list_deactive
+end sort_show_list
+
+on sort_show_list_old()
+	set show_list_deactive to {}
+	set show_list_active to {}
+	set show_list_later to {}
+	set show_list_recording to {}
+	set show_list_up to {}
+	set show_list_up2 to {}
 	
 	repeat with i from 1 to length of show_info
 		set temp_show_line to " " & (show_title of item i of show_info & " on " & show_channel of item i of show_info & " at " & show_time of item i of show_info & " for " & show_length of item i of show_info & " minutes on " & my listtostring(show_air_date of item i of show_info, ", "))
@@ -1193,7 +1247,7 @@ on sort_show_list()
 	end repeat
 	
 	set show_info to show_list_recording & show_list_up & show_list_up2 & show_list_later & show_list_deactive
-end sort_show_list
+end sort_show_list_old
 
 
 ------HDHR Disscovery------
@@ -1233,7 +1287,7 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 			end repeat
 		else
 			set HDHRDeviceDiscovery_none to display dialog "No HDHR devices can be found" buttons {"Quit", "Rescan"} default button 2 cancel button 1 with title my check_version_dialog() giving up after dialog_timeout
-			if button returned of HDHRDeviceDiscovery_none = "Rescan" then 
+			if button returned of HDHRDeviceDiscovery_none = "Rescan" then
 				my HDHRDeviceDiscovery("no_devices", "")
 			end if
 			
