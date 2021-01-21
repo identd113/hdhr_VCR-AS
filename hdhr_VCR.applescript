@@ -507,6 +507,7 @@ on main(emulated_button_press)
 	if button returned of title_response contains "Shows" then
 		set show_info to my sort_show_list()
 		--log "show_info2: " & length of my sort_show_list()
+		(*
 		if option_down of my isModifierKeyPressed("shows", "option") = true then
 			set temp_show_next to {}
 			repeat with i from 1 to length of show_info
@@ -514,6 +515,7 @@ on main(emulated_button_press)
 			end repeat
 			choose from list temp_show_next
 		end if
+		*)
 		--display dialog button returned of title_response
 		set show_list to {}
 		--display dialog length of show_info
@@ -541,7 +543,7 @@ on main(emulated_button_press)
 			end if
 			
 			if show_active of item i of show_info = true then
-				set temp_show_line to check_icon & temp_show_line
+				--set temp_show_line to check_icon & temp_show_line
 			else
 				set temp_show_line to uncheck_icon & temp_show_line
 			end if
@@ -610,10 +612,19 @@ on main(emulated_button_press)
 				return
 			end try
 		else if length of show_list > 0 then
+			--fix we need to get the show_list offset, based on the result of this choose from list
 			set temp_show_list to (choose from list show_list with title my check_version_dialog() with prompt "Select show to edit: " & return & "(" & show_list_length & ")" & return & single_icon & " Single   " & series_icon & " Series" & "   " & record_icon & " Recording" & "   " & uncheck_icon & "/" & check_icon & " In/active" & "   " & film_icon & " Up Next < 1h" & "  " & up_icon & " Up Next < 4h" & "  " & up2_icon & " Up Next > 4h" & "  " & calendar_icon & " Future Show" OK button name edit_icon & " Edit.." cancel button name play_icon & " Run" without empty selection allowed)
 			if temp_show_list ­ false then
-				my validate_show_info(show_id of item (my list_position("main1", (temp_show_list as text), show_list, true)) of show_info, true)
-				my save_data()
+				set temp_show_list_offset to (my list_position("main1", (temp_show_list as text), show_list, true))
+				log "temp_show_list_offset"
+				log temp_show_list_offset
+				my validate_show_info(show_id of item temp_show_list_offset of show_info, true)
+				my update_show(show_id of item temp_show_list_offset of show_info)
+				set show_next of item temp_show_list_offset of show_info to my nextday(show_id of item temp_show_list_offset of show_info)
+				
+				--set (show_next of temp_show_list_offset of show_info) to my nextday(show_id of temp_show_list_offset)
+				
+				my save_data() 
 			else
 				return false
 			end if
