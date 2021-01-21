@@ -11,6 +11,7 @@ I call it a VCR app, as while it does use guide data to pull name / season / epi
 #### Requirements
 1. JSONHelper is required, available for free at 
 * https://apps.apple.com/us/app/json-helper-for-applescript/id453114608
+* A configured HDHomeRun device from https://www.silicondust.com
 
 #### Features
 * Auto discovery of all HDHomeRun devices on your network!
@@ -42,10 +43,11 @@ When you first run this, OSX will prompt multiple times for various system permi
 9. You will then be asked to specify a time, it is done a bit strangely. We use 24 hour decimal time
 * For example, if you wanted to record a show at 6:45 PM, you would enter 18.75. (.5 of an hour, is 30 minutes.  .75 of an hour is 45 minutes.)
 * If you attempt to use a time that has already passed for today, it will assume you mean tomorrow.
+* When picking a time, you can select anytime during the show time span, and we will adjust the start time to align with the real start.  For example, if a certain show starts at 10:35 PM, and the show runs 62 minutes, you could enter any time between 22.56 to 23.58, and we would set the start time to 22.56 (10:35)
 11. How that we have the channel, and the time, we can attempt to pull some guide data.  The free DVR guide provided by SiliconDust only gives us ~ 4 hours.  If we are able to pull this show information down, we will pre populate the next couple of questions with those as the defaults.
 12.  You will now have the ability to set the recordings name.  The name provided is just temporary, as we will try to pull the guide data before the recording starts. Again, we cannot pull guide data for any show that starts more then 4 hours from now.
 13. In this same window, you will also tell the script if this is a a "Single" or a "Series"
-* A "Single" is a one off recording, perhaps to record a show as a one off.
+* A "Single" is a one off recording.  Once the recording is complete, the show will be marked as inactive.
 * A "Series" is meant for shows that air at the same time, perhaps 1 day or week, or 7, at a certain time.
 14. The next screen allows you to tell us which day you wish to record.  It will default to today.
 * If you selected a "Series" you can select as many days as you wish.
@@ -60,7 +62,7 @@ Wow, that was alot.  In practice, you can add shows very quickly, and I over des
 
 
 "You told me you would tell me what "Run" is for?
-The button that shows "Run" in almost all dialogs, will drop you back into the idle() handler.  This allows the script to run as needed.  It is important to know that the idle() is NOT running when a dialog is open.  If a dialog stays open forever, we will never be able to record, or update anything in the script.  Because of this, most dialogs have a timeout of 60 seconds, before auto closing.
+The button that shows "Run" in almost all dialogs, will drop you back into the idle() handler. This can be used to go back, oe start over, for example if entering the incorrect information when adding a show.   This allows the script to run as needed.  It is important to know that the idle() is NOT running when a dialog is open.  If a dialog stays open forever, we will never be able to record, or update anything in the script.  Because of this, dialogs have a timeout of 60 seconds, before auto closing.  The choose from list dialog can NOT be dismissed automatically.  Our use case is the show info list.
 
 "I did that, but nothing happens!"
 
@@ -100,9 +102,9 @@ The hdhr_guide and hdhr_lineup contain the entire json result of the lineup, and
 ## Special considerations
 * The "heavy lifting" is done with curl, which downloads the data to a local drive.  The script manages the show and device logic.
 * If there are multiple HDHR device on the network, you will be asked which one you want to use when adding a show.
-* When adding a show, we will attempt to write a test file to that location (and remove it) right away, so we can get through any of the OS X disk access prompts.  This file is written/removed every 5 minutes during a recording.  This will update the file, as seen in Finder.
+* When adding a show, we will attempt to write a test file to that location (and remove it) right away, so we can get through any of the OS X disk access prompts.  This file is written/removed every 5 minutes during a recording.  This will update the file size, as seen in Finder.
 * Heavily use notifications to pass along information to the user, as we run more or less faceless.  Future versions will allow you to specify you get a message such as:
-* *  Starting recording
+* * Starting recording
 * * Recording in progress
 * * End recording.
 * * Tuner and Lineup updates (On launch, and every two hours.)
