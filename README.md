@@ -44,7 +44,7 @@ When you first run this, OSX will prompt multiple times for various system permi
 * For example, if you wanted to record a show at 6:45 PM, you would enter 18.75. (.5 of an hour, is 30 minutes.  .75 of an hour is 45 minutes.)
 * If you attempt to use a time that has already passed for today, it will assume you mean tomorrow.
 * When picking a time, you can select anytime during the show time span, and we will adjust the start time to align with the real start.  For example, if a certain show starts at 10:35 PM, and the show runs 62 minutes, you could enter any time between 22.56 to 23.58, and we would set the start time to 22.56 (10:35)
-11. How that we have the channel, and the time, we can attempt to pull some guide data.  The free DVR guide provided by SiliconDust only gives us ~ 4 hours.  If we are able to pull this show information down, we will pre populate the next couple of questions with those as the defaults.
+11. Now that we have the channel, and the time, we can attempt to pull some guide data.  The free DVR guide provided by SiliconDust only gives us ~ 4 hours.  If we are able to pull this show information down, we will pre populate the next couple of questions with those as the defaults.
 12.  You will now have the ability to set the recordings name.  The name provided is just temporary, as we will try to pull the guide data before the recording starts. Again, we cannot pull guide data for any show that starts more then 4 hours from now.
 13. In this same window, you will also tell the script if this is a a "Single" or a "Series"
 * A "Single" is a one off recording.  Once the recording is complete, the show will be marked as inactive.
