@@ -81,6 +81,7 @@ We use notifications to alert the user to recordings being started, in progress,
 
 If you want to quit the script, the best way to do so is being in a "run" state (faceless) and then issuing a command q, or selecting "Quit" from the hdhr_VCR File menu.
 * If a show is currently recording, you will be prompted regarding if you want to cancel the recordings, before quitting.  You can choose to go back to the main screem, quit, and cancel all recordings, or quit, but do not cancel the shows.  Since the recording is done with "curl", hdhr_VCR does not need to be open once a recording has already started.
+
 **In almost every case, you should choose "No". **
 
 ## Nitty gritty  
