@@ -71,7 +71,7 @@ That is accurate.  When the script is configured with a show, it is faceless, an
 
 "I want to add or edit a show"
 
-If you click the icon in the Dock, you will be presented with the main window, so you can do such things."
+If you click the icon in the Dock, you will be presented with the main window, so you can do such things.
 
 "How do I know something is happening?
 
