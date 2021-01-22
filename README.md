@@ -62,6 +62,7 @@ Wow, that was alot.  In practice, you can add shows very quickly, and I over des
 
 
 "You told me you would tell me what "Run" is for?
+
 The button that shows "Run" in almost all dialogs, will drop you back into the idle() handler. This can be used to go back, oe start over, for example if entering the incorrect information when adding a show.   This allows the script to run as needed.  It is important to know that the idle() is NOT running when a dialog is open.  If a dialog stays open forever, we will never be able to record, or update anything in the script.  Because of this, dialogs have a timeout of 60 seconds, before auto closing.  The choose from list dialog can NOT be dismissed automatically.  Our use case is the show info list.
 
 "I did that, but nothing happens!"
