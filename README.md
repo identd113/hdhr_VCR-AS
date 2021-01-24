@@ -44,7 +44,7 @@ When you first run this, OSX will prompt multiple times for various system permi
 * For example, if you wanted to record a show at 6:45 PM, you would enter 18.75. (.5 of an hour, is 30 minutes.  .75 of an hour is 45 minutes.)
 * If you attempt to use a time that has already passed for today, it will assume you mean tomorrow.
 * When picking a time, you can select anytime during the show time span, and we will adjust the start time to align with the real start.  For example, if a certain show starts at 10:35 PM, and the show runs 62 minutes, you could enter any time between 22.56 to 23.58, and we would set the start time to 22.56 (10:35)
-11. How that we have the channel, and the time, we can attempt to pull some guide data.  The free DVR guide provided by SiliconDust only gives us ~ 4 hours.  If we are able to pull this show information down, we will pre populate the next couple of questions with those as the defaults.
+11. Now that we have the channel, and the time, we can attempt to pull some guide data.  The free DVR guide provided by SiliconDust only gives us ~ 4 hours.  If we are able to pull this show information down, we will pre populate the next couple of questions with those as the defaults.
 12.  You will now have the ability to set the recordings name.  The name provided is just temporary, as we will try to pull the guide data before the recording starts. Again, we cannot pull guide data for any show that starts more then 4 hours from now.
 13. In this same window, you will also tell the script if this is a a "Single" or a "Series"
 * A "Single" is a one off recording.  Once the recording is complete, the show will be marked as inactive.
@@ -62,7 +62,8 @@ Wow, that was alot.  In practice, you can add shows very quickly, and I over des
 
 
 "You told me you would tell me what "Run" is for?
-The button that shows "Run" in almost all dialogs, will drop you back into the idle() handler. This can be used to go back, oe start over, for example if entering the incorrect information when adding a show.   This allows the script to run as needed.  It is important to know that the idle() is NOT running when a dialog is open.  If a dialog stays open forever, we will never be able to record, or update anything in the script.  Because of this, dialogs have a timeout of 60 seconds, before auto closing.  The choose from list dialog can NOT be dismissed automatically.  Our use case is the show info list.
+
+The button that shows "Run" in almost all dialogs, will drop you back into the idle() handler. This can be used to go back, or start over, for example if entering the incorrect information when adding a show.   This allows the script to run as needed.  It is important to know that the idle() is NOT running when a dialog is open.  If a dialog stays open forever, we will never be able to record, or update anything in the script.  Because of this, dialogs have a timeout of 60 seconds, before auto closing.  The choose from list dialog can NOT be dismissed automatically.  Our use case is the show info list.
 
 "I did that, but nothing happens!"
 
@@ -70,7 +71,7 @@ That is accurate.  When the script is configured with a show, it is faceless, an
 
 "I want to add or edit a show"
 
-If you click the icon in the Dock, you will be presented with the main window, so you can do such things."
+If you click the icon in the Dock, you will be presented with the main window, so you can do such things.
 
 "How do I know something is happening?
 
@@ -80,6 +81,7 @@ We use notifications to alert the user to recordings being started, in progress,
 
 If you want to quit the script, the best way to do so is being in a "run" state (faceless) and then issuing a command q, or selecting "Quit" from the hdhr_VCR File menu.
 * If a show is currently recording, you will be prompted regarding if you want to cancel the recordings, before quitting.  You can choose to go back to the main screem, quit, and cancel all recordings, or quit, but do not cancel the shows.  Since the recording is done with "curl", hdhr_VCR does not need to be open once a recording has already started.
+
 **In almost every case, you should choose "No". **
 
 ## Nitty gritty  
