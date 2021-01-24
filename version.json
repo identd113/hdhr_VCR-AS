@@ -2,6 +2,10 @@
 	"versions": 
 [
 {
+"hdhr_version":"20210124",
+"changelog":"Added Show Guide, to make it easier to select a show."
+},
+{
 "hdhr_version":"20210120.2",
 "changelog":"Rewrite show list sorting. "
 },

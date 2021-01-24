@@ -100,7 +100,7 @@ on hdhrGRID(hdhr_device, hdhr_channel)
 		set end of hdhrGRID_sort to (word 2 of my short_date("hdhrGRID1", my epoch2datetime(my getTfromN(StartTime of item i of Guide of hdhrGRID_temp)), false) & "-" & word 2 of my short_date("hdhrGRID2", my epoch2datetime(my getTfromN(EndTime of item i of Guide of hdhrGRID_temp)), false) & " " & temp_title)
 	end repeat
 	
-	set hdhrGRID_selected to choose from list hdhrGRID_sort with prompt "Channel " & hdhr_channel & " (" & GuideName of hdhrGRID_temp & ")"
+	set hdhrGRID_selected to choose from list hdhrGRID_sort with prompt "Channel " & hdhr_channel & " (" & GuideName of hdhrGRID_temp & ")" cancel button name "Manual Add" OK button name "Next.."
 	log "hdhr_offset"
 	if hdhrGRID_selected ­ false then
 		return item (my list_position("hdhrGRID1", hdhrGRID_selected, hdhrGRID_sort, false)) of Guide of hdhrGRID_temp
@@ -203,7 +203,7 @@ on run {}
 	set calendar_icon to character id 128197
 	set hourglass_icon to character id 8987
 	set film_icon to character id 127910
-	set version_local to "20210120.2"
+	set version_local to "20210124"
 	
 	set progress description to "Loading " & name of me & " " & version_local
 	
@@ -485,7 +485,6 @@ on main(emulated_button_press)
 	
 	if button returned of title_response contains "Add" then
 		set temp_tuners_list to {}
-		--set end of temp_tuners_list to "Auto" 
 		repeat with i from 1 to length of HDHR_DEVICE_LIST
 			
 			log "main()"
@@ -500,7 +499,8 @@ on main(emulated_button_press)
 				set hdhr_device to missing value
 			end if
 		else
-			set hdhr_device to device_id of item 1 of HDHR_DEVICE_LIST
+			set hdhr_device to missing value
+			--set hdhr_device to device_id of item 1 of HDHR_DEVICE_LIST
 		end if
 		my add_show_info2(hdhr_device)
 	end if
@@ -628,7 +628,7 @@ on main(emulated_button_press)
 	end if
 	
 end main
-
+(*
 on add_show_info(hdhr_device)
 	set tuner_status to my tuner_status2("add_show", hdhr_device)
 	set tuner_status_icon to ""
@@ -825,7 +825,7 @@ on add_show_info(hdhr_device)
 	log show_info
 	my save_data()
 end add_show_info
-
+*)
 on add_show_info2(hdhr_device)
 	set tuner_status to my tuner_status2("add_show", hdhr_device)
 	set tuner_status_icon to "Tuner: " & hdhr_device
