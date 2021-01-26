@@ -13,7 +13,7 @@
 
 
 global show_info
-global temp_show_info
+--global temp_show_info
 global locale
 global channel_list
 global HDHR_DEVICE_LIST
@@ -183,12 +183,6 @@ on check_version_dialog()
 	return temp
 end check_version_dialog
 
-on hdhr_prepare_record(hdhr_device)
-	set tuner_offset to my HDHRDeviceSearch("hdhr_prepare_record0", hdhr_device)
-	set temp to my stringtolist("hdhr_prepare_record", discover_url of item tuner_offset of HDHR_DEVICE_LIST, "/")
-	return my listtostring(items 1 thru -2 of temp, "/")
-end hdhr_prepare_record
-
 on run {}
 	
 	--Icons!	
@@ -212,7 +206,7 @@ on run {}
 	set calendar_icon to character id 128197
 	set hourglass_icon to character id 8987
 	set film_icon to character id 127910
-	set version_local to "20210124"
+	set version_local to "20210126"
 	
 	set progress description to "Loading " & name of me & " " & version_local
 	
@@ -493,7 +487,7 @@ on main(emulated_button_press)
 	--Collect the temporary name.  This will likely be over written once we can pull guide data
 	activate me
 	if emulated_button_press = "" then
-		set title_response to (display dialog "Would you like to add a show?" buttons {tv_icon & " Shows..", plus_icon & " Add..", play_icon & " Run"} with title my check_version_dialog() giving up after (dialog_timeout - 30) with icon note default button 2)
+		set title_response to (display dialog "Would you like to add a show?" buttons {tv_icon & " Shows..", plus_icon & " Add..", play_icon & " Run"} with title my check_version_dialog() giving up after (dialog_timeout * 0.5) with icon note default button 2)
 	else
 		set title_response to {button returned:emulated_button_press}
 	end if
@@ -958,7 +952,7 @@ on add_show_info2(hdhr_device)
 			set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title my check_version_dialog() OK button name "Next.." cancel button name play_icon & " Run" with prompt "Select the day you wish to record." & return & "A \"Single\" can only select 1 day." without empty selection allowed)
 			--	log "showairdate2: " & class of (show_air_date of temp_show_info)
 		else
-			set show_air_date of temp_show_info to weekday of (my epoch2datetime((my getTfromN(StartTime of hdhrGRID_response)))) as list
+			set show_air_date of temp_show_info to weekday of (my epoch2datetime((my getTfromN(StartTime of hdhrGRID_response)))) as text
 			--log "showairdate3: " & class of (show_air_date of temp_show_info)
 		end if
 	end if
@@ -1156,6 +1150,7 @@ on record_now(the_show_id, opt_show_length)
 	set i to my check_offset(the_show_id)
 	my update_show(the_show_id)
 	set hdhr_device to hdhr_record of item i of show_info
+	set tuner_offset to my HDHRDeviceSearch("HDHRDeviceDiscovery0", hdhr_device)
 	if opt_show_length ­ missing value then
 		set temp_show_length to opt_show_length as number
 	else
@@ -1166,10 +1161,11 @@ on record_now(the_show_id, opt_show_length)
 		display notification "Negative duration: " & show_title of item i of show_info
 	end if
 	if show_transcode of item i of show_info = missing value or show_transcode of item i of show_info = "None" then
-		do shell script "caffeinate -i curl '" & my hdhr_prepare_record(hdhr_device) & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now0", current date, true) & ".m2ts") & "> /dev/null 2>&1 &"
+		do shell script "caffeinate -i curl '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now0", current date, true) & ".m2ts") & "> /dev/null 2>&1 &"
+		--do shell script "caffeinate -i curl '" & my hdhr_prepare_record(hdhr_device) & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now0", current date, true) & ".m2ts") & "> /dev/null 2>&1 &"
 	else
-		do shell script "caffeinate -i curl '" & my hdhr_prepare_record(hdhr_device) & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "&transcode=" & show_transcode of item i of show_info & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now1", current date, true) & ".mkv") & "> /dev/null 2>&1 &"
-		--display dialog "caffeinate -i curl '" & my hdhr_prepare_record(hdhr_device) & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now", current date, true) & ".mkv") & "> /dev/null 2>&1 &"
+		--do shell script "caffeinate -i curl '" & my hdhr_prepare_record(hdhr_device) & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "&transcode=" & show_transcode of item i of show_info & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now1", current date, true) & ".mkv") & "> /dev/null 2>&1 &"
+		do shell script "caffeinate -i curl '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "&transcode=" & show_transcode of item i of show_info & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now1", current date, true) & ".mkv") & "> /dev/null 2>&1 &"
 	end if
 	
 	set show_recording of item i of show_info to true
