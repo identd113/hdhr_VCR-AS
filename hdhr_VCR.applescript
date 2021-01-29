@@ -228,7 +228,7 @@ on run {}
 	set progress description to "Loading " & name of me & " " & version_local
 	
 	--set globals 
-	set show_info to {} 
+	set show_info to {}
 	set notify_upnext to 30
 	set notify_recording to 15
 	set locale to user locale of (system info)
@@ -1469,12 +1469,17 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 		set progress additional description to "Discovering HDHomeRun Devices"
 		set progress completed steps to 0
 		set hdhr_device_discovery to my hdhr_api("", "", "", "/discover")
-		set progress total steps to length of hdhr_device_discovery
+		set progress total steps to length of hdhr_device_discovery 
 		repeat with i from 1 to length of hdhr_device_discovery
 			set progress completed steps to i
+			try
+				set tuner_transcode_temp to Transcode of item i of hdhr_device_discovery
+			on error
+				set tuner_transcode_temp to 0
+			end try
 			--I suspect issue #24 is caused by us assuming Transcode'
 			
-			set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:DiscoverURL of item i of hdhr_device_discovery, lineup_url:LineupURL of item i of hdhr_device_discovery, device_id:deviceid of item i of hdhr_device_discovery, does_transcode:Transcode of item i of hdhr_device_discovery, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value, channel_mapping:missing value, BaseURL:BaseURL of item i of hdhr_device_discovery, statusURL:(BaseURL of item i of hdhr_device_discovery & "/status.json")}
+			set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:DiscoverURL of item i of hdhr_device_discovery, lineup_url:LineupURL of item i of hdhr_device_discovery, device_id:deviceid of item i of hdhr_device_discovery, does_transcode:tuner_transcode_temp, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value, channel_mapping:missing value, BaseURL:BaseURL of item i of hdhr_device_discovery, statusURL:(BaseURL of item i of hdhr_device_discovery & "/status.json")}
 			log "!HDHR!"
 			--log statusURL of last item of HDHR_DEVICE_LIST
 			log last item of HDHR_DEVICE_LIST
