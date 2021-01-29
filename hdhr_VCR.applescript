@@ -55,6 +55,7 @@ global uncheck_icon
 global calendar_icon
 global hourglass_icon
 global film_icon
+global back_icon
 --Since we use JSON helper to do some of the work, we should declare it, so we dont end up having to use tell blocks everywhere.  If we declare 1 thing, we have to declare everything we are using.
 
 use AppleScript version "2.4"
@@ -88,7 +89,7 @@ use application "JSON Helper"
 --FIX
 on hdhrGRID(hdhr_device, hdhr_channel)
 	log "hdhrgrid: " & hdhr_channel
-	set hdhrGRID_sort to {"Back"}
+	set hdhrGRID_sort to {back_icon & " Back"}
 	set hdhrGRID_temp to my channel_guide("hdhrGRID0", hdhr_device, hdhr_channel, "")
 	
 	repeat with i from 1 to length of Guide of hdhrGRID_temp
@@ -98,15 +99,28 @@ on hdhrGRID(hdhr_device, hdhr_channel)
 			set temp_title to (title of item i of Guide of hdhrGRID_temp)
 		end try
 		set end of hdhrGRID_sort to (word 2 of my short_date("hdhrGRID1", my epoch2datetime(my getTfromN(StartTime of item i of Guide of hdhrGRID_temp)), false) & "-" & word 2 of my short_date("hdhrGRID2", my epoch2datetime(my getTfromN(EndTime of item i of Guide of hdhrGRID_temp)), false) & " " & temp_title)
+		(*
+			repeat with i2 from 1 to length of show_info
+			if temp_title is not in show_title of item i2 of show_info then
+				set end of hdhrGRID_sort to (word 2 of my short_date("hdhrGRID1", my epoch2datetime(my getTfromN(StartTime of item i of Guide of hdhrGRID_temp)), false) & "-" & word 2 of my short_date("hdhrGRID2", my epoch2datetime(my getTfromN(EndTime of item i of Guide of hdhrGRID_temp)), false) & " " & temp_title)
+			end if
+		end repeat
+*)
 	end repeat
 	
 	set hdhrGRID_selected to choose from list hdhrGRID_sort with prompt "Channel " & hdhr_channel & " (" & GuideName of hdhrGRID_temp & ")" cancel button name "Manual Add" OK button name "Next.." with title my check_version_dialog()
 	log "hdhrGRID_selected: " & hdhrGRID_selected
 	try
-		if item 1 of hdhrGRID_selected = "Back" then
+		if item 1 of hdhrGRID_selected = back_icon & " Back" then
 			return true
 		end if
 	end try
+	if my epoch2datetime(EndTime of item ((my list_position("hdhrGRID1", hdhrGRID_selected, hdhrGRID_sort, false)) - 1) of Guide of hdhrGRID_temp) < (current date) then
+		display notification "The show has already passed, returning..."
+		my HDHRDeviceDiscovery("hdhrGRID", hdhr_device)
+		my build_channel_list("hdhrGRID", hdhr_device)
+		return true
+	end if
 	if hdhrGRID_selected ­ false then
 		return item ((my list_position("hdhrGRID1", hdhrGRID_selected, hdhrGRID_sort, false)) - 1) of Guide of hdhrGRID_temp
 	else
@@ -153,6 +167,9 @@ on tuner_status2(caller, device_id)
 	log "tuner_status: " & caller & " of " & device_id
 	set temp_list to {}
 	set tuner_offset to my HDHRDeviceSearch("tuner_status2", device_id)
+	if tuner_offset = 0 then
+		return true
+	end if
 	set hdhr_discover_temp to my hdhr_api(statusURL of item tuner_offset of HDHR_DEVICE_LIST, "", "", "")
 	repeat with i from 1 to length of hdhr_discover_temp
 		if length of item i of hdhr_discover_temp = 1 then
@@ -206,12 +223,12 @@ on run {}
 	set calendar_icon to character id 128197
 	set hourglass_icon to character id 8987
 	set film_icon to character id 127910
-	set version_local to "20210126"
-	
+	set back_icon to character id 8592
+	set version_local to "20210129"
 	set progress description to "Loading " & name of me & " " & version_local
 	
 	--set globals 
-	set show_info to {}
+	set show_info to {} 
 	set notify_upnext to 30
 	set notify_recording to 15
 	set locale to user locale of (system info)
@@ -412,7 +429,7 @@ on validate_show_info(show_to_check, should_edit)
 			if show_time of item i of show_info = missing value or (show_time of item i of show_info as number) ³ 24 or my is_number(show_time of item i of show_info) = false or should_edit = true then
 				--set show_time of item i of show_info to text returned of (display dialog "What time does this show air? (use 1-24)" default answer show_time of item i of show_info)
 				--FIX give option to smart "adjust" the time if guide data is available 
-				set show_time of item i of show_info to text returned of (display dialog "What time does this show air? " & return & "(0-24, use decimals, ie 9.5 for 9:30)" default answer hours of (current date) buttons {play_icon & " Run", "Next.."} with title my check_version_dialog() giving up after dialog_timeout default button 2 cancel button 1) as number
+				set show_time of item i of show_info to text returned of (display dialog "What time does this show air? " & return & "(0-24, use decimals, ie 9.5 for 9:30)" default answer show_time of item i of show_info buttons {play_icon & " Run", "Next.."} with title my check_version_dialog() giving up after dialog_timeout default button 2 cancel button 1) as number
 			end if
 			if show_length of item i of show_info = missing value or my is_number(show_length of item i of show_info) = false or show_length of item i of show_info ² 0 or should_edit = true then
 				set show_length of item i of show_info to text returned of (display dialog "How long is this show? (in minutes)" default answer show_length of item i of show_info with title my check_version_dialog() buttons {play_icon & " Run", "Next.."} default button 2 cancel button 1 giving up after dialog_timeout)
@@ -509,8 +526,8 @@ on main(emulated_button_press)
 				set hdhr_device to missing value
 			end if
 		else
-			set hdhr_device to missing value
-			--set hdhr_device to device_id of item 1 of HDHR_DEVICE_LIST
+			--set hdhr_device to hdhr_model of item 1 of HDHR_DEVICE_LIST
+			set hdhr_device to device_id of item 1 of HDHR_DEVICE_LIST
 		end if
 		my add_show_info2(hdhr_device)
 	end if
@@ -615,15 +632,16 @@ on main(emulated_button_press)
 			end try
 		else if length of show_list > 0 then
 			--fix we need to get the show_list offset, based on the result of this choose from list
-			set temp_show_list to (choose from list show_list with title my check_version_dialog() with prompt "Select show to edit: " & return & "(" & show_list_length & ")" & return & single_icon & " Single   " & series_icon & " Series" & "   " & record_icon & " Recording" & "   " & uncheck_icon & "/" & check_icon & " In/active" & "   " & film_icon & " Up Next < 1h" & "  " & up_icon & " Up Next < 4h" & "  " & up2_icon & " Up Next > 4h" & "  " & calendar_icon & " Future Show" OK button name edit_icon & " Edit.." cancel button name play_icon & " Run" without empty selection allowed)
+			set temp_show_list to (choose from list show_list with title my check_version_dialog() with prompt "Select show to edit: " & return & "(" & show_list_length & ")" & return & single_icon & " Single   " & series_icon & " Series" & "   " & record_icon & " Recording" & "   " & uncheck_icon & " Inactive" & return & film_icon & " Up Next < 1h" & "  " & up_icon & " Up Next < 4h" & "  " & up2_icon & " Up Next > 4h" & "  " & calendar_icon & " Future Show" OK button name edit_icon & " Edit.." cancel button name play_icon & " Run" without empty selection allowed)
 			if temp_show_list ­ false then
 				set temp_show_list_offset to (my list_position("main1", (temp_show_list as text), show_list, true))
 				log "temp_show_list_offset"
 				log temp_show_list_offset
 				my validate_show_info(show_id of item temp_show_list_offset of show_info, true)
-				my update_show(show_id of item temp_show_list_offset of show_info)
-				set show_next of item temp_show_list_offset of show_info to my nextday(show_id of item temp_show_list_offset of show_info)
-				
+				if show_active of item (temp_show_list_offset) of show_info = true then
+					my update_show(show_id of item temp_show_list_offset of show_info)
+					set show_next of item temp_show_list_offset of show_info to my nextday(show_id of item temp_show_list_offset of show_info)
+				end if
 				--set (show_next of temp_show_list_offset of show_info) to my nextday(show_id of temp_show_list_offset)
 				
 				my save_data()
@@ -860,17 +878,24 @@ on add_show_info2(hdhr_device)
 	--What channel.  We need at least this to pull a guide. 
 	set hdhrGRID_response to true
 	repeat until hdhrGRID_response ­ true
-		--	try 
-		set show_channel of temp_show_info to word 1 of item 1 of (choose from list channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with prompt "What channel does this show air on?" & return & return & tuner_status_icon with title my check_version_dialog() OK button name "Next.." cancel button name play_icon & " Run" without empty selection allowed)
-		--on error
-		--	set show_channel of temp_show_info to missing value
-		--error number -128 
-		--end try
+		--try
+		--	break this down, so we can catch if the response from choose to list is false (cancel)
 		
-		if option_down of my isModifierKeyPressed("add", "option") = true then
-			set hdhrGRID_response to false
+		set hdhrGRID_list_response to (choose from list channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with prompt "What channel does this show air on?" & return & return & tuner_status_icon with title my check_version_dialog() OK button name "Next.." cancel button name play_icon & " Run" without empty selection allowed)
+		if hdhrGRID_list_response ­ false then
+			set show_channel of temp_show_info to word 1 of item 1 of hdhrGRID_list_response
+			--on error
+			--	set show_channel of temp_show_info to missing value
+			--	error number -128
+			-- end try
+			
+			if option_down of my isModifierKeyPressed("add", "option") = true then
+				set hdhrGRID_response to false
+			else
+				set hdhrGRID_response to my hdhrGRID(hdhr_device, show_channel of temp_show_info)
+			end if
 		else
-			set hdhrGRID_response to my hdhrGRID(hdhr_device, show_channel of temp_show_info)
+			error number -128
 		end if
 	end repeat
 	
@@ -905,6 +930,8 @@ on add_show_info2(hdhr_device)
 		--set hdhr_response_channel to hdhrGRID_response
 		
 		--auto title 
+		
+		
 		set hdhr_response_channel_title to ""
 		set hdhr_response_channel_title to title of hdhrGRID_response
 		
@@ -1004,7 +1031,7 @@ on idle
 	--Re run auto discover every 2 hours, or once we flip past midnight
 	if length of HDHR_DEVICE_LIST > 0 then
 		repeat with i2 from 1 to length of HDHR_DEVICE_LIST
-			if ((cd_object) - (hdhr_guide_update of item i2 of HDHR_DEVICE_LIST)) div 60 ³ 120 or date string of (hdhr_guide_update of item i2 of HDHR_DEVICE_LIST) ­ date string of (current date) then
+			if ((cd_object) - (hdhr_guide_update of item i2 of HDHR_DEVICE_LIST)) div 60 ³ 60 or date string of (hdhr_guide_update of item i2 of HDHR_DEVICE_LIST) ­ date string of (current date) then
 				my HDHRDeviceDiscovery("idle0", "")
 			end if
 		end repeat
@@ -1038,7 +1065,6 @@ on idle
 								else
 									set show_active of item i of show_info to false
 								end if
-								display notification "show_end of item i of show_info < (current date)"
 								exit repeat
 							end if
 							--FIX the above line would cause some issues when quitting/re opening.  We should resume more gracefully
@@ -1446,13 +1472,15 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 		set progress total steps to length of hdhr_device_discovery
 		repeat with i from 1 to length of hdhr_device_discovery
 			set progress completed steps to i
+			--I suspect issue #24 is caused by us assuming Transcode'
+			
 			set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:DiscoverURL of item i of hdhr_device_discovery, lineup_url:LineupURL of item i of hdhr_device_discovery, device_id:deviceid of item i of hdhr_device_discovery, does_transcode:Transcode of item i of hdhr_device_discovery, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value, channel_mapping:missing value, BaseURL:BaseURL of item i of hdhr_device_discovery, statusURL:(BaseURL of item i of hdhr_device_discovery & "/status.json")}
 			log "!HDHR!"
 			--log statusURL of last item of HDHR_DEVICE_LIST
 			log last item of HDHR_DEVICE_LIST
 		end repeat
 		--Add a fake device entry to make sure we dont break this for multiple devices.
-		set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value, channel_mapping:missing value, BaseURL:BaseURL of item 1 of hdhr_device_discovery, statusURL:"http://10.0.1.101/status.json"}
+		--set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value, channel_mapping:missing value, BaseURL:BaseURL of item 1 of hdhr_device_discovery, statusURL:"http://10.0.1.101/status.json"}
 		log "Length of HDHR_DEVICE_LIST: " & length of HDHR_DEVICE_LIST
 		
 		--We now have a list of tuners, via a list of records in HDHR_TUNERS, now we want to pull a lineup, and a guide.
@@ -1487,7 +1515,7 @@ on HDHRDeviceSearch(caller, hdhr_device)
 			return i
 		end if
 	end repeat
-	log "HDHRDeviceSearch: " & 0
+	log "HDHRDeviceSearch: 0"
 	return 0
 end HDHRDeviceSearch
 
@@ -1501,7 +1529,7 @@ on hdhr_api(hdhr_ready, hdhr_IP, hdhr_PORT, hdhr_endpoint)
 	if hdhr_ready is in {"", {}, missing value} then
 		set hdhr_api_result to (fetch JSON from hdhr_IP & hdhr_PORT & hdhr_endpoint)
 	else
-		--COnnection issue here hangs up jsonhelper
+		--Connection issue here hangs up jsonhelper
 		set hdhr_api_result to (fetch JSON from hdhr_ready)
 	end if
 	set HDHR_api_result_cached to hdhr_api_result
@@ -1530,7 +1558,7 @@ on getHDHR_Guide(caller, hdhr_device)
 	set hdhr_guide of item tuner_offset of HDHR_DEVICE_LIST to hdhr_guide_data
 	set hdhr_guide_update of item tuner_offset of HDHR_DEVICE_LIST to current date
 	set progress completed steps to 1
-	display notification "Last Updated: " & (my short_date("getHDHR_Guide", current date, false)) with title hdhr_device subtitle "Guide and Lineup Data"
+	--	display notification "Last Updated: " & (my short_date("getHDHR_Guide", current date, false)) with title hdhr_device subtitle "Guide and Lineup Data"
 	--display dialog length of hdhr_guide_data
 	--each item is a different channel, so we can walk these to pull information. 
 end getHDHR_Guide
