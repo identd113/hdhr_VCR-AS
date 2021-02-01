@@ -2,6 +2,10 @@
 	"versions": 
 [
 {
+"hdhr_version":"20210201",
+"changelog":"Fixed show guide.  This is now our default method of adding shows."
+},
+{
 "hdhr_version":"20210124",
 "changelog":"Added Show Guide, to make it easier to select a show."
 },

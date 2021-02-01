@@ -4,7 +4,7 @@
 -- Done We need to write a flat file to save the TV shows, as properties will lose their persistence in big sur
 -- Done We should not ask about the tuner until after we click "add"
 --property show_info : {}
---property hdhr_IP : "10.0.1.12"
+--property hdhr_IP : "10.0.1.12" 
 --property hdhr_PORT : ":5004"
 --property hdhr_TUNER_ct : 0
 -- caffeinate -i curl 'http://10.0.1.101:5004/auto/v2.4?duration=1768' -o '/Volumes/Backups/DVR Tests/Dinosaur Train S02E09 The Lost Bird; The Forest Fire_01.05.21 09.55.mkv'> /dev/null 2>&1 &
@@ -99,14 +99,8 @@ on hdhrGRID(hdhr_device, hdhr_channel)
 			set temp_title to (title of item i of Guide of hdhrGRID_temp)
 		end try
 		set end of hdhrGRID_sort to (word 2 of my short_date("hdhrGRID1", my epoch2datetime(my getTfromN(StartTime of item i of Guide of hdhrGRID_temp)), false) & "-" & word 2 of my short_date("hdhrGRID2", my epoch2datetime(my getTfromN(EndTime of item i of Guide of hdhrGRID_temp)), false) & " " & temp_title)
-		(*
-			repeat with i2 from 1 to length of show_info
-			if temp_title is not in show_title of item i2 of show_info then
-				set end of hdhrGRID_sort to (word 2 of my short_date("hdhrGRID1", my epoch2datetime(my getTfromN(StartTime of item i of Guide of hdhrGRID_temp)), false) & "-" & word 2 of my short_date("hdhrGRID2", my epoch2datetime(my getTfromN(EndTime of item i of Guide of hdhrGRID_temp)), false) & " " & temp_title)
-			end if
-		end repeat
-*)
 	end repeat
+	--fixme  Allow multiple shows to be selected.
 	
 	set hdhrGRID_selected to choose from list hdhrGRID_sort with prompt "Channel " & hdhr_channel & " (" & GuideName of hdhrGRID_temp & ")" cancel button name "Manual Add" OK button name "Next.." with title my check_version_dialog()
 	log "hdhrGRID_selected: " & hdhrGRID_selected
@@ -224,12 +218,12 @@ on run {}
 	set hourglass_icon to character id 8987
 	set film_icon to character id 127910
 	set back_icon to character id 8592
-	set version_local to "20210129"
+	set version_local to "20210201"
 	set progress description to "Loading " & name of me & " " & version_local
 	
 	--set globals 
 	set show_info to {}
-	set notify_upnext to 30
+	set notify_upnext to 20
 	set notify_recording to 15
 	set locale to user locale of (system info)
 	set hdhr_setup_folder to "Volumes:"
@@ -529,7 +523,7 @@ on main(emulated_button_press)
 			--set hdhr_device to hdhr_model of item 1 of HDHR_DEVICE_LIST
 			set hdhr_device to device_id of item 1 of HDHR_DEVICE_LIST
 		end if
-		my add_show_info2(hdhr_device)
+		my add_show_info(hdhr_device)
 	end if
 	
 	if button returned of title_response contains "Shows" then
@@ -632,7 +626,7 @@ on main(emulated_button_press)
 			end try
 		else if length of show_list > 0 then
 			--fix we need to get the show_list offset, based on the result of this choose from list
-			set temp_show_list to (choose from list show_list with title my check_version_dialog() with prompt "Select show to edit: " & return & "(" & show_list_length & ")" & return & single_icon & " Single   " & series_icon & " Series" & "   " & record_icon & " Recording" & "   " & uncheck_icon & " Inactive" & return & film_icon & " Up Next < 1h" & "  " & up_icon & " Up Next < 4h" & "  " & up2_icon & " Up Next > 4h" & "  " & calendar_icon & " Future Show" OK button name edit_icon & " Edit.." cancel button name play_icon & " Run" without empty selection allowed)
+			set temp_show_list to (choose from list show_list with title my check_version_dialog() with prompt "Select show to edit: " & return & single_icon & " Single   " & series_icon & " Series" & "   " & record_icon & " Recording" & "   " & uncheck_icon & " Inactive" & return & film_icon & " Up Next < 1h" & "  " & up_icon & " Up Next < 4h" & "  " & up2_icon & " Up Next > 4h" & "  " & calendar_icon & " Future Show" OK button name edit_icon & " Edit.." cancel button name play_icon & " Run" without empty selection allowed)
 			if temp_show_list ­ false then
 				set temp_show_list_offset to (my list_position("main1", (temp_show_list as text), show_list, true))
 				log "temp_show_list_offset"
@@ -656,205 +650,8 @@ on main(emulated_button_press)
 	end if
 	
 end main
-(*
+
 on add_show_info(hdhr_device)
-	set tuner_status to my tuner_status2("add_show", hdhr_device)
-	set tuner_status_icon to ""
-	if tuner_status = false then
-		set tuner_status_icon to hdhr_device & " has no available tuners" & return & "Next timeout: " & my tuner_end(hdhr_device)
-	end if
-	
-	set tuner_offset to my HDHRDeviceSearch("add_show_info0", hdhr_device)
-	set show_channel to missing value
-	set temp_show_info to {show_title:missing value, show_time:missing value, show_length:missing value, show_air_date:missing value, show_transcode:missing value, show_temp_dir:missing value, show_dir:missing value, show_channel:missing value, show_active:true, show_id:(do shell script "date | md5") as text, show_recording:false, show_last:my epoch(), show_next:missing value, show_end:missing value, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:hdhr_device, show_is_series:false}
-	
-	if hdhr_device = "" then
-		if length of HDHR_DEVICE_LIST = 1 then
-			--fix Add multiple tuner prompt
-			set hdhr_device to device_id of item 1 of HDHR_DEVICE_LIST
-		end if
-	end if
-	
-	
-	repeat until my is_number(show_channel of temp_show_info)
-		try
-			--	
-			set show_channel of temp_show_info to word 1 of item 1 of (choose from list channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with prompt "What channel does this show air on?" & return & return & tuner_status_icon with title my check_version_dialog() OK button name "Next.." cancel button name play_icon & " Run" without empty selection allowed)
-			--set show_channel of temp_show_info to text returned of (display dialog "What channel does this show air on?" default answer "") --pull channel kineup, and parse out Channel name/channel.
-			--if my is_number(show_channel of temp_show_info) = false then
-			--	set show_channel of temp_show_info to missing value
-			--else
-			--		set show_channel of temp_show_info to show_channel of temp_show_info as number 
-			--end if
-		on error
-			error number -128
-		end try
-	end repeat
-	--if option_down of my isModifierKeyPressed("add", "option") = true then
-	set hdhrGRID_response to my hdhrGRID(hdhr_device, show_channel of temp_show_info)
-	--end if
-	if hdhrGRID_response = false then
-		repeat until my is_number(show_time of temp_show_info) and show_time of temp_show_info ³ 0 and show_time of temp_show_info < 24
-			set show_time of temp_show_info to text returned of (display dialog "What time does this show air? " & return & "(0-24, use decimals, ie 16.5 for 4:30 PM)" default answer hours of (current date) buttons {play_icon & " Run", "Next.."} with title my check_version_dialog() giving up after dialog_timeout default button 2 cancel button 1) as number
-			
-			--if my is_number(show_time of temp_show_info) = false then 
-			
-			--set show_time of temp_show_info to missing value
-			--else
-			--set show_time of temp_show_info to my time_shift((show_time of temp_show_info as number) * hours)
-			--set show_time of temp_show_info to show_time of temp_show_info as number
-			--end if
-		end repeat
-	end if
-	-- We know the channel and time, we can refer to our guid data to pull the name of the show.  If we dont know of it yet, we can ask the user.
-	log "Add_show"
-	set show_time_changed to false
-	--log my channel_guide(hdhr_device, show_channel of temp_show_info, show_time of temp_show_info)
-	--fix we error here if we cannot pull guidedata
-	if hdhrGRID_response = false then
-		set hdhr_response_channel to my channel_guide("Add_show_info0", hdhr_device, show_channel of temp_show_info, show_time of temp_show_info)
-	else
-		set hdhr_response_channel to hdhrGRID_response
-	end if
-	--log " hdhr_response_channel: " & hdhr_response_channel
-	if hdhr_response_channel ­ {} then
-		set show_time_adjusted to my epoch2show_time(getTfromN(StartTime of hdhr_response_channel))
-		if (show_time of temp_show_info as number) ­ (show_time_adjusted as number) then
-			set show_time_changed to true
-			--display notification edit_icon & " Show Time changed to " & show_time_adjusted
-			set show_time of temp_show_info to show_time_adjusted
-		end if
-	end if
-	--	log "start time: " & my epoch2show_time(getTfromN(StartTime of hdhr_response_channel))
-	--fixme!
-	--	(*start time: 1.609974E+9*)
-	-- (*proposed time: 17.5*) 
-	
-	--FIX
-	--if show_time of temp_show_info > StartTime of  hdhr_response_channel then
-	--set show_time of temp_show_info to StartTime of  hdhr_response_channel
-	--end if
-	--repeat this for the end time as well
-	
-	if hdhr_response_channel ­ {} then
-		set hdhr_response_channel_title to title of hdhr_response_channel
-	else
-		set hdhr_response_channel_title to ""
-	end if
-	
-	try
-		set hdhr_response_channel_title to hdhr_response_channel_title & " " & EpisodeNumber of hdhr_response_channel
-	end try
-	
-	try
-		set hdhr_response_channel_title to hdhr_response_channel_title & " " & EpisodeTitle of hdhr_response_channel
-	end try
-	
-	-- my short_date(the_caller, the_date_object, twentyfourtime) 
-	
-	
-	
-	if show_time_changed = true then
-		set show_title_temp to display dialog "What is the title of this show, and is it a series?" & return & edit_icon & " Start changed to " & items 2 through end of my short_date("on_add", my time_set((current date), (show_time of temp_show_info)), false) buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 default answer hdhr_response_channel_title with title my check_version_dialog() giving up after dialog_timeout with icon caution
-	else
-		set show_title_temp to display dialog "What is the title of this show, and is it a series?" buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 default answer hdhr_response_channel_title with title my check_version_dialog() giving up after dialog_timeout
-	end if
-	set show_title of temp_show_info to text returned of show_title_temp
-	--if show_title of temp_show_info contains " " then
-	--set show_title of temp_show_info to my listtostring(my stringtolist("show title", show_title of temp_show_info, " "), "_")
-	--end if
-	if button returned of show_title_temp contains "Series" then
-		set show_is_series of temp_show_info to true
-	else if button returned of show_title_temp contains "Single" then
-		set show_is_series of temp_show_info to false
-	end if
-	--display notification "OK6: " & show_title of temp_show_info 
-	--log "StartTime of hdhr_response_channel " & getTfromN(StartTime of hdhr_response_channel)
-	log (my datetime2epoch("add_show0", current date))
-	
-	if hdhr_response_channel ­ {} then
-		if my getTfromN(StartTime of hdhr_response_channel) < my datetime2epoch("add_show0", current date) then
-			set hdhr_response_length to (my getTfromN(StartTime of hdhr_response_channel)) - (my datetime2epoch("add_show0", current date))
-		else
-			set hdhr_response_length to ((EndTime of hdhr_response_channel) - (StartTime of hdhr_response_channel)) div 60
-			log hdhr_response_length
-			
-		end if
-	else
-		set hdhr_response_length to 30
-	end if
-	if hdhr_response_channel = {} then
-		repeat until my is_number(show_length of temp_show_info) and show_length of temp_show_info ³ 1
-			set show_length of temp_show_info to text returned of (display dialog "How long is this show? (in minutes)" default answer hdhr_response_length with title my check_version_dialog() buttons {play_icon & " Run", "Next.."} default button 2 cancel button 1 giving up after dialog_timeout)
-		end repeat
-	else
-		set show_length of temp_show_info to hdhr_response_length
-		
-	end if
-	--	if hdhr_response_channel_title ­ "" then
-	set default_record_day to (weekday of ((current date) + time_slide * days)) as text
-	--else
-	--set default_record_day to ""
-	-- end if
-	
-	
-	if hdhr_response_channel = {} then
-		if show_is_series of temp_show_info = true then
-			--set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} with prompt "Please choose the days this series airs." default items default_record_day with multiple selections allowed without empty selection allowed)
-			
-			set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title my check_version_dialog() OK button name "Next.." cancel button name play_icon & " Run" with prompt "Select the days you wish to record." & return & "A \"Series\" can select multiple days." with multiple selections allowed without empty selection allowed)
-		else
-			set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title my check_version_dialog() OK button name "Next.." cancel button name play_icon & " Run" with prompt "Select the days you wish to record." & return & "A \"Single\" can only select 1 day." without empty selection allowed)
-		end if
-		
-		if show_air_date of temp_show_info = false then
-			return
-		end if
-	else
-		set show_air_date of temp_show_info to default_record_day
-	end if
-	set time_slide to 0
-	set temp_dir to alias "Volumes:"
-	repeat until temp_dir ­ alias "Volumes:"
-		set show_dir of temp_show_info to choose folder with prompt "Select Shows Directory" default location temp_dir
-		if show_dir of temp_show_info ­ temp_dir then
-			set temp_dir to show_dir of temp_show_info
-		end if
-	end repeat
-	--We attempt to write a small file to shows folder.  This will prompt the user in the OS to allow this app to write data there. 
-	my update_folder(show_dir of temp_show_info)
-	
-	set model_response to ""
-	
-	--try
-	--log "does_transcode: " & does_transcode of item tuner_offset of HDHR_DEVICE_LIST
-	--set model_response to (do shell script "curl http://" & hdhr_IP & "/ | grep 'HDHomeRun' | grep 'div class'")
-	--log "model_response: " & model_response
-	--http://10.0.1.101/discover.json
-	--end try
-	
-	if does_transcode of item tuner_offset of HDHR_DEVICE_LIST = 1 then
-		set show_transcode_response to (choose from list {"None: Does not transcode, will save as MPEG2 stream.", "heavy: Transcode with same settings", "mobile: Transcode not exceeding 1280x720 30fps", "intenet720: Low bit rate, not exceeding 1280x720 30fps", "internet480: Low bit rate not exceeding 848x480/640x480 for 16:9/4:3 30fps", "internet360: Low bit rate not exceeding 640x360/480x360 for 16:9/4:3 30fps", "internet240: Low bit rate not exceeding 432x240/320x240 for 16:9/4:3 30fps"} with prompt "Please choose the transcode level on the file" with title my check_version_dialog() default items {"None: Does not transcode, will save as MPEG2 stream."} OK button name disk_icon & " Save Show" cancel button name play_icon & " Run")
-		try
-			set show_transcode of temp_show_info to word 1 of item 1 of show_transcode_response
-		on error
-			return false
-		end try
-	else
-		set show_transcode of temp_show_info to missing value
-	end if
-	
-	set show_temp_dir of temp_show_info to show_dir of temp_show_info
-	--	end if
-	--commit the temp_show_info to show_info
-	set end of show_info to temp_show_info
-	set show_next of last item of show_info to my nextday(show_id of temp_show_info)
-	my validate_show_info(show_id of last item of show_info, false)
-	log show_info
-	my save_data()
-end add_show_info
-*)
-on add_show_info2(hdhr_device)
 	set tuner_status to my tuner_status2("add_show", hdhr_device)
 	set tuner_status_icon to "Tuner: " & hdhr_device
 	
@@ -1016,7 +813,7 @@ on add_show_info2(hdhr_device)
 	my validate_show_info(show_id of last item of show_info, false)
 	log show_info
 	my save_data()
-end add_show_info2
+end add_show_info
 
 on update_folder(update_path)
 	do shell script "touch \"" & POSIX path of update_path & "hdhr_test_write\""
@@ -1469,7 +1266,7 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 		set progress additional description to "Discovering HDHomeRun Devices"
 		set progress completed steps to 0
 		set hdhr_device_discovery to my hdhr_api("", "", "", "/discover")
-		set progress total steps to length of hdhr_device_discovery 
+		set progress total steps to length of hdhr_device_discovery
 		repeat with i from 1 to length of hdhr_device_discovery
 			set progress completed steps to i
 			try
@@ -1781,9 +1578,7 @@ end epoch2show_time
 
 
 on save_data()
-	--try
 	set ref_num to open for access file ((path to documents folder) & savefilename as string) with write permission
-	--end try
 	set eof of ref_num to 0
 	if length of show_info > 0 then
 		repeat with i from 1 to length of show_info
@@ -1834,12 +1629,6 @@ on save_data()
 		log "Save file protected from being wiped"
 	end if
 	
-	try
-		--set show_info_json to (make JSON from show_info)
-		--log show_info_json
-	on error
-		log "json error"
-	end try
 	
 	close access ref_num
 	--display notification disk_icon & " " & length of show_info & " shows saved"
