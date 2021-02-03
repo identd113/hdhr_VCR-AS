@@ -30,24 +30,35 @@ I call it a VCR app, as while it does use guide data to pull name / season / epi
 
 When you first run this, OSX will prompt multiple times for various system permissions.  Please grant all of these.
 
-6. You will then be presented with options to see the existing shows, add a show, or "Run"  More about "Run" later.
-7. If you have multiple tuners, you will be asked which one you would like to use fo this recording.
+6. You will then be presented with options to see the existing shows, add a show, or "Run"  
+* More about "Run" later.
+7. If you have multiple tuners, you will be asked which one you would like to use for this recording.
 8. You will be presented with a channel list.  Select the channel this show is on.
-```
-  2.1 TPT2
-  2.3 TPTLife
-  ...
-  ...
-```
 
-9. You will then be asked to specify a time, it is done a bit strangely. We use 24 hour decimal time
+![Channel List](channel_list.png)
+
+10. Once you select your channel, you will see a screen that details the shows that are on in the next ~ 4 hours.
+![HDHR Guide](hdhrGRID.png)
+
+11. You will notice that there is a "Manua Add" option.  This will allow you to select a time past the 4 hours of guide data provided.
+Select a show, and click "Next"
+
+![Show Info](show_info2.png)
+
+* A "Single" is a one off recording.  Once the recording is complete, the show will be marked as inactive.
+* If you selected a "Series" you can select as many days as you wish.
+
+#### Manual Add
+If you wish to schedule a recording oustode of the 4 hour guide windowm, you can select Manual Add, and add this show/series.
+
+You will then be asked to specify a time, it is done a bit strangely. We use 24 hour decimal time
 * For example, if you wanted to record a show at 6:45 PM, you would enter 18.75. (.5 of an hour, is 30 minutes.  .75 of an hour is 45 minutes.)
 * If you attempt to use a time that has already passed for today, it will assume you mean tomorrow.
 * When picking a time, you can select anytime during the show time span, and we will adjust the start time to align with the real start.  For example, if a certain show starts at 10:35 PM, and the show runs 62 minutes, you could enter any time between 22.56 to 23.58, and we would set the start time to 22.56 (10:35)
-11. Now that we have the channel, and the time, we can attempt to pull some guide data.  The free DVR guide provided by SiliconDust only gives us ~ 4 hours.  If we are able to pull this show information down, we will pre populate the next couple of questions with those as the defaults.
-12.  You will now have the ability to set the recordings name.  The name provided is just temporary, as we will try to pull the guide data before the recording starts. Again, we cannot pull guide data for any show that starts more then 4 hours from now.
+
+You will now have the ability to set the recordings name.  The name provided is just temporary, as we will try to pull the guide data right before the recording starts. 
 13. In this same window, you will also tell the script if this is a a "Single" or a "Series"
-* A "Single" is a one off recording.  Once the recording is complete, the show will be marked as inactive.
+
 * A "Series" is meant for shows that air at the same time, perhaps 1 day or week, or 7, at a certain time.
 14. The next screen allows you to tell us which day you wish to record.  It will default to today.
 * If you selected a "Series" you can select as many days as you wish.
@@ -55,10 +66,11 @@ When you first run this, OSX will prompt multiple times for various system permi
 
 This allows you to set up a recording up to a week in advance.
 
-15. You will then select where you want the file to be saved.  The default location is "/Volumes/", but you will need to select a specific location.  Any attempts to select "/Volumes/" as the destination will re prompt you for a valid location.
-16. If you own a "Extend" device, or a device that has transcode capibilities, you can select which profile you wish to you.
+#### END Manual Add
 
-Wow, that was alot.  In practice, you can add shows very quickly, and I over described this process, as this is the primary way to interact with the script.
+You will then select where you want the file to be saved.  The default location is "/Volumes/", but you will need to select a specific location.  Any attempts to select "/Volumes/" as the destination will re prompt you for a valid location.
+
+If you own a "Extend" device, or a device that has transcode capibilities, you can select which profile you wish to you.
 
 
 "You told me you would tell me what "Run" is for?
