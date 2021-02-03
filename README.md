@@ -41,6 +41,7 @@ When you first run this, OSX will prompt multiple times for various system permi
 ![HDHR Guide](hdhrGRID.png)
 
 11. You will notice that there is a "Manua Add" option.  This will allow you to select a time past the 4 hours of guide data provided.
+
 Select a show, and click "Next"
 
 ![Show Info](show_info2.png)
