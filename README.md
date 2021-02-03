@@ -40,7 +40,7 @@ When you first run this, OSX will prompt multiple times for various system permi
 10. Once you select your channel, you will see a screen that details the shows that are on in the next ~ 4 hours.
 ![HDHR Guide](hdhrGRID.png)
 
-11. You will notice that there is a "Manua Add" option.  This will allow you to select a time past the 4 hours of guide data provided.
+11. You will notice that there is a "Manual Add" option.  This will allow you to select a time past the 4 hours of guide data provided.
 
 Select a show, and click "Next"
 
@@ -50,7 +50,7 @@ Select a show, and click "Next"
 * If you selected a "Series" you can select as many days as you wish.
 
 #### Manual Add
-If you wish to schedule a recording oustode of the 4 hour guide windowm, you can select Manual Add, and add this show/series.
+If you wish to schedule a recording oustside of the 4 hour guide window, you can select Manual Add, and add this show/series.
 
 You will then be asked to specify a time, it is done a bit strangely. We use 24 hour decimal time
 * For example, if you wanted to record a show at 6:45 PM, you would enter 18.75. (.5 of an hour, is 30 minutes.  .75 of an hour is 45 minutes.)
