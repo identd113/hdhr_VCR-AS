@@ -2,6 +2,10 @@
 	"versions": 
 [
 {
+"hdhr_version":"20210208.2",
+"changelog":"Cleaned up some handlers, and testing version message is logs."
+},
+{
 "hdhr_version":"20210208",
 "changelog":"Added: hdhr_VCR.log in Documents folder to allow us to keep a running tab if what is happening."
 },
