@@ -2,7 +2,7 @@
 	"versions": 
 [
 {
-"hdhr_version":"20210208.2",
+"hdhr_version":"20210209",
 "changelog":"Cleaned up some handlers, and testing version message is logs."
 },
 {
