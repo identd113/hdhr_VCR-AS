@@ -2,6 +2,10 @@
 	"versions": 
 [
 {
+"hdhr_version":"20210208",
+"changelog":"Added: hdhr_VCR.log in Documents folder to allow us to keep a running tab if what is happening."
+},
+{
 "hdhr_version":"20210201",
 "changelog":"Fixed show guide.  This is now our default method of adding shows."
 },
