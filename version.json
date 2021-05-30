@@ -2,6 +2,10 @@
 	"versions": 
 [
 {
+"hdhr_version":"20210530",
+"changelog":"Cleaned up some bugs, and updated some language"
+},
+{
 "hdhr_version":"20210301",
 "changelog":"Big update.  Added a logger, so we can more closely see what is happening, and makes it easier to track down bugs.  There is more to do, but satisfied this is working well for now.  Numerous bug fixes, including update_show from running on days the recording is not set to record."
 },
