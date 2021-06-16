@@ -2,7 +2,7 @@
 A pretty damn good VCR "plus" script that works on all HDHomeRun devices, and is free to use!
 An OSX faceless/background script that makes recording TV shows and Movies on HDHomeRun very easy.
 
-![Show List](show_list.jpg)
+![Show List](show_list.png)
 
 #### Why?
 I wanted to allow a quick way to record a TV show, without needing to setup a large system like Plex or HDHomeRuns' own DVR software.
