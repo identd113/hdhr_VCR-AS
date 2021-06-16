@@ -1,3 +1,8 @@
+(*
+Fix: update_folder() now logs more information.  We also fixed some bugs.
+
+*)
+
 global show_info
 --global temp_show_info
 global locale
@@ -16,10 +21,13 @@ global hdhr_setup_length_bool
 global notify_upnext
 global notify_recording
 global hdhr_setup_ran
-global savefilename
+global configfilename
+global logfilename
 global time_slide
 global dialog_timeout
 global temp_dir
+global config_dir
+global log_dir
 
 --Icons
 global play_icon
@@ -44,6 +52,8 @@ global calendar2_icon
 global hourglass_icon
 global film_icon
 global back_icon
+global done_icon
+
 global LF
 global logger_levels
 
@@ -88,8 +98,8 @@ on run {}
 	set hourglass_icon to character id 8987
 	set film_icon to character id 127910
 	set back_icon to character id 8592
-	
-	set version_local to "20210530"
+	set done_icon to character id {9989, 32}
+	set version_local to "20210616"
 	set progress description to "Loading " & name of me & " " & version_local
 	
 	--set globals 
@@ -101,7 +111,8 @@ on run {}
 	set hdhr_setup_transcode to "No"
 	set hdhr_setup_name_bool to "No"
 	set hdhr_setup_length_bool to "No"
-	set savefilename to "hdhr_VCR.config"
+	set configfilename to (name of me) & ".config" as text
+	set logfilename to (name of me) & ".log" as text
 	set time_slide to 0
 	set dialog_timeout to 60
 	set version_url to "https://raw.githubusercontent.com/identd113/hdhr_VCR-AS/master/version.json"
@@ -109,6 +120,8 @@ on run {}
 	set idle_timer to 12
 	set idle_count to 0
 	set temp_dir to alias "Volumes:"
+	set config_dir to path to documents folder
+	set log_dir to path to documents folder
 	--set logger_levels to {"INFO", "WARN", "ERROR", "DEBUG"}
 	set logger_levels to {"INFO", "WARN", "ERROR"}
 	my logger(true, "init", "INFO", "Started " & name of me & " " & version_local)
@@ -135,7 +148,6 @@ end run
 
 ## This script will loop through this every 12 seconds, or whatever the return value is, in second is at the bottom of this handler.
 on idle
-	my logger(true, "idle()", "WARN", "Ran")
 	--Fixed We manually called idle() handler before popping any notification windows.  This akllows us to start a show that may already be started when openong the app.
 	--This should give us an approximate time in seconds the script was launched. 
 	set idle_count to idle_count + idle_timer
@@ -184,6 +196,13 @@ on idle
 				display notification "is_series1:" & class of (show_is_series of item i of show_info)
 				display notification "is_series2:" & (show_is_series of item i of show_info)
 			*)
+				#	try
+				#		if my recorded_today(show_id of item i of show_info) = true then
+				#			my logger(true, "idle()", "INFO", show_title of item i of show_info & " was recorded today")
+				#		end if
+				#	on error
+				#		my logger(true, "idle()", "ERROR", "Error in recorded_today")
+				#	end try
 				if show_active of item i of show_info = true then
 					if show_next of item i of show_info < cd_object then
 						--if show_next of item i of show_info < cd_object then
@@ -215,11 +234,7 @@ on idle
 								display notification "Ends " & my short_date("rec progress", show_end of item i of show_info, false, false) & " (" & (my sec_to_time((show_end of item i of show_info) - (current date))) & ") " with title record_icon & " Recording in progress on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
 								--try to refresh the file, so it shows it refreshes finder.
 								my logger(true, "idle()", "INFO", "Recording in progress for " & (show_title of item i of show_info & " on " & show_channel of item i of show_info))
-								try
-									my update_folder(show_dir of item i of show_info)
-								on error
-									my logger(true, "idle()", "ERROR", "Unable to write to " & show_dir of item i of show_info)
-								end try
+								my update_folder(show_dir of item i of show_info)
 								set notify_recording_time of item i of show_info to (current date) + (notify_recording * minutes)
 							end if
 						end if
@@ -668,6 +683,7 @@ on setup()
 		set hdhr_setup_ran to true
 	end if
 	if button returned of hdhr_setup_response = "Delete" then
+		--Just set the show_active to false
 		--  if my remove_show("setup0", "?")
 	end if
 	
@@ -698,6 +714,7 @@ on main(caller, emulated_button_press)
 	end if
 	
 	activate me
+	
 	if emulated_button_press is not in {"Add", "Shows"} then
 		set title_response to (display dialog "Would you like to add a show?" buttons {tv_icon & " Shows..", plus_icon & " Add..", play_icon & " Run"} with title my check_version_dialog() giving up after (dialog_timeout * 0.5) with icon note default button 2)
 	else
@@ -770,6 +787,7 @@ on main(caller, emulated_button_press)
 					set temp_show_line to film_icon & temp_show_line
 				end if
 			end if
+			
 			if ((show_next of item i of show_info) - (current date)) ³ 4 * hours and (date (date string of (current date))) = (date (date string of (show_next of item i of show_info))) and show_active of item i of show_info = true and show_recording of item i of show_info = false then
 				set temp_show_line to up2_icon & temp_show_line
 			end if
@@ -780,6 +798,10 @@ on main(caller, emulated_button_press)
 			
 			if (date (date string of (current date))) < (date (date string of (show_next of item i of show_info))) and show_active of item i of show_info = true then
 				set temp_show_line to calendar_icon & temp_show_line
+			end if
+			
+			if my recorded_today(show_id of item i of show_info) = true then
+				set temp_show_line to done_icon & temp_show_line
 			end if
 			
 			## Fix we need to tag a show that completed a record for the day 
@@ -829,6 +851,21 @@ on main(caller, emulated_button_press)
 		end if
 	end if
 end main
+
+on recorded_today(the_show_id)
+	---- show_info model: (*show_title:Happy_Holidays_America, show_time:16, show_length:60, show_air_date:Sunday, show_transcode:missing value, show_temp_dir:alias Backups:, show_dir:alias Backups:, show_channel:5.1, show_active:true, show_id:221fbe1126389e6af35f405aa681cf19, show_recording:false, show_last:date Sunday, December 13, 2020 at 4:04:54 PM, show_next:date Sunday, December 13, 2020 at 4:00:00 PM, show_end:date Sunday, December 13, 2020 at 5:00:00 PM, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:XX105404BE,show_is_series:false*
+	
+	--takes show_id and returns true if the show has already recorded today.
+	repeat with i from 1 to length of show_info
+		if show_id of item i of show_info = the_show_id then
+			if show_last of item i of show_info ² (current date) and date string of show_last of item i of show_info = date string of (current date) and time string of show_last of item i of show_info < time string of (current date) then
+				my logger(true, "recorded_today()", "INFO", "show_title: " & show_title of item i of show_info & ", show_last: " & show_last of item i of show_info & ", show_next: " & show_next of item i of show_info)
+				return true
+			end if
+		end if
+	end repeat
+	return false
+end recorded_today
 
 on add_show_info(hdhr_device)
 	set tuner_status_result to my tuner_status("add_show", hdhr_device)
@@ -1110,6 +1147,8 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 			
 			set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:DiscoverURL of item i of hdhr_device_discovery, lineup_url:LineupURL of item i of hdhr_device_discovery, device_id:deviceid of item i of hdhr_device_discovery, does_transcode:tuner_transcode_temp, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value, channel_mapping:missing value, BaseURL:BaseURL of item i of hdhr_device_discovery, statusURL:(BaseURL of item i of hdhr_device_discovery & "/status.json")}
 			--log statusURL of last item of HDHR_DEVICE_LIST
+			log "HDHRDeviceDiscovery25"
+			log last item of HDHR_DEVICE_LIST
 			my logger(true, "HDHRDeviceDiscovery()", "INFO", "Added: " & device_id of last item of HDHR_DEVICE_LIST)
 		end repeat
 		--Add a fake device entry to make sure we dont break this for multiple devices.
@@ -1350,7 +1389,7 @@ end update_show
 
 on save_data()
 	my show_info_dump("save_data()", "")
-	set ref_num to open for access file ((path to documents folder) & savefilename as string) with write permission
+	set ref_num to open for access file ((config_dir) & configfilename as text) with write permission
 	if length of show_info > 0 then
 		set eof of ref_num to 0
 		repeat with i from 1 to length of show_info
@@ -1410,7 +1449,7 @@ end save_data
 --takes the the data in the filesystem, and writes to to a variable
 on read_data()
 	--set ref_num to missing value
-	set hdhr_vcr_config_file to ((path to documents folder) & savefilename as string)
+	set hdhr_vcr_config_file to ((config_dir) & configfilename as string)
 	my logger(true, "read_data()", "INFO", "Config loading from \"" & POSIX path of hdhr_vcr_config_file & "\"")
 	set ref_num to open for access file hdhr_vcr_config_file
 	try
@@ -1789,9 +1828,14 @@ on list_position(caller, this_item, this_list, is_strict)
 end list_position
 
 on update_folder(update_path)
-	do shell script "touch \"" & POSIX path of update_path & "hdhr_test_write\""
-	delay 0.1
-	do shell script "rm \"" & POSIX path of update_path & "hdhr_test_write\""
+	set posix_update_path to POSIX path of update_path
+	try
+		do shell script "touch \"" & posix_update_path & "hdhr_test_write\""
+		delay 0.1
+		do shell script "rm \"" & posix_update_path & "hdhr_test_write\""
+	on error err_string
+		my logger(true, "update_folder()", "ERROR", "Unable to write to " & posix_update_path & ", " & err_string)
+	end try
 end update_folder
 
 on logger(logtofile, caller, loglevel, message)
@@ -1799,8 +1843,8 @@ on logger(logtofile, caller, loglevel, message)
 	## caller is a string that tells us where this handler was called from
 	## loglevel is a string that tell us how severe the log line is 
 	## message is the actual message we want to log.
-	log caller
-	log loglevel & " " & caller & " " & message
+	--log caller
+	--log loglevel & " " & caller & " " & message
 	--caller can be "init" or "flush"
 	--We dont want to write out everything we write, so lets maintain a buffer.  We can add a hook into the idle() handler to flush the queue.
 	set logger_max_queued to 1
@@ -1813,14 +1857,14 @@ on logger(logtofile, caller, loglevel, message)
 	if loglevel is in logger_levels then
 		try
 			
-			set logfile to open for access file ((path to documents folder) & (name of me) & ".log" as text) with write permission
+			set logfile to open for access file ((log_dir) & (logfilename) as text) with write permission
 			set ref_num to get eof of logfile
 			--set eof of ref_num to 0
 			repeat with i from 1 to length of queued_log_lines
 				write (item i of queued_log_lines & LF) to logfile starting at ref_num
 			end repeat
 		on error
-			--my logger(true, "logger()", "ERROR", "Unable to write to log file. " & caller & ", " & message)
+			--my logger(true, "logger()", "ERROR", "Unable to write to log file. " & caller & ", " & message) 
 			display notification "Unable to write to log file. " & caller & ", " & message
 		end try
 		close access logfile
