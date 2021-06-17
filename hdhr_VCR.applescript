@@ -99,7 +99,7 @@ on run {}
 	set film_icon to character id 127910
 	set back_icon to character id 8592
 	set done_icon to character id {9989, 32}
-	set version_local to "20210616"
+	set version_local to "20210617"
 	set progress description to "Loading " & name of me & " " & version_local
 	
 	--set globals 
@@ -216,7 +216,8 @@ on idle
 								exit repeat
 							end if
 							set show_runtime to (show_end of item i of show_info) - (current date)
-							if my tuner_status("idle2", hdhr_record of item i of show_info) is true then
+							set tuner_status_result to my tuner_status2("idle2", hdhr_record of item i of show_info)
+							if item 2 of tuner_status_result < item 1 of tuner_status_result then
 								-- If we now have no tuner avilable, we skip this "loop" and try again later.
 								my record_now((show_id of item i of show_info), show_runtime)
 								display notification "Ends " & my short_date("rec started", show_end of item i of show_info, false, false) with title record_icon & " Started Recording on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
@@ -395,6 +396,15 @@ end hdhrGRID
 --return false means we cancelled out.
 --return anything else, and this is the guide data for the channel they are requesting.
 
+on tuner_overview()
+	--We want to return the tuner names, the number of tuners/in use.  We might as well try to return any shows that are recording
+	set main_tuners_list to {}
+	repeat with i from 1 to length of HDHR_DEVICE_LIST
+		set end of main_tuners_list to hdhr_model of item i of HDHR_DEVICE_LIST & " " & (device_id of item i of HDHR_DEVICE_LIST)
+	end repeat
+	return main_tuners_list
+end tuner_overview
+
 (*
 on is_recording(caller, hdhr_model, show_time_check)
 	set is_recording_temp to {}
@@ -403,7 +413,7 @@ on is_recording(caller, hdhr_model, show_time_check)
 		if hdhr_record of item i of show_info = hdhr_model then
 		end if
 	end repeat
-end is_recording
+end is_recording 
 *)
 
 on show_info_dump(caller, show_id_lookup)
@@ -436,7 +446,28 @@ on tuner_end(caller, hdhr_model)
 	return 0
 end tuner_end
 
+on tuner_status2(caller, device_id)
+	--This needs to report back the number of tuners avilable, and the number in use.
+	set tuneractive to 0
+	set tuner_offset to my HDHRDeviceSearch("tuner_status", device_id)
+	if tuner_offset = 0 then
+		return true
+	end if
+	set hdhr_discover_temp to my hdhr_api(statusURL of item tuner_offset of HDHR_DEVICE_LIST, "", "", "")
+	set tunermax to length of hdhr_discover_temp
+	repeat with i from 1 to tunermax
+		try
+			set temp to SymbolQualityPercent of item i of hdhr_discover_temp
+			log "SymbolQualityPercent"
+			set tuneractive to tuneractive + 1
+		end try
+	end repeat
+	return {tunermax, tuneractive}
+end tuner_status2
+
 on tuner_status(caller, device_id)
+	log "@"
+	--log my tuner_status2(caller, device_id)
 	log "tuner_status: " & caller & " of " & device_id
 	set temp_list to {}
 	set tuner_offset to my HDHRDeviceSearch("tuner_status", device_id)
@@ -716,7 +747,7 @@ on main(caller, emulated_button_press)
 	activate me
 	
 	if emulated_button_press is not in {"Add", "Shows"} then
-		set title_response to (display dialog "Would you like to add a show?" buttons {tv_icon & " Shows..", plus_icon & " Add..", play_icon & " Run"} with title my check_version_dialog() giving up after (dialog_timeout * 0.5) with icon note default button 2)
+		set title_response to (display dialog "Would you like to add a show?" & return & "Tuner(s): " & return & my listtostring("main()", my tuner_overview(), return) buttons {tv_icon & " Shows..", plus_icon & " Add..", play_icon & " Run"} with title my check_version_dialog() giving up after (dialog_timeout * 0.5) with icon note default button 2)
 	else
 		set title_response to {button returned:emulated_button_press}
 	end if
@@ -868,11 +899,10 @@ on recorded_today(the_show_id)
 end recorded_today
 
 on add_show_info(hdhr_device)
-	set tuner_status_result to my tuner_status("add_show", hdhr_device)
+	set tuner_status_result to my tuner_status2("add_show", hdhr_device)
 	set tuner_status_icon to "Tuner: " & hdhr_device
-	
-	if tuner_status_result = false then
-		set tuner_status_icon to hdhr_device & " has no available tuners" & return & "Next timeout: " & my tuner_end("add_show_info()", hdhr_device)
+	if item 2 of tuner_status_result = item 1 of tuner_status_result then
+		set tuner_status_icon to hdhr_device & " has no available tuners" & return & "Next timeout: " & my ms2time("add_show_info", my tuner_end("add_show_info()", hdhr_device), "s", 3)
 	end if
 	
 	set tuner_offset to my HDHRDeviceSearch("add_show_info0", hdhr_device)
@@ -891,6 +921,7 @@ on add_show_info(hdhr_device)
 	set hdhrGRID_response to true
 	repeat until hdhrGRID_response ­ true
 		set hdhrGRID_list_response to (choose from list channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with prompt "What channel does this show air on?" & return & return & tuner_status_icon with title my check_version_dialog() OK button name "Next.." cancel button name play_icon & " Run" without empty selection allowed)
+		--fix this tuner_offset is returning 0, when multiple tuners present, but "Run" is pressed.
 		if hdhrGRID_list_response ­ false then
 			set show_channel of temp_show_info to word 1 of item 1 of hdhrGRID_list_response
 			
@@ -1152,7 +1183,7 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 			my logger(true, "HDHRDeviceDiscovery()", "INFO", "Added: " & device_id of last item of HDHR_DEVICE_LIST)
 		end repeat
 		--Add a fake device entry to make sure we dont break this for multiple devices.
-		--set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value, channel_mapping:missing value, BaseURL:BaseURL of item 1 of hdhr_device_discovery, statusURL:"http://10.0.1.101/status.json"}
+		set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value, channel_mapping:missing value, BaseURL:BaseURL of item 1 of hdhr_device_discovery, statusURL:"http://10.0.1.101/status.json"}
 		
 		--We now have a list of tuners, via a list of records in HDHR_TUNERS, now we want to pull a lineup, and a guide.
 		
@@ -1462,6 +1493,7 @@ on read_data()
 		log "read_data"
 		--set temp_show_info_template to {show_title:missing value, show_time:missing value, show_length:missing value, show_air_date:missing value, show_transcode:missing value, show_temp_dir:missing value, show_dir:missing value, show_channel:missing value, show_active:true, show_id:(do shell script "date | md5") as text, show_recording:false, show_last:(current date), show_next:missing value, show_end:missing value, notify_upnext_time:missing value, notify_recording_time:missing value}
 		repeat with i from 1 to length of hdhr_vcr_config_data_parsed
+			--fix we can add progress bars here
 			if item i of hdhr_vcr_config_data_parsed is "--NEXT SHOW--" then
 				log "read_data_start"
 				log i
