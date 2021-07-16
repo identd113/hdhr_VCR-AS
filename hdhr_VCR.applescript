@@ -108,13 +108,13 @@ on run {}
 	set film_icon to character id 127910
 	set back_icon to character id 8592
 	set done_icon to character id 9989
-	set version_local to "20210708"
+	set version_local to "20210716"
 	set progress description to "Loading " & name of me & " " & version_local
 	
 	--set globals   
 	set show_info to {}
 	set notify_upnext to 30
-	set notify_recording to 15
+	set notify_recording to 15 
 	set locale to user locale of (system info)
 	set hdhr_setup_folder to "Volumes:"
 	set hdhr_setup_transcode to "No"
