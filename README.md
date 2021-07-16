@@ -64,6 +64,7 @@ You will then be asked to specify a time, it is done a bit strangely. We use 24 
 * When picking a time, you can select anytime during the show time span, and we will adjust the start time to align with the real start.  For example, if a certain show starts at 10:35 PM, and the show runs 62 minutes, you could enter any time between 22.56 to 23.58, and we would set the start time to 22.56 (10:35)
 
 You will now have the ability to set the recordings name.  The name provided is just temporary, as we will try to pull the guide data right before the recording starts. 
+
 13. In this same window, you will also tell the script if this is a a "Single" or a "Series"
 
 * A "Series" is meant for shows that air at the same time, perhaps 1 day or week, or 7, at a certain time.
