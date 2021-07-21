@@ -108,13 +108,13 @@ on run {}
 	set film_icon to character id 127910
 	set back_icon to character id 8592
 	set done_icon to character id 9989
-	set version_local to "20210716"
+	set version_local to "20210721"
 	set progress description to "Loading " & name of me & " " & version_local
 	
 	--set globals   
 	set show_info to {}
 	set notify_upnext to 30
-	set notify_recording to 15 
+	set notify_recording to 15
 	set locale to user locale of (system info)
 	set hdhr_setup_folder to "Volumes:"
 	set hdhr_setup_transcode to "No"
@@ -312,12 +312,17 @@ on idle
 				end if
 			end repeat
 		end repeat
+		--If there are no shows, we can do something here:
+	else
+		my logger(true, "idle()", "INFO", "There are no shows setup for recording.  If you are seeing this message, and wondering if the script is actually working, it is.")
 	end if
 	return idle_timer
 end idle
 
 ## This fires when you click the script in the dock.
 on reopen {}
+	set progress description to name of me & " " & version_local
+	set progress additional description to "Loading Main"
 	my logger(true, "reopen()", "INFO", "User clicked in Dock")
 	my main("reopen", "reopen()")
 end reopen
@@ -527,7 +532,8 @@ on check_version()
 			end if
 		end timeout
 	on error
-		set version_response to {versions:{{changelog:"Unable to check for new version", hdhr_version:"20210101"}}}
+		my logger(true, "check_version()", "ERROR", "Unable to check for new versions")
+		set version_response to {versions:{{changelog:"Unable to check for new versions", hdhr_version:"20210101"}}}
 		set version_remote to hdhr_version of item 1 of versions of version_response
 	end try
 end check_version
@@ -637,7 +643,14 @@ on nextday(the_show_id)
 				if cd_object is less than (my time_set((cd_object + i * days), (show_time of item show_offset of show_info))) + ((show_length of item show_offset of show_info) * minutes) then
 					--display dialog "test3"
 					--end time in future
+					-- FIX This may be blowing us up, but not sure why
 					set nextup to my time_set((cd_object + i * days), show_time of item show_offset of show_info)
+					try
+						my logger(true, "nextday()", "INFO", "Show: \"" & show_title of item show_offset of show_info & "\"", "NextUp changed to " & my short_date("nextday", show_next of item show_offset of show_info, true, false))
+					on error errmsg
+						log "nextDay: " & errmsg
+					end try
+					--on short_date(the_caller, the_date_object, twentyfourtime, show_seconds)
 					exit repeat
 				end if
 			end if
@@ -811,8 +824,23 @@ on main(caller, emulated_button_press)
 	end if
 	
 	--activate me
+	--try
+	--on short_date(the_caller, the_date_object, twentyfourtime, show_seconds)
+	try
+		set next_show_main_temp to my next_shows("add")
+		set next_show_main to my listtostring("main()", item 2 of next_show_main_temp, return)
+		set next_show_main_time to my short_date("main()", item 1 of next_show_main_temp, false, false)
+		--	on error
+		--set next_show_main to ""
+		--set next_show_main_time to ""
+		--	end try
+	on error
+		set next_show_main_temp to {}
+		set next_show_main_time to my epoch()
+		set next_show_main to "No shows found!  You can add one by clicking \"Add\""
+	end try
 	if emulated_button_press is not in {"Add", "Shows"} then
-		set title_response to (display dialog "Would you like to add a show?" & return & return & "Tuner(s): " & return & my listtostring("main()", my tuner_overview("main()"), return) buttons {tv_icon & " Shows..", plus_icon & " Add..", play_icon & " Run"} with title my check_version_dialog() giving up after (dialog_timeout * 0.5) with icon note default button 2)
+		set title_response to (display dialog "Would you like to add a show?" & return & return & "Tuner(s): " & return & my listtostring("main()", my tuner_overview("main()"), return) & return & return & "Next Show: " & next_show_main_time & return & next_show_main buttons {tv_icon & " Shows..", plus_icon & " Add..", play_icon & " Run"} with title my check_version_dialog() giving up after (dialog_timeout * 0.5) with icon note default button 2)
 	else
 		set title_response to {button returned:emulated_button_press}
 	end if
@@ -1097,12 +1125,12 @@ on add_show_info(hdhr_device)
 		--set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} with prompt "Please choose the days this series airs." default items default_record_day with multiple selections allowed without empty selection allowed)
 		
 		set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title my check_version_dialog() OK button name "Next.." cancel button name play_icon & " Run" with prompt "Select the days you wish to record." & return & "A \"Series\" can select multiple days." with multiple selections allowed without empty selection allowed)
-		my logger(true, "add_show_info()", "INFO", "(Manual) show_air_date: " & show_air_date of temp_show_info)
+		my logger(true, "add_show_info()", "INFO", "(Manual) show_air_date: " & my listtostring("add_show", show_air_date of temp_show_info, ","))
 	end if
 	if show_is_series of temp_show_info = false then
 		if hdhrGRID_response = false then
 			set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title my check_version_dialog() OK button name "Next.." cancel button name play_icon & " Run" with prompt "Select the day you wish to record." & return & "A \"Single\" can only select 1 day." without empty selection allowed)
-			my logger(true, "add_show_info()", "INFO", "(Manual) show_air_date: " & show_air_date of temp_show_info)
+			my logger(true, "add_show_info()", "INFO", "(Manual) show_air_date: " & my listtostring("add_show2()", show_air_date of temp_show_info, ","))
 		else
 			set show_air_date of temp_show_info to weekday of (my epoch2datetime((my getTfromN(StartTime of hdhrGRID_response)))) as text
 			my logger(true, "add_show_info()", "INFO", "(Auto) show_air_date: " & show_air_date of temp_show_info)
@@ -1127,7 +1155,7 @@ on add_show_info(hdhr_device)
 		set show_transcode_response to (choose from list {"None: Does not transcode, will save as MPEG2 stream.", "heavy: Transcode with same settings", "mobile: Transcode not exceeding 1280x720 30fps", "intenet720: Low bit rate, not exceeding 1280x720 30fps", "internet480: Low bit rate not exceeding 848x480/640x480 for 16:9/4:3 30fps", "internet360: Low bit rate not exceeding 640x360/480x360 for 16:9/4:3 30fps", "internet240: Low bit rate not exceeding 432x240/320x240 for 16:9/4:3 30fps"} with prompt "Please choose the transcode level on the file" with title my check_version_dialog() default items {"None: Does not transcode, will save as MPEG2 stream."} OK button name disk_icon & " Save Show" cancel button name play_icon & " Run")
 		try
 			set show_transcode of temp_show_info to word 1 of item 1 of show_transcode_response
-			my logger(true, "add_show_info2()", "INFO", word 1 of item 1 of show_transcode_response)
+			--my logger(true, "add_show_info2()", "INFO", word 1 of item 1 of show_transcode_response)
 		on error
 			set show_transcode of temp_show_info to "None"
 			my logger(true, "add_show_info()", "INFO", "User clicked \"Run\"")
@@ -1556,7 +1584,7 @@ on update_show(caller, the_show_id, force_update)
 			if length of hdhr_response_channel is greater than 0 then
 				--try
 				
-				--on error
+				--on error 
 				--	my logger(true, "update_show()", "ERROR", "Unable to set title of show") 
 				--end try
 				
@@ -1601,7 +1629,7 @@ on update_show(caller, the_show_id, force_update)
 			--	end try
 			-- end try
 		else
-			my logger(true, "update_show(" & force_update & ")", "WARN", caller & " -> Did not update the show " & show_title of item i of show_info & ", next_show in " & my ms2time("update_show1", ((show_next of item i of show_info) - (current date)), "s", 4))
+			my logger(true, "update_show(" & force_update & ")", "DEBUG", caller & " -> Did not update the show " & show_title of item i of show_info & ", next_show in " & my ms2time("update_show1", ((show_next of item i of show_info) - (current date)), "s", 4))
 		end if
 	end if
 end update_show
@@ -1726,7 +1754,7 @@ on read_data()
 		log class of show_id of item 1 of show_info
 		log "show_recording of item 1 of show_info "
 		log class of show_recording of item 1 of show_info
-		log "show_last of item 1 of show_info"
+		log "show_last of item 1 of show_info" 
 		log class of show_last of item 1 of show_info
 		log "show_next of item 1 of show_info"
 		log class of show_next of item 1 of show_info
@@ -1737,11 +1765,57 @@ on read_data()
 		log "hdhr_record of item 1 of show_info"
 		log class of hdhr_record of item 1 of show_info
 	*)
+	on error errmsg
+		log errmsg
 	end try
 	close access ref_num
 	my validate_show_info("read_data", "", false)
 end read_data
 
+on next_shows(caller)
+	set soonest_show to 9999999
+	set soonest_show_time to current date
+	repeat with i from 1 to length of show_info
+		if ((show_next of item i of show_info) - (current date)) < soonest_show and show_next of item i of show_info > (current date) and show_active of item i of show_info = true then
+			set soonest_show_time to show_next of item i of show_info
+			set soonest_show to ((show_next of item i of show_info) - (current date))
+		end if
+	end repeat
+	if soonest_show < 9999999 then
+		set next_shows_final to {}
+		repeat with i2 from 1 to length of show_info
+			if show_next of item i2 of show_info = soonest_show_time then
+				set end of next_shows_final to (show_title of item i2 of show_info & " on channel " & show_channel of item i2 of show_info)
+				set end of next_shows_final to {}
+			end if
+		end repeat
+		return {soonest_show_time, next_shows_final}
+	end if
+end next_shows
+
+--short_date(the_caller, the_date_object, twentyfourtime, show_seconds)
+
+on create_config_backup()
+	set posix_update_path to POSIX path of config_dir
+	try
+		do shell script "touch \"" & posix_update_path & "hdhr_test_write\""
+		delay 0.1
+		do shell script "rm \"" & posix_update_path & "hdhr_test_write\""
+	on error err_string
+		my logger(true, "update_folder()", "ERROR", "Unable to write to " & posix_update_path & ", " & err_string)
+	end try
+end create_config_backup
+
+on recording_search(caller, start_time, end_time, channel, hdhr_model)
+	set temp_hdhr_check to my HDHRDeviceSearch("recording_search", hdhr_model)
+	repeat with i from 1 to length of show_info
+		if hdhr_record of item i of show_info = hdhr_model then
+			if channel = show_channel of item i of show_info then
+				
+			end if
+		end if
+	end repeat
+end recording_search
 ##########    These are custom handlers.  They are more like libraries    ##########
 
 on datetime2epoch(caller, the_date_object)
@@ -1947,12 +2021,15 @@ on listtostring(caller, theList, delim)
 end listtostring
 
 on short_date(the_caller, the_date_object, twentyfourtime, show_seconds)
+	
+	log "short_date: " & the_caller & " / " & the_date_object
+	
 	--	set twentyfourtime to true
 	set timeAMPM to ""
 	--takes date object, and coverts to a shorter time string
 	if the_date_object is not "?" then
 		if the_date_object is not "" then
-			set year_string to (items -2 thru end of (year of the_date_object as string) as string)
+			set year_string to (items -2 thru end of (year of the_date_object as string))
 			
 			if ((month of the_date_object) * 1) is less than 10 then
 				set month_string to ("0" & ((month of the_date_object) * 1)) as text

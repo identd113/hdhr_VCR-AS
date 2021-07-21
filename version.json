@@ -2,6 +2,10 @@
 	"versions": 
 [
 {
+"hdhr_version":"20210721",
+"changelog":"Added The main screen will now show you the next shows that are going to record.  This saves a click into Shows."
+},
+{
 "hdhr_version":"20210716",
 "changelog":"Big Update.  Lots of stability changes, and some updated verbiage and icons.  More information at https://github.com/identd113/hdhr_VCR-AS/commit/1e65c927dc7b46a34db980c6ba2d05f7e9317e8a#diff-5af381b49e80c9f4c6828989c3cc939db4ccd1e8d39ed0142b4f10b9ab1d674b"
 },
