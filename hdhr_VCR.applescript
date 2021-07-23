@@ -5,10 +5,11 @@ tell application "JSON Helper"
 end tell
 *)
 
---add display on main screen to show next recording.  Check that time, and see if multiple shows are being recorded at the time.
---This may just evolve into a futurerecording search, which we could use to not over book recording times.
+--add display on main screen to show next recording.  Check that time, and see if multiple shows are being recorded at the time. -Done
+--This may just evolve into a futurerecording search, which we could use to not over book recording times. -In Progress
 --on recording_search(caller,start_time, end_time, hdhr_model)
 --This would return the number of shows being recorded at the time 
+
 
 global local_env
 global show_info
@@ -852,6 +853,7 @@ on main(caller, emulated_button_press)
 	--on short_date(the_caller, the_date_object, twentyfourtime, show_seconds)
 	try
 		set next_show_main_temp to my next_shows("add")
+		
 		set next_show_main to my listtostring("main()", item 2 of next_show_main_temp, return)
 		set next_show_main_time to my short_date("main()", item 1 of next_show_main_temp, false, false)
 		--	on error
@@ -1125,7 +1127,7 @@ on add_show_info(hdhr_device)
 				try
 					set show_length of temp_show_info to ((EndTime of item i3 of hdhrGRID_response) - (StartTime of item i3 of hdhrGRID_response)) div 60
 				on error
-					my logger(true, "add_show_info()", "ERROR", "(Auto) show time defaulted to 30")
+		 			my logger(true, "add_show_info()", "ERROR", "(Auto) show time defaulted to 30")
 					set show_length of temp_show_info to 30
 				end try
 				my logger(true, "add_show_info()", "INFO", "(Auto) show length: " & show_length of temp_show_info)
@@ -1142,7 +1144,7 @@ on add_show_info(hdhr_device)
 				try
 					
 					
-					set temp_show_info_series to (display dialog "Is this a single or a series recording? " & return & return & "Title: " & show_title of temp_show_info & return & return & "Synopsis: " & synopsis_temp & return & return & "Start: " & time string of my time_set(current date, 17) & return & "Length: " & my ms2time("add_show_info2", ((show_length of temp_show_info) * 60), "s", 2) buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 with title my check_version_dialog() giving up after dialog_timeout with icon note)
+					set temp_show_info_series to (display dialog "Is this a single or a series recording? " & return & return & "Title: " & show_title of temp_show_info & return & return & "Synopsis: " & synopsis_temp & return & return & "Start: " & time string of my time_set(current date, show_time of temp_show_info) & return & "Length: " & my ms2time("add_show_info2", ((show_length of temp_show_info) * 60), "s", 2) buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 with title my check_version_dialog() giving up after dialog_timeout with icon note)
 					
 					--set temp_show_info_series to (display dialog "Is this a single or a series recording? " & return & return & "Title: " & show_title of temp_show_info & return & return & "Synopsis: " & synopsis_temp & return & "Start: " & show_time of temp_show_info & return & "Length: " & show_length of temp_show_info buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 with title my check_version_dialog() giving up after dialog_timeout with icon note)
 					
