@@ -2,6 +2,10 @@
 	"versions": 
 [
 {
+"hdhr_version":"20210805",
+"changelog":"You can now select multiple shows on the same channel.  You can optionally choose to apply the same settings to all shows,  which allows you to add them quickly.\nNew: Main screen shows you the next shows to be recorded.  The current recorded shows will show up as a notification.\nNew: We now show the show graphic when adding shows."
+},
+{
 "hdhr_version":"20210721",
 "changelog":"Added The main screen will now show you the next shows that are going to record.  This saves a click into Shows."
 },
@@ -20,50 +24,6 @@
 {
 "hdhr_version":"20210208",
 "changelog":"Added: hdhr_VCR.log in Documents folder to allow us to keep a running tab if what is happening."
-},
-{
-"hdhr_version":"20210201",
-"changelog":"Fixed show guide.  This is now our default method of adding shows."
-},
-{
-"hdhr_version":"20210124",
-"changelog":"Added Show Guide, to make it easier to select a show."
-},
-{
-"hdhr_version":"20210120.2",
-"changelog":"Rewrite show list sorting. "
-},
-{
-"hdhr_version":"20210120",
-"changelog":"Rolled back previous release, and some small fixes. "
-},
-{
-"hdhr_version":"20210119",
-"changelog":"Sorted show list to group shows in same status. Fixed issue when calculating show_time."
-},
-{
-"hdhr_version":"20210115",
-"changelog":"Release!"
-},
-{
-"hdhr_version":"20210114",
-"changelog":"Pre Release of the announced release."
-},
-{
-"hdhr_version":"20210111",
-"changelog":"Made some changes to icons, and other UI elements`."
-},
-{
-"hdhr_version":"20210109",
-"changelog":"Changed how we display icons."
-},
-{
-"hdhr_version": "20210107",
-"changelog": "We will alert you if there are new versions!"
-},
-{
-"hdhr_version":"20210105",
-"changelog":"Moar Tests!"
 }
 
 ]
