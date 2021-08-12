@@ -1,3 +1,4 @@
+
 (*
 tell application "JSON Helper"
 	fetch JSON from "http://10.0.1.101/discover.json"
@@ -31,6 +32,7 @@ global notify_upnext
 global notify_recording
 global hdhr_setup_ran
 global configfilename
+global configfilename_json
 global logfilename
 global time_slide
 global dialog_timeout
@@ -109,7 +111,7 @@ on run {}
 	set film_icon to character id 127910
 	set back_icon to character id 8592
 	set done_icon to character id 9989
-	set version_local to "202108010"
+	set version_local to "20210810"
 	set progress description to "Loading " & name of me & " " & version_local
 	
 	--set globals   
@@ -122,6 +124,7 @@ on run {}
 	set hdhr_setup_name_bool to "No"
 	set hdhr_setup_length_bool to "No"
 	set configfilename to (name of me) & ".config" as text
+	set configfilename_json to (name of me) & ".json" as text
 	set logfilename to (name of me) & ".log" as text
 	set time_slide to 0
 	set dialog_timeout to 60
@@ -282,7 +285,7 @@ on idle
 				end if
 				
 				if show_recording of item i of show_info is false and show_active of item i of show_info is true then
-					--my update_show(show_id of item i of show_info, false)
+					--my update_show(show_id of item i of show_info, false) 
 					if (notify_upnext_time of item i of show_info is less than (current date) or notify_upnext_time of item i of show_info is missing value) and (show_next of item i of show_info) - (current date) is less than or equal to 1 * hours then
 						display notification "Starts: " & my short_date("is_next", show_next of item i of show_info, false, false) & " (" & my ms2time("idle()", ((show_next of item i of show_info) - (current date)), "s", 3) & ")" with title film_icon & " Next Up on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info, hdhr_record of item i of show_info) & ")"
 						
@@ -301,15 +304,15 @@ on idle
 						
 						--FIX We can try setting the files date modified to the orginal air date.
 						--log my channel_guide("TEST", "105404BE", "4.1", "0")
-						
+						-- We dont always get a result.  I was going to use this to determine if the show is a repeat.
 						set temp_guide_data to my channel_guide("idle(recording_ended)", hdhr_record of item i of show_info, show_channel of item i of show_info, show_time of item i of show_info)
 						try
 							set temp_test to my getTfromN(OriginalAirdate of temp_guide_data)
 						on error
 							set temp_test to "Failed"
 						end try
-						
 						my logger(true, "idle()", "INFO", "OriginalAirdate: " & temp_test)
+						
 						if show_is_series of item i of show_info is true then
 							set show_next of item i of show_info to my nextday(show_id of item i of show_info)
 							my logger(true, "idle()", "INFO", "Recording Complete for " & (show_title of item i of show_info & " on " & show_channel of item i of show_info))
@@ -319,11 +322,7 @@ on idle
 							my logger(true, "idle()", "INFO", "Recording Complete for " & (show_title of item i of show_info & " on " & show_channel of item i of show_info & " and marked inactive"))
 							display notification "Show marked inactive" with title stop_icon & " Recording Complete" subtitle (show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
 						end if
-						
-						--This needs to happen not in the idle loop.  Since we loop the stored tv shows (show_info), and we are still inside of the repeat loop, we end up trying to walk past the list, kind of a off by 1 error.
-						--We can remove these shows on app start, before we start walking the idle loop.  If we want to remove a show, we have to make sure we are not in a loop inside of the idle handler.  We can create an idle lock bit, which can increase the call back time to a much higer number, run our code, and then "unlock" the loop.  This all sounds very sloppy, and i dont like it.  We may just need to mark the show entries as dirty, likely by making making the show_id a missing value.  We would need to clear this out before we get stuck in a repeat loop.  This sounds cleaner.  This also means we need to remove references of the remove_show_info handler,  and stick this in the idle handler, which can have its own host of issues.
 					end if
-					--else if show_end of item i of show_info < (current date) and show_is_series of item i of show_info = false then 
 				else if show_is_series of item i of show_info is false and show_end of item i of show_info is less than (current date) and show_active of item i of show_info is true then
 					set show_active of item i of show_info to false
 					my logger(true, "idle()", "INFO", "Show " & show_title of item i of show_info & " as inactive, as it is a single, and record time has passed")
@@ -366,11 +365,11 @@ on quit {}
 		my save_data()
 		continue quit
 	end if
+	my logger(true, "quit()", "INFO", quit_response)
 	if quit_response is "Yes" then
 		repeat with i from 1 to length of show_info
 			set show_recording of item i of show_info to false
 		end repeat
-		my logger(true, "quit()", "DEBUG", "end repeat")
 		--FIX What if we cannot run pkill.  This typically is the script thinks a show is recording, but the curl never fired.
 		try
 			with timeout of 5 seconds
@@ -425,7 +424,7 @@ on hdhrGRID(caller, hdhr_device, hdhr_channel)
 			return true
 		end if
 	end try
-	--fix If we select multiple shows, we miss this check.
+	--fix If we select multiple shows, we miss this check.  Since we refresh the guide data on v hour, this may not even matter anymore, and we may need to remove it.
 	if my epoch2datetime(EndTime of item ((my list_position("hdhrGRID1", hdhrGRID_selected, hdhrGRID_sort, false)) - 1) of Guide of hdhrGRID_temp) is less than (current date) then
 		my logger(true, "hdhrGRID()", "WARN", "The show time has already passed, returning...")
 		display notification "The show has already passed, returning..."
@@ -904,9 +903,9 @@ on main(caller, emulated_button_press)
 		set next_show_main_time to my short_date("main()", item 1 of next_show_main_temp, false, false)
 		set next_show_main_time_real to item 1 of next_show_main_temp
 		--	on error
-		--set next_show_main to ""
+		--	set next_show_main to ""
 		--set next_show_main_time to ""
-		--	end try
+		--end try
 	on error
 		set next_show_main_temp to {}
 		set next_show_main_time to my epoch()
@@ -1075,6 +1074,11 @@ on main(caller, emulated_button_press)
 				return false
 			end if
 		end if
+		
+	end if
+	if button returned of title_response contains "Run" or gave up of title_response = true then
+		my logger(true, "main(new)", "INFO", "User clicked \"Run\"")
+		return
 	end if
 end main
 
@@ -1332,9 +1336,8 @@ on add_show_info(hdhr_device)
 						set show_transcode of temp_show_info to word 1 of item 1 of show_transcode_response
 						--my logger(true, "add_show_info2()", "INFO", word 1 of item 1 of show_transcode_response)
 					on error
-						--fix 	"If we click "Run" we still create the show, with None as the transcoding type.  This also drops us out of the multiple shows loop, likely due to the return statement   We should also NOT add this show.  The most logical thing is to switch the tranbscoding question, with the "Save file here" window, and if the user cancels out of that, then we exit the repeat 1 loop, maybe?
 						set show_transcode of temp_show_info to "None"
-						my logger(true, "add_show_info()", "INFO", "User clicked \"Run\"")
+						my logger(true, "add_show_info(transcode)", "INFO", "User clicked \"Run\"")
 						return false
 					end try
 				else
@@ -1392,7 +1395,7 @@ on add_show_info(hdhr_device)
 			my validate_show_info("add_show_info", show_id of last item of show_info, false)
 			my update_show("add_show_info()", show_id of last item of show_info, false)
 			--log show_info
-			set progress description to "This show has been added"
+			set progress description to "This show has been added!"
 			display notification with title "Show Added!" subtitle "" & show_title of last item of show_info & " at  " & show_time of last item of show_info
 		end repeat
 	end repeat
@@ -1732,7 +1735,7 @@ on channel_guide(caller, hdhr_device, hdhr_channel, hdhr_time)
 		log hdhr_proposed_time
 		log "---"
 	end if
-	if HDHR_DEVICE_LIST is not in {missing value, {}, 0} then
+	if HDHR_DEVICE_LIST is not in {missing value, {}, 0, ""} then
 		--fix Result: error "CanÕt get length of missing value." number -1728 from length of missing value
 		repeat with i from 1 to length of hdhr_guide of item tuner_offset of HDHR_DEVICE_LIST
 			if hdhr_channel = GuideNumber of item i of hdhr_guide of item tuner_offset of HDHR_DEVICE_LIST then
@@ -1868,8 +1871,6 @@ on update_show(caller, the_show_id, force_update)
 					my logger(true, "update_show()", "INFO", "Show end changed to " & show_end of item i of show_info)
 				end if
 			end if
-			--FIX Wow, I guess we never even try to fix the start of the show. weird. 
-			
 			
 			--on error errmsg
 			--	my logger(true, "update_show()", "ERROR", "Unable to update " & show_title of item i of show_info & " : " & errmsg)
@@ -1887,6 +1888,36 @@ on update_show(caller, the_show_id, force_update)
 end update_show
 
 on save_data()
+	copy show_info to temp_show_info
+	
+	repeat with i5 from 1 to length of temp_show_info
+		if show_active of item i5 of temp_show_info ­ false then
+			set show_dir of item i5 of temp_show_info to (show_dir of item i5 of temp_show_info as text)
+			set show_temp_dir of item i5 of temp_show_info to (show_temp_dir of item i5 of temp_show_info as text)
+			set show_last of item i5 of temp_show_info to (show_last of item i5 of temp_show_info as text)
+			set show_next of item i5 of temp_show_info to (show_next of item i5 of temp_show_info as text)
+			set show_end of item i5 of temp_show_info to (show_end of item i5 of temp_show_info as text)
+			set notify_recording_time of item i5 of temp_show_info to (notify_recording_time of item i5 of temp_show_info as text)
+			set notify_upnext_time of item i5 of temp_show_info to (notify_upnext_time of item i5 of temp_show_info as text)
+		else
+			set item i5 of temp_show_info to ""
+			my logger(true, "save_data_json", "INFO", "JSON: Removed a show, as it was deactivated")
+		end if
+	end repeat
+	set temp_show_info to my emptylist(temp_show_info)
+	set temp_show_info_json to (make JSON from temp_show_info)
+	try
+		set ref_num to open for access file ((config_dir) & configfilename_json as text) with write permission
+		set eof of ref_num to 0
+		write temp_show_info_json to ref_num
+		my logger(true, "save_data()", "INFO", "Saved " & length of show_info & " shows to file")
+	on error errmsg
+		my logger(true, "save_data()", "INFO", "Unable to save JSON file")
+	end try
+	close access ref_num
+end save_data
+
+on save_data_old()
 	if local_env does not contain "Editor" then
 		my show_info_dump("save_data()", "")
 		try
@@ -1938,6 +1969,7 @@ on save_data()
 					my logger(true, "save_data()", "INFO", "Removed \"" & show_title of item i of show_info & "\"")
 				end if
 				
+				
 			end repeat
 			my logger(true, "save_data()", "INFO", "Saved " & length of show_info & " shows to file")
 		else
@@ -1950,10 +1982,43 @@ on save_data()
 		my logger(true, "save_data()", "DEBUG", "Did not save config, we are in debug mode")
 	end if
 	--display notification disk_icon & " " & length of show_info & " shows saved" 
-end save_data
+end save_data_old
 
---takes the the data in the filesystem, and writes to to a variable 
 on read_data()
+	--read .config file, if .json is not avilable
+	set hdhr_vcr_config_file to ((config_dir) & configfilename_json as string)
+	set ref_num to open for access file hdhr_vcr_config_file
+	set hdhr_vcr_config_data to read ref_num
+	log "hdhr_vcr_config_data"
+	log hdhr_vcr_config_data
+	set show_info to read JSON from hdhr_vcr_config_data
+	close access ref_num
+	my logger(true, "read_data()", "INFO", "Loading config from \"" & POSIX path of hdhr_vcr_config_file & "\"...")
+	repeat with i5 from 1 to length of show_info
+		set show_dir of item i5 of show_info to (show_dir of item i5 of show_info as alias)
+		set show_temp_dir of item i5 of show_info to (show_temp_dir of item i5 of show_info as alias)
+		
+		set show_last of item i5 of show_info to date (show_last of item i5 of show_info as text)
+		set show_next of item i5 of show_info to date (show_next of item i5 of show_info as text)
+		set show_end of item i5 of show_info to date (show_end of item i5 of show_info as text)
+		
+		if notify_recording_time of item i5 of show_info = "missing value" then
+			set notify_recording_time of item i5 of show_info to missing value
+		else
+			set notify_recording_time of item i5 of show_info to (notify_recording_time of item i5 of show_info as text)
+		end if
+		if notify_upnext_time of item i5 of show_info = "missing value" then
+			set notify_upnext_time of item i5 of show_info to missing value
+		else
+			set notify_upnext_time of item i5 of show_info to (notify_upnext_time of item i5 of show_info as text)
+		end if
+		
+	end repeat
+	
+end read_data
+
+--takes the the data in the filesystem, and writes to to a variable   
+on read_data_old()
 	--FIX We need to figure out how we can allow this handler to read whatever files we point it at.  Then we can add custom json sets for testing
 	--set ref_num to missing value 
 	set hdhr_vcr_config_file to ((config_dir) & configfilename as string)
@@ -2031,11 +2096,14 @@ on read_data()
 	end try
 	close access ref_num
 	my validate_show_info("read_data()", "", false)
-end read_data
+	
+end read_data_old
 
 on next_shows(caller)
 	set soonest_show to 9999999
 	set soonest_show_time to current date
+	log "length of showinfo"
+	log length of show_info
 	repeat with i from 1 to length of show_info
 		if ((show_next of item i of show_info) - (current date)) is less than soonest_show and show_next of item i of show_info is greater than (current date) and show_active of item i of show_info is true then
 			set soonest_show_time to show_next of item i of show_info
@@ -2050,6 +2118,9 @@ on next_shows(caller)
 				set end of next_shows_final to {}
 			end if
 		end repeat
+		log "next_shows"
+		log soonest_show_time
+		log next_shows_final
 		return {soonest_show_time, next_shows_final}
 	end if
 end next_shows
