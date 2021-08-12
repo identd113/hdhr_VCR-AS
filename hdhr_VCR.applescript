@@ -1,5 +1,13 @@
 
 (*
+Todo:
+setup a config record we can export to the save file.
+Fix progress screens to be more accurate
+create backup of config file
+Auto roll .log when starting (tail -n X)
+
+
+
 tell application "JSON Helper"
 	fetch JSON from "http://10.0.1.101/discover.json"
 		--> {ModelNumber:"HDTC-2US", UpgradeAvailable:"20210624", BaseURL:"http://10.0.1.101:80", FirmwareVersion:"20210210", DeviceAuth:"nrwqkmEpZNhIzf539VfjHyYP", FirmwareName:"hdhomeruntc_atsc", FriendlyName:"HDHomeRun EXTEND", LineupURL:"http://10.0.1.101:80/lineup.json", TunerCount:2, DeviceID:"105404BE"}
@@ -24,6 +32,7 @@ global version_local
 global version_remote
 global version_url
 
+global hdhr_config
 global hdhr_setup_folder
 global hdhr_setup_transcode
 global hdhr_setup_name_bool
@@ -111,11 +120,12 @@ on run {}
 	set film_icon to character id 127910
 	set back_icon to character id 8592
 	set done_icon to character id 9989
-	set version_local to "20210810"
+	set version_local to "20210812"
 	set progress description to "Loading " & name of me & " " & version_local
 	
 	--set globals   
 	set show_info to {}
+	set hdhr_config to {}
 	set notify_upnext to 30
 	set notify_recording to 15
 	set locale to user locale of (system info)
@@ -479,7 +489,6 @@ on tuner_overview(caller)
 		end if
 	end repeat
 	my logger(true, "tuner_overview()", "INFO", "END Called from " & caller)
-	--my logger(true, "tuner_overview()", "INFO", caller & " -> " & last item of main_tuners_list)
 	return main_tuners_list
 end tuner_overview
 
@@ -557,8 +566,6 @@ on tuner_end(caller, hdhr_model)
 end tuner_end
 
 on tuner_status2(caller, device_id)
-	--my logger(true, "tuner_status2()", "WARN", caller & " -> " & device_id)
-	--my logger(true, "tuner_status2()", "INFO", caller & " -> " & device_id)
 	--This needs to report back the number of tuners avilable, and the number in use.
 	set tuneractive to 0
 	set tuner_offset to my HDHRDeviceSearch("tuner_status", device_id)
@@ -840,7 +847,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 end validate_show_info
 
 on setup()
-	set hdhr_setup_response to (display dialog "hdhr_VCR Setup" buttons {"Defaults", "Delete", play_icon & " Run"} default button 1 cancel button 3 with title my check_version_dialog() giving up after dialog_timeout)
+	set hdhr_setup_response to (display dialog "hdhr_VCR Setup" buttons {"Defaults", " Run"} default button 1 cancel button 3 with title my check_version_dialog() giving up after dialog_timeout)
 	if button returned of hdhr_setup_response = "Defaults" then
 		set temp_dir to alias "Volumes:"
 		repeat until temp_dir is not alias "Volumes:"
@@ -896,6 +903,7 @@ on main(caller, emulated_button_press)
 	--activate me
 	--try
 	--on short_date(the_caller, the_date_object, twentyfourtime, show_seconds)
+	set show_list_empty to false
 	try
 		set next_show_main_temp to my next_shows("add")
 		
@@ -904,16 +912,18 @@ on main(caller, emulated_button_press)
 		set next_show_main_time_real to item 1 of next_show_main_temp
 		--	on error
 		--	set next_show_main to ""
-		--set next_show_main_time to ""
+		--set next_show_main_time to "" 
 		--end try
 	on error
-		set next_show_main_temp to {}
-		set next_show_main_time to my epoch()
-		set next_show_main to "No shows found!  You can add one by clicking \"Add\""
-		
+		--We likely do not have any shows.
+		set show_list_empty to true
 	end try
 	if emulated_button_press is not in {"Add", "Shows"} then
-		set title_response to (display dialog "Would you like to add a show?" & return & return & "Tuner(s): " & return & my listtostring("main()", my tuner_overview("main()"), return) & return & return & "Next Show: " & next_show_main_time & " (in " & my ms2time("main(next_show_countdown)", (next_show_main_time_real) - (current date), "s", 2) & ")" & return & next_show_main buttons {tv_icon & " Shows..", plus_icon & " Add..", play_icon & " Run"} with title my check_version_dialog() giving up after (dialog_timeout * 0.5) with icon note default button 2)
+		if show_list_empty = true then
+			set title_response to (display dialog "Would you like to add a show?" & return & return & "Tuner(s): " & return & my listtostring("main()", my tuner_overview("main()"), return) buttons {tv_icon & " Shows..", plus_icon & " Add..", play_icon & " Run"} with title my check_version_dialog() giving up after (dialog_timeout * 0.5) with icon note default button 2)
+		else
+			set title_response to (display dialog "Would you like to add a show?" & return & return & "Tuner(s): " & return & my listtostring("main()", my tuner_overview("main()"), return) & return & return & "Next Show: " & next_show_main_time & " (in " & my ms2time("main(next_show_countdown)", (next_show_main_time_real) - (current date), "s", 2) & ")" & return & next_show_main buttons {tv_icon & " Shows..", plus_icon & " Add..", play_icon & " Run"} with title my check_version_dialog() giving up after (dialog_timeout * 0.5) with icon note default button 2)
+		end if
 	else
 		set title_response to {button returned:emulated_button_press}
 	end if
@@ -1890,30 +1900,45 @@ end update_show
 on save_data()
 	copy show_info to temp_show_info
 	
-	repeat with i5 from 1 to length of temp_show_info
-		if show_active of item i5 of temp_show_info ­ false then
-			set show_dir of item i5 of temp_show_info to (show_dir of item i5 of temp_show_info as text)
-			set show_temp_dir of item i5 of temp_show_info to (show_temp_dir of item i5 of temp_show_info as text)
-			set show_last of item i5 of temp_show_info to (show_last of item i5 of temp_show_info as text)
-			set show_next of item i5 of temp_show_info to (show_next of item i5 of temp_show_info as text)
-			set show_end of item i5 of temp_show_info to (show_end of item i5 of temp_show_info as text)
-			set notify_recording_time of item i5 of temp_show_info to (notify_recording_time of item i5 of temp_show_info as text)
-			set notify_upnext_time of item i5 of temp_show_info to (notify_upnext_time of item i5 of temp_show_info as text)
-		else
-			set item i5 of temp_show_info to ""
-			my logger(true, "save_data_json", "INFO", "JSON: Removed a show, as it was deactivated")
-		end if
-	end repeat
-	set temp_show_info to my emptylist(temp_show_info)
-	set temp_show_info_json to (make JSON from temp_show_info)
-	try
-		set ref_num to open for access file ((config_dir) & configfilename_json as text) with write permission
-		set eof of ref_num to 0
-		write temp_show_info_json to ref_num
-		my logger(true, "save_data()", "INFO", "Saved " & length of show_info & " shows to file")
-	on error errmsg
-		my logger(true, "save_data()", "INFO", "Unable to save JSON file")
-	end try
+	if local_env does not contain "Editor" then
+		my show_info_dump("save_data()", "")
+	end if
+	if length of show_info is greater than 0 then
+		repeat with i5 from 1 to length of temp_show_info
+			if show_active of item i5 of temp_show_info ­ false then
+				set show_dir of item i5 of temp_show_info to (show_dir of item i5 of temp_show_info as text)
+				set show_temp_dir of item i5 of temp_show_info to (show_temp_dir of item i5 of temp_show_info as text)
+				set show_last of item i5 of temp_show_info to (show_last of item i5 of temp_show_info as text)
+				set show_next of item i5 of temp_show_info to (show_next of item i5 of temp_show_info as text)
+				set show_end of item i5 of temp_show_info to (show_end of item i5 of temp_show_info as text)
+				set notify_recording_time of item i5 of temp_show_info to (notify_recording_time of item i5 of temp_show_info as text)
+				set notify_upnext_time of item i5 of temp_show_info to (notify_upnext_time of item i5 of temp_show_info as text)
+				
+				set show_length of item i5 of temp_show_info to (show_length of item i5 of temp_show_info as number)
+				set show_air_date of item i5 of temp_show_info to (show_air_date of item i5 of temp_show_info as text)
+				set show_title of item i5 of temp_show_info to (show_title of item i5 of temp_show_info as text)
+				set show_time of item i5 of temp_show_info to (show_time of item i5 of temp_show_info as number)
+				set show_channel of item i5 of temp_show_info to (show_channel of item i5 of temp_show_info as text)
+			else
+				set item i5 of temp_show_info to ""
+				my logger(true, "save_data_json", "INFO", "JSON: Removed a show, as it was deactivated")
+			end if
+		end repeat
+		set temp_show_info to my emptylist(temp_show_info)
+		--	set temp_show_info_json to (make JSON from temp_show_info)
+		try
+			set ref_num to open for access file ((config_dir) & configfilename_json as text) with write permission
+			set eof of ref_num to 0
+			set json_temp to {the_shows:temp_show_info, config:{test1:"test2"}}
+			set temp_show_info_json to (make JSON from json_temp)
+			write temp_show_info_json to ref_num
+			--		write temp_show_info_json to ref_num
+			--set x to {shows:{test:"test1", test2:"Test2"}, config:{test3:"test3"}}
+			my logger(true, "save_data()", "INFO", "Saved " & length of show_info & " shows to file")
+		on error errmsg
+			my logger(true, "save_data()", "INFO", "Unable to save JSON file")
+		end try
+	end if
 	close access ref_num
 end save_data
 
@@ -1984,37 +2009,54 @@ on save_data_old()
 	--display notification disk_icon & " " & length of show_info & " shows saved" 
 end save_data_old
 
+on checkfileexists(filepath)
+	tell application "Finder" to return exists file filepath
+end checkfileexists
+
 on read_data()
 	--read .config file, if .json is not avilable
 	set hdhr_vcr_config_file to ((config_dir) & configfilename_json as string)
-	set ref_num to open for access file hdhr_vcr_config_file
-	set hdhr_vcr_config_data to read ref_num
-	log "hdhr_vcr_config_data"
-	log hdhr_vcr_config_data
-	set show_info to read JSON from hdhr_vcr_config_data
-	close access ref_num
-	my logger(true, "read_data()", "INFO", "Loading config from \"" & POSIX path of hdhr_vcr_config_file & "\"...")
-	repeat with i5 from 1 to length of show_info
-		set show_dir of item i5 of show_info to (show_dir of item i5 of show_info as alias)
-		set show_temp_dir of item i5 of show_info to (show_temp_dir of item i5 of show_info as alias)
-		
-		set show_last of item i5 of show_info to date (show_last of item i5 of show_info as text)
-		set show_next of item i5 of show_info to date (show_next of item i5 of show_info as text)
-		set show_end of item i5 of show_info to date (show_end of item i5 of show_info as text)
-		
-		if notify_recording_time of item i5 of show_info = "missing value" then
-			set notify_recording_time of item i5 of show_info to missing value
-		else
-			set notify_recording_time of item i5 of show_info to (notify_recording_time of item i5 of show_info as text)
-		end if
-		if notify_upnext_time of item i5 of show_info = "missing value" then
-			set notify_upnext_time of item i5 of show_info to missing value
-		else
-			set notify_upnext_time of item i5 of show_info to (notify_upnext_time of item i5 of show_info as text)
-		end if
-		
-	end repeat
+	if my checkfileexists(hdhr_vcr_config_file) is false and my checkfileexists(((config_dir) & configfilename as string)) is true then
+		my logger(true, "read_data()", "INFO", "Using old .config file loader.")
+		my read_data_old()
+		my save_data()
+		my read_data()
+		--If this works, just wow 
+		return
+	end if
 	
+	set ref_num to open for access file hdhr_vcr_config_file
+	try
+		set hdhr_vcr_config_data to read ref_num
+		set show_info_json to (read JSON from hdhr_vcr_config_data)
+		set show_info to the_shows of show_info_json
+		set hdhr_config to config of show_info_json
+		my logger(true, "read_data()", "INFO", "Loading config from \"" & POSIX path of hdhr_vcr_config_file & "\"...")
+		repeat with i5 from 1 to length of show_info
+			set show_dir of item i5 of show_info to (show_dir of item i5 of show_info as alias)
+			set show_temp_dir of item i5 of show_info to (show_temp_dir of item i5 of show_info as alias)
+			
+			set show_last of item i5 of show_info to date (show_last of item i5 of show_info as text)
+			set show_next of item i5 of show_info to date (show_next of item i5 of show_info as text)
+			set show_end of item i5 of show_info to date (show_end of item i5 of show_info as text)
+			
+			if notify_recording_time of item i5 of show_info = "missing value" then
+				set notify_recording_time of item i5 of show_info to missing value
+			else
+				set notify_recording_time of item i5 of show_info to (notify_recording_time of item i5 of show_info as text)
+			end if
+			if notify_upnext_time of item i5 of show_info = "missing value" then
+				set notify_upnext_time of item i5 of show_info to missing value
+			else
+				set notify_upnext_time of item i5 of show_info to (notify_upnext_time of item i5 of show_info as text)
+			end if
+			
+		end repeat
+	on error errmsg
+		log errmsg
+	end try
+	close access ref_num
+	my validate_show_info("read_data()", "", false)
 end read_data
 
 --takes the the data in the filesystem, and writes to to a variable   
