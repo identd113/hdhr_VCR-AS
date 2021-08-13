@@ -82,6 +82,7 @@ global loglines_max
 use AppleScript version "2.4"
 use scripting additions
 use application "JSON Helper"
+--use framework "Foundation"
 
 -- {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value}
 
@@ -89,9 +90,9 @@ use application "JSON Helper"
 
 -- http://api.hdhomerun.com/api/guide.php?DeviceAuth=IBn9SkGefWcxVTxbQpTBMsuI
 --	set progress description to "Loading ..."
---    set progress additional description to
+--    set progress additional description to 
 --	set progress completed steps to 0 
---	set progress total steps to 1
+--	set progress total steps to 1 
 
 ##########    These are reserved handlers, we do specific things in them    ##########
 on run {}
@@ -120,7 +121,7 @@ on run {}
 	set film_icon to character id 127910
 	set back_icon to character id 8592
 	set done_icon to character id 9989
-	set version_local to "20210812"
+	set version_local to "20210813"
 	set progress description to "Loading " & name of me & " " & version_local
 	
 	--set globals   
@@ -231,6 +232,7 @@ on idle
 	## If there are any shows to saved, we start working through them
 	if length of show_info is greater than 0 then
 		repeat with i from 1 to length of show_info
+			--my setDockBadgeString("2")
 			repeat 1 times
 				(*
 						else if show_is_series of item i of show_info = false then
@@ -541,7 +543,12 @@ on unicode_number(thedata)
 	end if
 	return
 end unicode_number
-
+(*
+on setDockBadgeString(dockBadgeString)
+	set appDockTile to current application's NSApp's dockTile()
+	appDockTile's setBadgeLabel:dockBadgeString
+end setDockBadgeString
+*)
 on tuner_end(caller, hdhr_model)
 	--Returns the number of seconds to next tuner timeout. 
 	set temp to {}
@@ -820,7 +827,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 				set show_time of item i of show_info to text returned of (display dialog "What time does this show air? " & return & "(0-24, use decimals, ie 9.5 for 9:30)" default answer show_time of item i of show_info buttons {play_icon & " Run", "Next.."} with title my check_version_dialog() giving up after dialog_timeout default button 2 cancel button 1) as number
 			end if
 			if show_length of item i of show_info = missing value or my is_number(show_length of item i of show_info) = false or show_length of item i of show_info is less than or equal to 0 or should_edit = true then
-				set show_length of item i of show_info to text returned of (display dialog "How long is this show? (in minutes)" default answer show_length of item i of show_info with title my check_version_dialog() buttons {play_icon & " Run", "Next.."} default button 2 cancel button 1 giving up after dialog_timeout)
+				set show_length of item i of show_info to text returned of (display dialog "How long is this show? (minutes)" default answer show_length of item i of show_info with title my check_version_dialog() buttons {play_icon & " Run", "Next.."} default button 2 cancel button 1 giving up after dialog_timeout)
 			end if
 			
 			if show_air_date of item i of show_info = missing value or length of show_air_date of item i of show_info = 0 or should_edit = true then
@@ -922,7 +929,7 @@ on main(caller, emulated_button_press)
 		if show_list_empty = true then
 			set title_response to (display dialog "Would you like to add a show?" & return & return & "Tuner(s): " & return & my listtostring("main()", my tuner_overview("main()"), return) buttons {tv_icon & " Shows..", plus_icon & " Add..", play_icon & " Run"} with title my check_version_dialog() giving up after (dialog_timeout * 0.5) with icon note default button 2)
 		else
-			set title_response to (display dialog "Would you like to add a show?" & return & return & "Tuner(s): " & return & my listtostring("main()", my tuner_overview("main()"), return) & return & return & "Next Show: " & next_show_main_time & " (in " & my ms2time("main(next_show_countdown)", (next_show_main_time_real) - (current date), "s", 2) & ")" & return & next_show_main buttons {tv_icon & " Shows..", plus_icon & " Add..", play_icon & " Run"} with title my check_version_dialog() giving up after (dialog_timeout * 0.5) with icon note default button 2)
+			set title_response to (display dialog "Would you like to add a show?" & return & return & "Tuner(s): " & return & my listtostring("main()", my tuner_overview("main()"), return) & return & return & "Next Show: " & next_show_main_time & " (" & my ms2time("main(next_show_countdown)", (next_show_main_time_real) - (current date), "s", 2) & ")" & return & next_show_main buttons {tv_icon & " Shows..", plus_icon & " Add..", play_icon & " Run"} with title my check_version_dialog() giving up after (dialog_timeout * 0.5) with icon note default button 2)
 		end if
 	else
 		set title_response to {button returned:emulated_button_press}
@@ -1369,6 +1376,9 @@ on add_show_info(hdhr_device)
 			if temp_show_air_date is missing value then
 				repeat until temp_dir is not alias "Volumes:"
 					try
+						set temp_dir to show_dir of last item of show_info
+					end try
+					try
 						set show_dir of temp_show_info to choose folder with prompt "Select Shows Directory" default location temp_dir
 					on error
 						exit repeat
@@ -1719,7 +1729,7 @@ on getHDHR_Lineup(caller, hdhr_device)
 	end if
 	if hdhr_lineup of item tuner_offset of HDHR_DEVICE_LIST is not in {"", {}, missing value} then
 		set hdhr_lineup_update of item tuner_offset of HDHR_DEVICE_LIST to current date
-		my logger(true, "getHDHR_Lineup()", "INFO", "Updated lineup for " & hdhr_device & " called from " & caller)
+		my logger(true, "getHDHR_Lineup()", "INFO", "Updated LineUP for " & hdhr_device & " called from " & caller)
 		set progress completed steps to 1
 	else
 		my logger(true, "getHDHR_Lineup()", "ERROR", caller & " -> Unable to update lineup for " & hdhr_device)
@@ -2025,7 +2035,7 @@ on read_data()
 		return
 	end if
 	
-	set ref_num to open for access file hdhr_vcr_config_file
+	set ref_num to open for access hdhr_vcr_config_file
 	try
 		set hdhr_vcr_config_data to read ref_num
 		set show_info_json to (read JSON from hdhr_vcr_config_data)
