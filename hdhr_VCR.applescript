@@ -118,7 +118,7 @@ on run {}
 	set film_icon to character id 127910
 	set back_icon to character id 8592
 	set done_icon to character id 9989
-	set version_local to "20210818"
+	set version_local to "20210903"
 	set progress description to "Loading " & name of me & " " & version_local
 	
 	--set globals   
@@ -509,7 +509,7 @@ on tuner_overview(caller)
 	my logger(true, "tuner_overview(" & caller & ")", "INFO", "START Called")
 	--We want to return the tuner names, the number of tuners/in use.  We might as well try to return any shows that are recording
 	--display dialog length of HDHR_DEVICE_LIST 
-	set main_tuners_list to {} 
+	set main_tuners_list to {}
 	repeat with i from 1 to length of HDHR_DEVICE_LIST
 		set tuner_status2_result to my tuner_status2("tuner_overview(" & caller & ")", device_id of item i of HDHR_DEVICE_LIST)
 		if hdhr_model of item i of HDHR_DEVICE_LIST is not missing value then
