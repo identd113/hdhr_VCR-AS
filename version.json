@@ -2,6 +2,10 @@
 	"versions": 
 [
 {
+"hdhr_version":"20210905",
+"changelog":"We now use JSON to save the config.  We will attempt to convert your old config file.  We can now edit, and add multiple shows.  Main screen now shows the next upcoming shows, and what is currently recording. When adding a show, we now show the shows  thumbnail image.  We now roll logs as needed.  More progress bars!"
+},
+{
 "hdhr_version":"20210805",
 "changelog":"You can now select multiple shows on the same channel.  You can optionally choose to apply the same settings to all shows,  which allows you to add them quickly.New: Main screen shows you the next shows to be recorded.The current recorded shows will show up as a notification. New: We now show the show graphic when adding shows."
 },
