@@ -1,5 +1,5 @@
 ## hdhr_VCR
-A pretty damn good VCR "plus" script that works on all HDHomeRun devices, and is free to use!
+A pretty darn good VCR "plus" script that works on all HDHomeRun devices, and is free to use!
 An OSX faceless/background script that makes recording TV shows and Movies on HDHomeRun very easy.
 
 ![Show List](show_list.png)
