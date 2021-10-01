@@ -119,7 +119,7 @@ on run {}
 	set film_icon to character id 127910
 	set back_icon to character id 8592
 	set done_icon to character id 9989
-	set version_local to "20210929"
+	set version_local to "20211001"
 	set progress description to "Loading " & name of me & " " & version_local
 	
 	--set globals   
@@ -171,7 +171,7 @@ on run {}
 	## Main is the start of the UI for the user. on main
 	my main("run()", "run")
 	## Make sure the log file doesnt get too big
-	my rotate_logs("run()", (log_dir & logfilename as text)) 
+	my rotate_logs("run()", (log_dir & logfilename as text))
 end run
 
 ## This script will loop through this every 12 seconds, or whatever the return value is, in second is at the bottom of this handler.
@@ -263,14 +263,17 @@ on idle
 								if my HDHRDeviceSearch("idle()", hdhr_record of item i of show_info) is 0 then
 									my logger(true, "idle()", "WARN", "The tuner, " & hdhr_recordl of item i of show_info & " does not exist")
 								end if
+								
 								if show_end of item i of show_info is less than (cd) then
 									my logger(true, "idle(9)", "INFO", show_end of item i of show_info)
 									if show_is_series of item i of show_info is true then
 										set show_next of item i of show_info to my nextday("idle(10)", show_id of item i of show_info)
+										exit repeat
 									else
 										set show_active of item i of show_info to false
 									end if
 								end if
+								
 								--	my logger(true, "idle()", "INFO", "1-1")
 								
 								if (notify_upnext_time of item i of show_info is less than (cd) or notify_upnext_time of item i of show_info is missing value) and (show_next of item i of show_info) - (cd) is less than or equal to 1 * hours then
@@ -291,6 +294,10 @@ on idle
 								if tunermax of tuner_status_result is greater than tuneractive of tuner_status_result then
 									--my logger(true, "idle()", "INFO", "2-2")
 									-- If we now have no tuner available, we skip this "loop" and try again later.
+									my logger(true, "idle()", "INFO", show_title of item i of show_info)
+									my logger(true, "idle()", "INFO", show_next of item i of show_info)
+									my logger(true, "idle()", "INFO", show_time of item i of show_info)
+									my logger(true, "idle()", "INFO", show_end of item i of show_info)
 									my record_now("idle(32)", (show_id of item i of show_info), show_runtime)
 									display notification "Ends " & my short_date("rec started", show_end of item i of show_info, false, false) with title record_icon & " Started Recording on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name("idle(16)", show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
 									set notify_recording_time of item i of show_info to (cd) + (2 * minutes)
@@ -385,7 +392,6 @@ on idle
 	on error errmsg
 		my logger(true, "idle(31)", "INFO", errmsg)
 	end try
-	--FIX Change idle_timer when we are less then 60 seconds from a new show beginning,
 	return idle_timer
 end idle
 
@@ -418,7 +424,6 @@ on quit {}
 	end repeat
 	
 	if hdhr_quit_record is true then
-		--Add currently recorded shows 
 		--fix check this
 		my logger(true, "quit()", "INFO", "The following shows are marked as currently recording: " & my listtostring("quit()", hdhr_quit_record_titles, ", "))
 		set quit_response to button returned of (display dialog "Do you want to cancel recordings already in progress?" buttons {"Go Back", "Yes", "No"} default button 3 with title my check_version_dialog() giving up after dialog_timeout with icon caution)
@@ -790,8 +795,8 @@ on nextday(caller, the_show_id)
 			if ((weekday of (cd_object + i * days)) as text) is in (show_air_date of item show_offset of show_info) then
 				--log "1: " & (weekday of (cd_object + i * days)) & " is in " & show_air_date of item show_offset of show_info as text
 				--log "2: " & (my time_set((cd_object + i * days), (show_time of item show_offset of show_info))) + ((show_length of item show_offset of show_info) * minutes)
-				if cd_object is less than (my time_set((cd_object + i * days), (show_time of item show_offset of show_info))) + ((show_length of item show_offset of show_info) * minutes) then
-					set nextup to my time_set((cd_object + i * days), show_time of item show_offset of show_info)
+				if cd_object is less than (my time_set("nextday(" & caller & ")", (cd_object + i * days), (show_time of item show_offset of show_info))) + ((show_length of item show_offset of show_info) * minutes) then
+					set nextup to my time_set("nextday(" & caller & ")", (cd_object + i * days), show_time of item show_offset of show_info)
 					try
 						log "show_next of item show_offset of show_info"
 						log show_next of item show_offset of show_info
@@ -1410,7 +1415,7 @@ on add_show_info(caller, hdhr_device)
 							set temp_default_button to 2
 						end if
 						
-						set temp_show_info_series to (display dialog "Is this a single or a series recording? " & return & return & "Title: " & show_title of temp_show_info & return & "Type: " & show_tags & return & return & "Synopsis: " & synopsis_temp & return & return & "Start: " & time string of my time_set(current date, show_time of temp_show_info) & return & "Length: " & my ms2time("add_show_info2", ((show_length of temp_show_info) * 60), "s", 2) buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button temp_default_button with title my check_version_dialog() giving up after dialog_timeout with icon temp_icon)
+						set temp_show_info_series to (display dialog "Is this a single or a series recording? " & return & return & "Title: " & show_title of temp_show_info & return & "Type: " & show_tags & return & return & "Synopsis: " & synopsis_temp & return & return & "Start: " & time string of my time_set("add_show_info(" & caller & ")", current date, show_time of temp_show_info) & return & "Length: " & my ms2time("add_show_info2", ((show_length of temp_show_info) * 60), "s", 2) buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button temp_default_button with title my check_version_dialog() giving up after dialog_timeout with icon temp_icon)
 						
 						--set temp_show_info_series to (display dialog "Is this a single or a series recording? " & return & return & "Title: " & show_title of temp_show_info & return & return & "Synopsis: " & synopsis_temp & return & "Start: " & show_time of temp_show_info & return & "Length: " & show_length of temp_show_info buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 with title my check_version_dialog() giving up after dialog_timeout with icon note)
 						
@@ -2514,7 +2519,7 @@ on isModifierKeyPressed(caller, checkKey)
 	return modiferKeysDOWN
 end isModifierKeyPressed
 
-on time_set(adate_object, time_shift)
+on time_set(caller, adate_object, time_shift)
 	log adate_object
 	log time_shift
 	set dateobject to adate_object
@@ -2523,6 +2528,7 @@ on time_set(adate_object, time_shift)
 	set minutes of dateobject to 0
 	set seconds of dateobject to 0
 	set dateobject to dateobject + (time_shift * hours)
+	my logger(true, "time_set(" & caller & ")", "INFO", dateobject as text)
 	return dateobject
 end time_set
 
