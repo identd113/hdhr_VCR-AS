@@ -2,6 +2,10 @@
 	"versions": 
 [
 {
+"hdhr_version":"20211222",
+"changelog":"Stuff changed, and I am too lazy to document them all.  We can detect if a recording has a PID, and restart the recording as needed."
+},
+{
 "hdhr_version":"20210905",
 "changelog":"We now use JSON to save the config.  We will attempt to convert your old config file.  We can now edit, and add multiple shows.  Main screen now shows the next upcoming shows, and what is currently recording. When adding a show, we now show the shows  thumbnail image.  We now roll logs as needed.  More progress bars!"
 },

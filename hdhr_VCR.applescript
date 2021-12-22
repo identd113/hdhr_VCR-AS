@@ -146,7 +146,7 @@ on run {}
 	set stop_icon to character id 9209
 	set up_icon to character id 128316
 	set up2_icon to character id 9195
-	set check_icon to character id 9989
+	set check_icon to character id 9989 
 	set uncheck_icon to character id 10060
 	set futureshow_icon to character id {9197, 65039}
 	set calendar_icon to character id 128197
