@@ -29,12 +29,14 @@ I call it a VCR app, as while it does use guide data to pull name / season / epi
 2. Choose "Save as..." in the File Menu.
 3. Save as "Application" and check "Stay open after run handler"  **MUST** be checked for this to work.
 4. Save the file with the name hdhr_VCR.  I save this in the Application Folder.
-5. Now we have a compliled application, we want to open it.
+5. Now we have a compiled application, we want to open it.
 
 When you first run this, OSX will prompt multiple times for various system permissions.  Please grant all of these.
 
 6. You will then be presented with options to see the existing shows, add a show, or "Run"  
 * More about "Run" later.
+
+Let's start with "Add", as this is the main function.
 
 ![Title Screen](title.png)
 
@@ -46,7 +48,7 @@ When you first run this, OSX will prompt multiple times for various system permi
 10. Once you select your channel, you will see a screen that details the shows that are on in the next ~ 4 hours.
 ![HDHR Guide](hdhrGRID.png)
 
-11. You will notice that there is a "Manual Add" option.  This will allow you to select a time past the 4 hours of guide data provided.
+11. You will notice that there is a "Manual Add" option.  This will allow you to select a time past the 4 hours of guide data provided.  If you wish to follow this route, you can skip to https://github.com/identd113/hdhr_VCR-AS#manual-add
 
 Select a show, and click "Next"
 
@@ -54,6 +56,11 @@ Select a show, and click "Next"
 
 * A "Single" is a one-off recording.  Once the recording is complete, the show will be marked as inactive.
 * If you selected a "Series" you can select as many days as you wish.
+
+
+You will then select where you want the file to be saved.  The default location is "/Volumes/", but you will need to select a specific location.  Any attempts to select "/Volumes/" as the destination will re prompt you for a valid location.
+
+If you own a "Extend" device, or a device that has transcode capabilities, you can select which profile you wish to you.
 
 #### Manual Add
 If you wish to schedule a recording outside of the 4 hour guide window, you can select Manual Add, and add this show/series.
@@ -76,11 +83,8 @@ This allows you to set up a recording up to a week in advance.
 
 #### END Manual Add
 
-You will then select where you want the file to be saved.  The default location is "/Volumes/", but you will need to select a specific location.  Any attempts to select "/Volumes/" as the destination will re prompt you for a valid location.
 
-If you own a "Extend" device, or a device that has transcode capabilities, you can select which profile you wish to you.
-
-
+#### What is Run?
 "You told me you would tell me what "Run" is for?
 
 The button that shows "Run" in almost all dialogs, will drop you back into the idle() handler. This can be used to go back, or start over, for example if entering the incorrect information when adding a show.   This allows the script to run as needed.  It is important to know that the idle() is NOT running when a dialog is open.  If a dialog stays open forever, we will never be able to record, or update anything in the script.  Because of this, dialogs have a timeout of 60 seconds, before auto closing.  The choose from list dialog can NOT be dismissed automatically.  Our use case is the show info list.

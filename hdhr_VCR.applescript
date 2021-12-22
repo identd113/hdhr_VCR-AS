@@ -158,7 +158,7 @@ on run {}
 	set done_icon to character id 9989
 	set running_icon to character id {127939, 8205, 9794, 65039}
 	set add_icon to character id 127381
-	set version_local to "20211210"
+	set version_local to "20211222"
 	set config_version to 1
 	set progress description to "Loading " & name of me & " " & version_local
 	
@@ -203,6 +203,7 @@ on run {}
 	
 	## Lets check for a new version! This will trigger OSX to prompt for confirmation to talk to JSONHelper, the library we use for JSOn related matters.
 	my check_version()
+	
 	(*
 	This really kicks us off.  The will query to see if there are any HDHomeRun devices on the local network.  This script support multiple devices.
 	Once we find some devices, we will query them and pull there lineup data.  This tells us what channels belong to what tags, like "2.4 TPTN"
@@ -231,7 +232,7 @@ on run {}
 	
 	--Test
 	## Main is the start of the UI for the user. on main
-	
+	my checkFS("run()")
 	if shift_down of my isModifierKeyPressed("run_shift", "shift") is true then
 		--FIX NEW
 		my main("run()", "run")
@@ -242,9 +243,10 @@ on run {}
 		my rotate_logs("run()", (log_dir & logfilename as text))
 	end if
 	--idle {} 
-	--reopen {} 
-	
 	display notification "Click the icon in the dock, to add a show!" with title name of me & " " & version_local & " Started!" subtitle "We will now run in the background"
+	delay 0.1
+	reopen {}
+	
 end run
 
 ## This script will loop through this every 12 seconds, or whatever the return value is, in second is at the bottom of this handler.
@@ -374,13 +376,13 @@ on idle
 									
 									try
 										if show_end of item i of show_info is less than (cd) then
-											my logger(true, "idle9(" & randnum & ")", "INFO", show_title of item i of show_info & " ends at " & show_end of item i of show_info)
+											my logger(true, "idle9(" & randnum & ")", "INFO", quote & show_title of item i of show_info & quote & " ends at " & show_end of item i of show_info)
 											if show_is_series of item i of show_info is true then
-												my logger(true, "idle9-1(" & randnum & ")", "WARN", show_title of item i of show_info & " is a series, but passed")
+												my logger(true, "idle9-1(" & randnum & ")", "WARN", quote & show_title of item i of show_info & quote & " is a series, but passed")
 												set show_next of item i of show_info to my nextday("idle(10)", show_id of item i of show_info)
 												exit repeat
 											else
-												my logger(true, "idle9-2(" & randnum & ")", "WARN", show_title of item i of show_info & " is a single, and deactivated")
+												my logger(true, "idle9-2(" & randnum & ")", "WARN", quote & show_title of item i of show_info & quote & " is a single, and deactivated")
 												set show_active of item i of show_info to false
 												exit repeat
 											end if
@@ -504,7 +506,7 @@ on idle
 								try
 									set temp_test to my getTfromN(OriginalAirdate of temp_guide_data)
 								on error errmsg
-									my logger(true, "idle8678(" & randnum & ")", "WARN", errmsg)
+									my logger(true, "idle8678(" & randnum & ")", "WARN", errmsg) --Errors here are expected.
 									set temp_test to "Failed"
 								end try
 								my logger(true, "idle()", "INFO", "OriginalAirdate of " & quote & show_title of item i of show_info & quote & " " & temp_test)
@@ -547,27 +549,13 @@ on idle
 		on error errmsg
 			my logger(true, "idle31-1(" & randnum & ")", "ERROR", errmsg)
 		end try
-		--FIX We can likely remove this, we will just save after the periodic tuner update
-		(*
-		if next_save_dt is less than (cd) then  
-			--my logger(true, "idle()", "INFO", "Periodic Save")
-			my save_data("PeriodicSave")
-			set next_save_dt to ((cd) + (random number from 200 to 2000))
-		end if
-		*)
+		
 	on error errmsg
-		my logger(true, "idle000(" & randnum & ")", "IDLE", "END Idle Loop")
 		my logger(true, "idle000-101(" & randnum & ")", "ERROR", errmsg)
 	end try
 	my logger(true, "idle010(" & randnum & ")", "IDLE", "END Idle Loop")
 	return idle_timer
 end idle
-
-on temp_auto_delay(caller, thesec)
-	set idle_timer to thesec
-	copy ((current date) + thesec) to idle_timer_dateobj
-	my logger(true, "temp_auto_delay(" & caller & ")", "DEBUG", "idle_timer set to " & thesec)
-end temp_auto_delay
 
 ## This fires when you click the script in the dock.
 on reopen {}
@@ -578,7 +566,6 @@ on reopen {}
 end reopen
 
 ## Runs when the user attempts to quit the script.
-
 on quit {}
 	my logger(true, "quit()", "INFO", "quit() called.  We have written " & loglines_written & " lines")
 	
@@ -633,6 +620,29 @@ end quit
 
 ##########    These are custom handlers.  These are the heart of the script.    ##########
 
+on firstRun(caller)
+	set firstrun_agreed to false
+	repeat until firstrun_agreed is true
+		set firstRun_response to display dialog "This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details." & return & return & "You should have received a copy of the GNU General Public License along with this program.  If not, see <https://www.gnu.org/licenses/>." & return & return & "I hope this software can used as much as a teaching aid, as it can be for its primary function.
+If you would like to contact me with questions about copyright, please file an issue at the github page." & return & return & "https://github.com/identd113/hdhr_VCR-AS/issues" with title "GNU License Acknowledgment" with icon my curl2icon("show_info_dump(" & caller & ")", "https://www.gnu.org/graphics/gnu-smiling.png") buttons {"GitHub", "GNU v3 Verbiage", "I Agree"} default button 3
+		set firstRun_response_button to button returned of firstRun_response
+		if firstRun_response_button is "GitHub" then
+			open location "https://github.com/identd113/hdhr_VCR-AS/issues"
+		end if
+		if firstRun_response_button is "GNU v3 Verbiage" then
+			open location "https://www.gnu.org/licenses/gpl-3.0.en.html"
+		end if
+		if firstRun_response_button is "I Agree" then
+			set firstrun_agreed to true
+		end if
+	end repeat
+end firstRun
+
+on temp_auto_delay(caller, thesec)
+	set idle_timer to thesec
+	copy ((current date) + thesec) to idle_timer_dateobj
+	my logger(true, "temp_auto_delay(" & caller & ")", "DEBUG", "idle_timer set to " & thesec)
+end temp_auto_delay
 
 on hdhrGRID(caller, hdhr_device, hdhr_channel)
 	--log "hdhrgrid: " & hdhr_channel
@@ -704,9 +714,6 @@ end hdhrGRID
 --return true means we want to go back
 --return false means we cancelled out.
 --return anything else, and this is the guide data for the channel they are requesting.
-
-on hdhr_quality()
-end hdhr_quality
 
 on tuner_overview(caller)
 	--	my logger(true, "tuner_overview(" & caller & ")", "DEBUG", "START Called")
@@ -845,7 +852,11 @@ end show_info_dump
 on check_version()
 	try
 		--with timeout of 15 seconds
-		set version_response to (fetch JSON from version_url with cleaning feed)
+		try
+			set version_response to (fetch JSON from version_url with cleaning feed)
+		on error errmsg
+			my logger(true, "check_version()", "ERROR", errmsg)
+		end try
 		set version_remote to hdhr_version of item 1 of versions of version_response
 		set online_detected to true
 		my logger(true, "check_version()", "INFO", "Current Version: " & version_local & ", Remote Version: " & version_remote)
@@ -1483,7 +1494,7 @@ end recorded_today
 on add_show_info(caller, hdhr_device)
 	set progress additional description to ""
 	set progress description to "Adding a show on " & hdhr_device & "..."
-	do shell script "mkdir -p ~/Library/Caches/" & (name of me) & "/"
+	--do shell script "mkdir -p ~/Library/Caches/" & (name of me) & "/"
 	set tuner_status_result to my tuner_status2("add_show(" & caller & ")", hdhr_device)
 	set tuner_status_icon to "Tuner: " & hdhr_device
 	if tunermax of tuner_status_result is tuneractive of tuner_status_result then
@@ -2600,31 +2611,85 @@ on save_data(caller)
 	close access ref_num
 end save_data
 
-on checkifilexists(caller, filepath)
+on checkHFSpath(caller, the_path)
 	try
-		my logger(true, "checkifilexists(" & caller & ")", "INFO", filepath as text)
-		if class of filepath is not alias then
-			set filepath to POSIX file filepath
+		if (offset of "/" in the_path) is greater than 0 then
+			return false
+		else
+			return true
 		end if
-		tell application "Finder" to return (exists filepath)
+	on error errmsg
+		return missing value
+	end try
+end checkHFSpath
+
+on checkifilexists(caller, filepath)
+	my logger(true, "checkifilexists(" & caller & ")", "INFO", class of (filepath))
+	try
+		my logger(true, "checkifilexists(" & caller & ")", "INFO", (filepath as text))
+		--if class of filepath is not in {alias, «class furl»} then
+		if my checkHFSpath("checkifilexists(" & caller & ")", filepath) = false then
+			my logger(true, "checkifilexists(" & caller & ")", "WARN", "filepath is not an alias")
+			set filepath to POSIX file filepath
+			my logger(true, "checkifilexists1(" & caller & ")", "INFO", class of (filepath))
+		end if
+		my logger(true, "checkifilexists2(" & caller & ")", "INFO", (filepath as text))
+		tell application "System Events" to set file_path_exists to (exists filepath)
+		
+		my logger(true, "checkifilexists2(" & caller & ")", "INFO", file_path_exists as text)
+		return file_path_exists
 	on error errmsg
 		my logger(true, "checkifilexists(" & caller & ")", "ERROR", "Finder reported: " & errmsg)
 	end try
 end checkifilexists
 
+on checkifilexists2(caller, filepath)
+	my logger(true, "checkifilexists(" & caller & ")", "INFO", class of (filepath))
+	try
+		my logger(true, "checkifilexists(" & caller & ")", "INFO", (filepath as text))
+		--if class of filepath is not in {alias, «class furl»} then
+		if class of filepath is not alias then
+			my logger(true, "checkifilexists(" & caller & ")", "WARN", "filepath is not an alias")
+			set filepath to POSIX path of filepath
+			my logger(true, "checkifilexists1(" & caller & ")", "INFO", class of (filepath))
+		end if
+		my logger(true, "checkifilexists2(" & caller & ")", "INFO", (filepath as text))
+		tell application "Finder" to set file_path_exists to (exists filepath)
+		
+		my logger(true, "checkifilexists2(" & caller & ")", "INFO", file_path_exists as text)
+		return file_path_exists
+	on error errmsg
+		my logger(true, "checkifilexists(" & caller & ")", "ERROR", "Finder reported: " & errmsg)
+	end try
+end checkifilexists2
+
+on checkFS(caller)
+	try
+		do shell script "mkdir -p ~/Library/Caches/" & (name of me) & "/"
+	on error errmsg
+		my logger(true, "checkFS(" & caller & ")", "ERROR", errmsg)
+	end try
+end checkFS
+
 on read_data(caller, update)
+	set first_run to false
 	if update is true then
 		my save_data("read_data(" & caller & ")")
 	end if
 	--read .config file, if .json is not available
 	set hdhr_vcr_config_file to ((config_dir) & configfilename_json as text)
-	if my checkifilexists("read_data(" & caller & ")", hdhr_vcr_config_file) is false and my checkifilexists("read_data(" & caller & ")", (config_dir) & configfilename as text) is true then
-		my logger(true, "read_data(" & caller & ")", "INFO", "Using old .config file loader")
-		my read_data_old()
-		my save_data("read_data(old_config)")
-		my read_data("read_data(old_config)", false)
-		--If this works, just wow  
-		return
+	if my checkifilexists("read_data(" & caller & ")", hdhr_vcr_config_file) is false then
+		if my checkifilexists("read_data(" & caller & ")", (config_dir) & configfilename as text) is true then
+			my logger(true, "read_data(" & caller & ")", "INFO", "Using old .config file loader")
+			my read_data_old()
+			my save_data("read_data(old_config)")
+			my read_data("read_data(old_config)", false)
+			--If this works, just wow  
+			return
+		end if
+		set first_run to true
+		my logger(true, "read_data(" & caller & ")", "INFO", "First run")
+		my firstRun("read_data(" & caller & ")")
 	end if
 	my logger(true, "read_data(" & caller & ")", "IDLE", "Started open for access")
 	set ref_num to open for access hdhr_vcr_config_file
@@ -2674,88 +2739,6 @@ on read_data(caller, update)
 	--new Add back if we hit issues
 	--my validate_show_info("read_data(" & caller & ")", "", false)
 end read_data
-
---takes the the data in the filesystem, and writes to to a variable   
-on read_data_old()
-	--FIX We need to figure out how we can allow this handler to read whatever files we point it at.  Then we can add custom json sets for testing
-	--set ref_num to missing value 
-	set hdhr_vcr_config_file to ((config_dir) & configfilename as text)
-	my logger(true, "read_data()", "INFO", "Loading config from " & quote & POSIX path of hdhr_vcr_config_file & quote & "...")
-	set ref_num to open for access file hdhr_vcr_config_file
-	try
-		set hdhr_vcr_config_data to read ref_num
-		set temp_show_info to {}
-		set hdhr_vcr_config_data_parsed to my stringtolist("read_data", hdhr_vcr_config_data, return)
-		--log "read_data"
-		--set temp_show_info_template to {show_title:missing value, show_time:missing value, show_length:missing value, show_air_date:missing value, show_transcode:missing value, show_temp_dir:missing value, show_dir:missing value, show_channel:missing value, show_active:true, show_id:(do shell script "date | md5") as text, show_recording:false, show_last:(current date), show_next:missing value, show_end:missing value, notify_upnext_time:missing value, notify_recording_time:missing value}
-		repeat with i from 1 to length of hdhr_vcr_config_data_parsed
-			--fix we can add progress bars here
-			if item i of hdhr_vcr_config_data_parsed is "--NEXT SHOW--" then
-				--log "read_data_start"
-				--log i
-				set end of temp_show_info to {show_title:(item (i + 1) of hdhr_vcr_config_data_parsed), show_time:(item (i + 2) of hdhr_vcr_config_data_parsed), show_length:(item (i + 3) of hdhr_vcr_config_data_parsed), show_air_date:my stringtolist("read_data_showairdate", (item (i + 4) of hdhr_vcr_config_data_parsed), ", "), show_transcode:(item (i + 5) of hdhr_vcr_config_data_parsed), show_temp_dir:(item (i + 6) of hdhr_vcr_config_data_parsed) as alias, show_dir:(item (i + 7) of hdhr_vcr_config_data_parsed) as alias, show_channel:(item (i + 8) of hdhr_vcr_config_data_parsed), show_active:((item (i + 9) of hdhr_vcr_config_data_parsed as boolean)), show_id:(item (i + 10) of hdhr_vcr_config_data_parsed), show_recording:((item (i + 11) of hdhr_vcr_config_data_parsed as boolean)), show_last:date (item (i + 12) of hdhr_vcr_config_data_parsed), show_next:date (item (i + 13) of hdhr_vcr_config_data_parsed), show_end:date (item (i + 14) of hdhr_vcr_config_data_parsed), notify_upnext_time:missing value, notify_recording_time:missing value, show_is_series:((item (i + 15) of hdhr_vcr_config_data_parsed as boolean)), hdhr_record:(item (i + 16) of hdhr_vcr_config_data_parsed)}
-				--Fix We might be losing shows here
-				--Fix We can check for imcompatible tuners in showList here
-				--log my HDHRDeviceSearch("read_data()", (item (i + 16) of hdhr_vcr_config_data_parsed))
-				set show_info to temp_show_info
-				--log show_info
-				if show_is_series of last item of temp_show_info is true then
-					set show_next of last item of temp_show_info to my nextday("read_data_old(" & caller & ")", show_id of last item of temp_show_info)
-				end if
-				my logger(true, "read_data()", "DEBUG", "Class of transcode: " & class of show_transcode of last item of show_info & " / " & show_transcode of last item of show_info)
-			end if
-		end repeat
-		my logger(true, "read_data()", "INFO", "Config loaded")
-		try
-			--log "temp_show_info: " & temp_show_info
-		end try
-		
-		(*
-				log "show_time of item 1 of show_info"
-		log class of show_time of item 1 of show_info
-		
-		log "show_title of item 1 of show_info"  
-		log class of show_title of item 1 of show_info 
-		log "show_time of item 1 of show_info"
-		log class of show_time of item 1 of show_info
-		log "show_length of item 1 of show_info"
-		log class of show_length of item 1 of show_info
-		log my listtostring(show_air_date of item 1 of show_info, ", ")
-		log class of my listtostring(show_air_date of item 1 of show_info, ", ")
-		log "show_transcode of item 1 of show_info"
-		log class of show_transcode of item 1 of show_info
-		log "show_temp_dir of item 1 of show_info"
-		log class of show_temp_dir of item 1 of show_info
-		log "show_temp_dir of item 1 of show_info"
-		log class of show_temp_dir of item 1 of show_info
-		log "show_dir of item 1 of show_info "
-		log class of show_dir of item 1 of show_info
-		log "show_channel of item 1 of show_info"
-		log class of show_channel of item 1 of show_info
-		log "show_active of item 1 of show_info"
-		log class of show_active of item 1 of show_info
-		log " show_id of item 1 of show_info"
-		log class of show_id of item 1 of show_info
-		log "show_recording of item 1 of show_info "
-		log class of show_recording of item 1 of show_info
-		log "show_last of item 1 of show_info" 
-		log class of show_last of item 1 of show_info
-		log "show_next of item 1 of show_info"
-		log class of show_next of item 1 of show_info
-		log "show_end of item 1 of show_info"
-		log class of show_end of item 1 of show_info
-		log "show_is_series of item 1 of show_info"
-		log class of show_is_series of item 1 of show_info
-		log "hdhr_record of item 1 of show_info"
-		log class of hdhr_record of item 1 of show_info
-	*)
-	on error errmsg
-		log errmsg
-	end try
-	close access ref_num
-	my validate_show_info("read_data_old()", "", false)
-	
-end read_data_old
 
 on recording_now(caller)
 	copy (current date) to cd
@@ -2821,41 +2804,6 @@ on next_shows(caller)
 	end try
 end next_shows
 
-on check_range(check_date, start_date, end_date, hdhr_device)
-	if check_date is greater than or equal to start_date then
-		if check_date is less than or equal to end_date then
-			return true
-		end if
-	end if
-	return false
-end check_range
-
-on show_collision(caller, check_show_id)
-	if check_show_id is "" then
-		repeat with i3 from 1 to (length of show_info)
-			my show_collision("show_collision(" & caller & ")", show_id of item i3 of show_info)
-		end repeat
-	else
-		set show_offset to my HDHRShowSearch(check_show_id)
-		--log "show_offset: " & show_offset
-		
-		repeat with i from 1 to (length of show_info)
-			if show_active of item i of show_info then
-				set check_show_id_title to show_title of item i of show_info
-			end if
-		end repeat
-		
-		repeat with i2 from 1 to (length of show_info)
-			my logger(true, "show_collision(" & caller & ")", "WARN", show_title of item i2 of show_info)
-			my logger(true, "show_collision(" & caller & ")", "WARN", check_show_id_title)
-			my logger(true, "show_collision(" & caller & ")", "WARN", "- - - -")
-			if (show_title of item i2 of show_info is check_show_id_title) is true and show_id of item i2 of show_info is not check_show_id then
-				my logger(true, "show_collision(" & caller & ")", "WARN", show_id of item i2 of show_info & " may be a duplicate of " & check_show_id)
-			end if
-		end repeat
-	end if
-end show_collision
-
 on create_config_backup(caller)
 	--FIX This would run before we save a file
 	--if the config file has changed since we read it, save a backup file, appended with the date.
@@ -2869,25 +2817,12 @@ on create_config_backup(caller)
 	end try
 end create_config_backup
 
-on recording_search(caller, start_time, end_time, channel, hdhr_model)
-	set temp_hdhr_check to my HDHRDeviceSearch("recording_search", hdhr_model)
-	repeat with i from 1 to length of show_info
-		if hdhr_record of item i of show_info is hdhr_model then
-			if channel is show_channel of item i of show_info then
-				
-			end if
-		end if
-	end repeat
-end recording_search
 
 ##########    These are custom handlers.  They are more like libraries    ##########
 
-on clean_icons()
-end clean_icons
-
 on curl2icon(caller, thelink)
 	set savename to last item of my stringtolist("curl2icon(" & caller & ")", thelink, "/")
-	set temp_path to POSIX path of (path to home folder) & "Library/Caches/hdhr_VCR/" & savename as text
+	set temp_path to POSIX path of (path to home folder) & "Library/Caches/" & (name of me) & "/" & savename as text
 	if my checkifilexists("curl2icon(" & caller & ")", temp_path) is true then
 		my logger(true, "curl2icon(" & caller & ")", "DEBUG", "File exists")
 		try
@@ -3411,3 +3346,145 @@ on ms2time(caller, totalMS, time_duration, level_precision)
 	end if
 end ms2time
 
+
+
+
+--In Progress Handlers
+
+
+on recording_search(caller, start_time, end_time, channel, hdhr_model)
+	set temp_hdhr_check to my HDHRDeviceSearch("recording_search", hdhr_model)
+	repeat with i from 1 to length of show_info
+		if hdhr_record of item i of show_info is hdhr_model then
+			if channel is show_channel of item i of show_info then
+				
+			end if
+		end if
+	end repeat
+end recording_search
+
+##########    These are custom handlers.  They are more like libraries    ##########
+
+on clean_icons()
+	set temp_path to POSIX path of (path to home folder) & "Library/Caches/" & (name of me) & "/" & savename as text
+	
+end clean_icons
+
+on check_range(check_date, start_date, end_date, hdhr_device)
+	if check_date is greater than or equal to start_date then
+		if check_date is less than or equal to end_date then
+			return true
+		end if
+	end if
+	return false
+end check_range
+
+on show_collision(caller, check_show_id)
+	if check_show_id is "" then
+		repeat with i3 from 1 to (length of show_info)
+			my show_collision("show_collision(" & caller & ")", show_id of item i3 of show_info)
+		end repeat
+	else
+		set show_offset to my HDHRShowSearch(check_show_id)
+		--log "show_offset: " & show_offset
+		
+		repeat with i from 1 to (length of show_info)
+			if show_active of item i of show_info then
+				set check_show_id_title to show_title of item i of show_info
+			end if
+		end repeat
+		
+		repeat with i2 from 1 to (length of show_info)
+			my logger(true, "show_collision(" & caller & ")", "WARN", show_title of item i2 of show_info)
+			my logger(true, "show_collision(" & caller & ")", "WARN", check_show_id_title)
+			my logger(true, "show_collision(" & caller & ")", "WARN", "- - - -")
+			if (show_title of item i2 of show_info is check_show_id_title) is true and show_id of item i2 of show_info is not check_show_id then
+				my logger(true, "show_collision(" & caller & ")", "WARN", show_id of item i2 of show_info & " may be a duplicate of " & check_show_id)
+			end if
+		end repeat
+	end if
+end show_collision
+
+on read_data_old()
+	--FIX We need to figure out how we can allow this handler to read whatever files we point it at.  Then we can add custom json sets for testing
+	--set ref_num to missing value 
+	set hdhr_vcr_config_file to ((config_dir) & configfilename as text)
+	my logger(true, "read_data()", "INFO", "Loading config from " & quote & POSIX path of hdhr_vcr_config_file & quote & "...")
+	set ref_num to open for access file hdhr_vcr_config_file
+	try
+		set hdhr_vcr_config_data to read ref_num
+		set temp_show_info to {}
+		set hdhr_vcr_config_data_parsed to my stringtolist("read_data", hdhr_vcr_config_data, return)
+		--log "read_data"
+		--set temp_show_info_template to {show_title:missing value, show_time:missing value, show_length:missing value, show_air_date:missing value, show_transcode:missing value, show_temp_dir:missing value, show_dir:missing value, show_channel:missing value, show_active:true, show_id:(do shell script "date | md5") as text, show_recording:false, show_last:(current date), show_next:missing value, show_end:missing value, notify_upnext_time:missing value, notify_recording_time:missing value}
+		repeat with i from 1 to length of hdhr_vcr_config_data_parsed
+			--fix we can add progress bars here
+			if item i of hdhr_vcr_config_data_parsed is "--NEXT SHOW--" then
+				--log "read_data_start"
+				--log i
+				set end of temp_show_info to {show_title:(item (i + 1) of hdhr_vcr_config_data_parsed), show_time:(item (i + 2) of hdhr_vcr_config_data_parsed), show_length:(item (i + 3) of hdhr_vcr_config_data_parsed), show_air_date:my stringtolist("read_data_showairdate", (item (i + 4) of hdhr_vcr_config_data_parsed), ", "), show_transcode:(item (i + 5) of hdhr_vcr_config_data_parsed), show_temp_dir:(item (i + 6) of hdhr_vcr_config_data_parsed) as alias, show_dir:(item (i + 7) of hdhr_vcr_config_data_parsed) as alias, show_channel:(item (i + 8) of hdhr_vcr_config_data_parsed), show_active:((item (i + 9) of hdhr_vcr_config_data_parsed as boolean)), show_id:(item (i + 10) of hdhr_vcr_config_data_parsed), show_recording:((item (i + 11) of hdhr_vcr_config_data_parsed as boolean)), show_last:date (item (i + 12) of hdhr_vcr_config_data_parsed), show_next:date (item (i + 13) of hdhr_vcr_config_data_parsed), show_end:date (item (i + 14) of hdhr_vcr_config_data_parsed), notify_upnext_time:missing value, notify_recording_time:missing value, show_is_series:((item (i + 15) of hdhr_vcr_config_data_parsed as boolean)), hdhr_record:(item (i + 16) of hdhr_vcr_config_data_parsed)}
+				--Fix We might be losing shows here
+				--Fix We can check for imcompatible tuners in showList here
+				--log my HDHRDeviceSearch("read_data()", (item (i + 16) of hdhr_vcr_config_data_parsed))
+				set show_info to temp_show_info
+				--log show_info
+				if show_is_series of last item of temp_show_info is true then
+					set show_next of last item of temp_show_info to my nextday("read_data_old(" & caller & ")", show_id of last item of temp_show_info)
+				end if
+				my logger(true, "read_data()", "DEBUG", "Class of transcode: " & class of show_transcode of last item of show_info & " / " & show_transcode of last item of show_info)
+			end if
+		end repeat
+		my logger(true, "read_data()", "INFO", "Config loaded")
+		try
+			--log "temp_show_info: " & temp_show_info
+		end try
+		
+		(*
+				log "show_time of item 1 of show_info"
+		log class of show_time of item 1 of show_info
+		
+		log "show_title of item 1 of show_info"  
+		log class of show_title of item 1 of show_info 
+		log "show_time of item 1 of show_info"
+		log class of show_time of item 1 of show_info
+		log "show_length of item 1 of show_info"
+		log class of show_length of item 1 of show_info
+		log my listtostring(show_air_date of item 1 of show_info, ", ")
+		log class of my listtostring(show_air_date of item 1 of show_info, ", ")
+		log "show_transcode of item 1 of show_info"
+		log class of show_transcode of item 1 of show_info
+		log "show_temp_dir of item 1 of show_info"
+		log class of show_temp_dir of item 1 of show_info
+		log "show_temp_dir of item 1 of show_info"
+		log class of show_temp_dir of item 1 of show_info
+		log "show_dir of item 1 of show_info "
+		log class of show_dir of item 1 of show_info
+		log "show_channel of item 1 of show_info"
+		log class of show_channel of item 1 of show_info
+		log "show_active of item 1 of show_info"
+		log class of show_active of item 1 of show_info
+		log " show_id of item 1 of show_info"
+		log class of show_id of item 1 of show_info
+		log "show_recording of item 1 of show_info "
+		log class of show_recording of item 1 of show_info
+		log "show_last of item 1 of show_info" 
+		log class of show_last of item 1 of show_info
+		log "show_next of item 1 of show_info"
+		log class of show_next of item 1 of show_info
+		log "show_end of item 1 of show_info"
+		log class of show_end of item 1 of show_info
+		log "show_is_series of item 1 of show_info"
+		log class of show_is_series of item 1 of show_info
+		log "hdhr_record of item 1 of show_info"
+		log class of hdhr_record of item 1 of show_info
+	*)
+	on error errmsg
+		log errmsg
+	end try
+	close access ref_num
+	my validate_show_info("read_data_old()", "", false)
+	
+end read_data_old
+
+on hdhr_quality()
+end hdhr_quality
