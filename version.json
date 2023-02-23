@@ -2,6 +2,10 @@
 	"versions": 
 [
 {
+"hdhr_version":"20230223",
+"changelog":"Release! Fixed error when missing the cache folder, Replaced obsolete python2 requirement, display is logs if a channel does not contains MPEG or AC3 for codec types. General code cleanup"
+},
+{
 "hdhr_version":"20211222",
 "changelog":"Stuff changed, and I am too lazy to document them all.  We can detect if a recording has a PID, and restart the recording as needed."
 },
