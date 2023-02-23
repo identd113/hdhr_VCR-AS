@@ -2,6 +2,7 @@
 (*
 
 Todo:
+Check existing recordiings, before we start v same show again.
 Add time to live sporting events
 setup a config record we can export to the save file.
 create backup of config file
@@ -125,10 +126,10 @@ use application "JSON Helper"
 
 ##########    These are reserved handlers, we do specific things in them    ##########
 on run {}
-	set local_env to (name of current application) 
+	set local_env to (name of current application)
 	set LF to "
 "
-	--Icons!	 
+	--Icons! 
 	set play_icon to character id 9654
 	set record_icon to character id 128308
 	set tv_icon to character id 128250
@@ -1829,7 +1830,7 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 		--fix Update to "https://ipv4-api.hdhomerun.com/discover"
 		--		--> {ModelNumber:"HDTC-2US", UpgradeAvailable:"20220203", BaseURL:"http://10.0.1.101:80", FirmwareVersion:"20220125", DeviceAuth:"pP60GFYQSja9tKyA4iwcpzcG", FirmwareName:"hdhomeruntc_atsc", FriendlyName:"HDHomeRun EXTEND", LineupURL:"http://10.0.1.101:80/lineup.json", TunerCount:2, DeviceID:"105404BE"}
 		
-		--set hdhr_device_discovery to {{ModelNumber:"HDTC-2US", UpgradeAvailable:"20210624", BaseURL:"http://10.0.1.101:80", FirmwareVersion:"20210210", DeviceAuth:"nrwqkmEpZNhIzf539VfjHyYP", FirmwareName:"hdhomeruntc_atsc", FriendlyName:"HDHomeRun EXTEND", LineupURL:"http://10.0.1.101:80/lineup.json", TunerCount:2, DeviceID:"105404BE"}}
+		--set end of hdhr_device_discovery to {{ModelNumber:"HDTC-2US", UpgradeAvailable:"20210624", BaseURL:"http://10.0.1.101:80", FirmwareVersion:"20210210", DeviceAuth:"nrwqkmEpZNhIzf539VfjHyYP", FirmwareName:"hdhomeruntc_atsc", FriendlyName:"HDHomeRun EXTEND", LineupURL:"http://10.0.1.101:80/lineup.json", TunerCount:2, DeviceID:"XX5404BE"}}
 		my logger(true, "HDHRDeviceDiscovery(" & caller & ")", "INFO", "POST Discovery, length: " & length of hdhr_device_discovery)
 		set progress total steps to length of hdhr_device_discovery
 		repeat with i from 1 to length of hdhr_device_discovery
@@ -1843,6 +1844,18 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 				on error
 					set is_legacy to false
 				end try
+				
+				--This is to weed out invalid devices.
+				try
+					set is_valid to true
+					log DeviceID of item i of hdhr_device_discovery
+				on error
+					set is_valid to false
+				end try
+				if is_valid = false then
+					exit repeat
+				end if
+				
 				try
 					set tuner_transcode_temp to Transcode of item i of hdhr_device_discovery
 				on error
@@ -1852,14 +1865,15 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 				
 				set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:DiscoverURL of item i of hdhr_device_discovery, lineup_url:LineupURL of item i of hdhr_device_discovery, device_id:DeviceID of item i of hdhr_device_discovery, does_transcode:tuner_transcode_temp, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value, channel_mapping:missing value, BaseURL:BaseURL of item i of hdhr_device_discovery, statusURL:(BaseURL of item i of hdhr_device_discovery & "/status.json"), is_active:true, is_active_reason:"Newly Added Tuner"}
 				
-				--log statusURL of last item of HDHR_DEVICE_LIST 
+				--log statusURL of last item of HDHR_DEVICE_LIST
 				--log "HDHRDeviceDiscovery25"
 				if is_legacy is true then
 					my logger(true, "HDHRDeviceDiscovery(" & caller & ")", "WARN", hdhr_device & " is a legacy device, so we will deactivate it.")
 					set is_active of last item of HDHR_DEVICE_LIST to false
 					set is_active_reason of last item of HDHR_DEVICE_LIST to "Legacy Device"
+				else
+					my logger(true, "HDHRDeviceDiscovery(" & caller & ")", "INFO", "Added: " & device_id of last item of HDHR_DEVICE_LIST)
 				end if
-				my logger(true, "HDHRDeviceDiscovery(" & caller & ")", "INFO", "Added: " & device_id of last item of HDHR_DEVICE_LIST)
 			end repeat
 		end repeat
 		
