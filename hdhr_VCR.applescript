@@ -3,20 +3,21 @@
 
 Todo:
 Check existing recordiings, before we start v same show again.
-Add time to live sporting events
+Add time to live sporting events -Done
 setup a config record we can export to the save file.
 create backup of config file
 Auto roll .log when starting (tail -n X) 
-
+Fix time slide
+ 
 --rewrite next_show to be more like recording_now 
 
 tell application "JSON Helper" 
 	fetch JSON from "http://10.0.1.101/discover.json"
-		--> {ModelNumber:"HDTC-2US", UpgradeAvailable:"20210624", BaseURL:"http://10.0.1.101:80", FirmwareVersion:"20210210", DeviceAuth:"nrwqkmEpZNhIzf539VfjHyYP", FirmwareName:"hdhomeruntc_atsc", FriendlyName:"HDHomeRun EXTEND", LineupURL:"http://10.0.1.101:80/lineup.json", TunerCount:2, DeviceID:"105404BE"}
+		--> {ModelNumber:"HDTC 2US", UpgradeAvailable:"20210624", BaseURL:"http://10.0.1.101:80", FirmwareVersion:"20210210", DeviceAuth:"nrwqkmEpZNhIzf539VfjHyYP", FirmwareName:"hdhomeruntc_atsc", FriendlyName:"HDHomeRun EXTEND", LineupURL:"http://10.0.1.101:80/lineup.json", TunerCount:2, DeviceID:"105404BE"}
 end tell
 *)
 
---First variable sets capitalization 
+--First variable sets capitalization  
 
 --add display on main screen to show next recording.  Check that time, and see if multiple shows are being recorded at the time. -Done
 --This may just evolve into a futurerecording search, which we could use to not over book recording times. -In Progress
@@ -356,6 +357,18 @@ on idle
 									
 									--Make sure if we are start early, we dont end early.  This causes us to call the tuner status API every 8 seconds.  Since this call is hosted locally, I suspect there is not APi limit set, as the APi is returning cached data from silicondust
 									set show_runtime to (show_end of item i of show_info) - (cd)
+									
+									
+									--NEW
+									if show_is_sport of item i of show_info is true then
+										try
+											my logger(true, "idle901()", "INFO", "Setting show run time to an additional 30 minutes")
+											set show_runtime to show_runtime + 1800
+										on error errmsg
+											my logger(true, "idle684()", "ERROR", "Unable to extend record time: " & errmsg)
+										end try
+									end if
+									
 									set tuner_status_result to my tuner_status2("idle(15)", hdhr_record of item i of show_info)
 									--my logger(true, "idle()", "INFO", "2-1")
 									--my logger(true, "idle()", "INFO", tunermax of tuner_status_result & ">" & tuneractive of tuner_status_result)
@@ -1366,7 +1379,7 @@ on add_show_info(caller, hdhr_device)
 	--if hdhrGRID_response is not in {true, false} then
 	
 	--repeat with i3 from 1 to length of hdhrGRID_response
-	set time_slide to 0
+	
 	--set default_record_day to (weekday of ((current date) + time_slide * days)) as text
 	
 	set hdhr_skip_multiple_bool to false
@@ -1388,7 +1401,7 @@ on add_show_info(caller, hdhr_device)
 			set progress completed steps to 0
 			set temp_show_progress to {}
 			repeat 1 times
-				set temp_show_info to {show_title:missing value, show_time:missing value, show_length:missing value, show_air_date:missing value, show_transcode:missing value, show_temp_dir:missing value, show_dir:missing value, show_channel:show_channel_temp, show_active:true, show_id:(do shell script "date | md5") as text, show_recording:false, show_last:my epoch(), show_next:missing value, show_end:missing value, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:hdhr_device, show_is_series:false, show_seriesid:""}
+				set temp_show_info to {show_title:missing value, show_time:missing value, show_length:missing value, show_air_date:missing value, show_transcode:missing value, show_temp_dir:missing value, show_dir:missing value, show_channel:show_channel_temp, show_active:true, show_id:(do shell script "date | md5") as text, show_recording:false, show_last:my epoch(), show_next:missing value, show_end:missing value, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:hdhr_device, show_is_series:false, show_seriesid:"", show_tags:{}, show_time_orig:missing value, show_is_sport:false, show_recorded_today:false}
 				if length of hdhrGRID_response is 1 and hdhrGRID_response is {""} then
 					my logger(true, "add_show_info()", "INFO", "Manually adding show for " & hdhr_device)
 					--title 
@@ -1459,7 +1472,8 @@ on add_show_info(caller, hdhr_device)
 					
 					try
 						set default_record_day to (weekday of my epoch2datetime("hdhrGRID(3)", (my getTfromN(StartTime of item i3 of hdhrGRID_response)))) as text
-					on error
+					on error errmsg
+						my logger(true, "add_show_info(" & caller & ")", "WARN", "default_record_day failed, errmsg: " & errmsg)
 						set default_record_day to weekday of (current date) as text
 					end try
 					
@@ -1491,39 +1505,45 @@ on add_show_info(caller, hdhr_device)
 						set synopsis_temp to Synopsis of item i3 of hdhrGRID_response
 					on error
 						my logger(true, "add_show_info(" & caller & ")", "WARN", "Unable to pull Synopsis")
-						set synopsis_temp to "No Synopsis provided"
+						set synopsis_temp to "No Synopsis"
 					end try
 					
 					try
 						set seriesid_temp to SeriesID of item i3 of hdhrGRID_response
 						set show_seriesid of temp_show_info to SeriesID of item i3 of hdhrGRID_response
-						my logger(true, "add_show_info(" & caller & ")", "INFO", "Set Series ID")
+						my logger(true, "add_show_info(" & caller & ")", "INFO", "Set Series ID:" & SeriesID of item i3 of hdhrGRID_response)
 					on error errmsg
 						my logger(true, "add_show_info(" & caller & ")", "WARN", "Unable to pull Series ID: " & errmsg)
 						set seriesid_temp to "No SeriesID provided"
 					end try
 					
 					
+					set temp_icon to my curl2icon("add_show_info(" & caller & ")", ImageURL of item i3 of hdhrGRID_response)
+					--force error to test custom icons 
+					--error -128
+					
 					try
-						try
-							set temp_icon to my curl2icon("add_show_info(" & caller & ")", ImageURL of item i3 of hdhrGRID_response)
-							--force error to test custom icons 
-							--error -128
-						on error
-							set temp_icon to note
-						end try
-						
-						set show_tags to "Not Listed"
-						try
-							set show_tags to my listtostring("add_show_info(" & caller & ")", Filter of item i3 of hdhrGRID_response, ", ")
-						end try
-						
-						set temp_default_button to 3
-						if temp_is_series is true then
-							set temp_default_button to 2
-						end if
-						
-						set temp_show_info_series to (display dialog "Is this a single or a series recording? " & return & return & "Title: " & show_title of temp_show_info & return & "Type: " & show_tags & return & "SeriesID: " & seriesid_temp & return & return & "Synopsis: " & synopsis_temp & return & return & "Start: " & time string of my time_set("add_show_info(" & caller & ")", current date, show_time of temp_show_info) & return & "Length: " & my ms2time("add_show_info2", ((show_length of temp_show_info) * 60), "s", 2) buttons {running_icon & " Run", series_icon & " Series", single_icon & " Single"} default button temp_default_button cancel button 1 with title my check_version_dialog() giving up after dialog_timeout with icon temp_icon)
+						set show_tags of temp_show_info to Filter of item i3 of hdhrGRID_response
+					on error
+						set show_tags of temp_show_info to {"None"}
+					end try
+					
+					--					set show_tags_text of temp_show_info to my listtostring("add_show_info(" & caller & ")", show_tags of temp_show_info , ", ")
+					
+					try
+						set tags_text to my listtostring("add_show_info(" & caller & ")", show_tags of temp_show_info, ", ")
+					on error errmsg
+						set tags_text to "ERROR"
+						my logger(true, "add_show_info1(" & caller & ")", "ERROR", errmsg)
+					end try
+					
+					set temp_default_button to 3
+					if temp_is_series is true then
+						set temp_default_button to 2
+					end if
+					
+					try
+						set temp_show_info_series to (display dialog "Is this a single or a series recording? " & return & return & "Title: " & show_title of temp_show_info & return & "Type: " & tags_text & return & "SeriesID: " & seriesid_temp & return & return & "Synopsis: " & synopsis_temp & return & return & "Start: " & time string of my time_set("add_show_info(" & caller & ")", current date, show_time of temp_show_info) & return & "Length: " & my ms2time("add_show_info2", ((show_length of temp_show_info) * 60), "s", 2) buttons {running_icon & " Run", series_icon & " Series", single_icon & " Single"} default button temp_default_button cancel button 1 with title my check_version_dialog() giving up after dialog_timeout with icon temp_icon)
 						
 						--set temp_show_info_series to (display dialog "Is this a single or a series recording? " & return & return & "Title: " & show_title of temp_show_info & return & return & "Synopsis: " & synopsis_temp & return & "Start: " & show_time of temp_show_info & return & "Length: " & show_length of temp_show_info buttons {"Cancel", series_icon & " Series", single_icon & " Single"} default button 3 with title my check_version_dialog() giving up after dialog_timeout with icon note)
 						
@@ -1537,8 +1557,8 @@ on add_show_info(caller, hdhr_device)
 						set progress additional description to my listtostring("add_show(" & caller & ")", temp_show_progress, return)
 						set progress completed steps to 4
 						my logger(true, "add_show_info(" & caller & ")", "INFO", "(Auto) show_is_series: " & show_is_series of temp_show_info)
-					on error
-						my logger(true, "add_show_info(" & caller & ")", "WARN", "(Auto) " & show_title of temp_show_info & " NOT added")
+					on error errmsg
+						my logger(true, "add_show_info(" & caller & ")", "WARN", "(Auto) " & show_title of temp_show_info & " NOT added, errmsg: " & errmsg)
 						exit repeat
 					end try
 				end if
@@ -1561,12 +1581,26 @@ on add_show_info(caller, hdhr_device)
 							set time_slide to 1
 						end if
 					on error errmsg
+						my logger(true, "add_show_info(" & caller & ")", "WARN", "Time Slide defaulted to 0, errmsg: " & errmsg)
 						set time_slide to 0
 						set default_record_day to weekday of (current date) as text
 					end try
 				else
 					set default_record_day to temp_show_air_date
 				end if
+				
+				
+				--NEW
+				set sports_ball_bool to "No"
+				try
+					if "Sports" is in show_tags of temp_show_info then
+						set sports_ball_bool to button returned of (display dialog quote & show_title of temp_show_info & quote & return & return & "Is listed as a Sport" & return & "Would you like to add an additional 30 minutes past the scheduled time, to ensure the whole game is captured?" buttons {"Run", "No", "Yes"} default button 3 cancel button 1 with title my check_version_dialog() giving up after dialog_timeout with icon temp_icon)
+						if sports_ball_bool is "Yes" then
+							set show_is_sport of temp_show_info to true
+						end if
+					end if
+				end try
+				
 				if show_is_series of temp_show_info is true then
 					set show_air_date of temp_show_info to (choose from list {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"} default items default_record_day with title my check_version_dialog() OK button name "Next.." cancel button name running_icon & " Run" with prompt "Select the days you wish to record." & return & "A \"Series\" can select multiple days." with multiple selections allowed without empty selection allowed)
 					my logger(true, "add_show_info()", "INFO", "(Manual) show_air_date: " & my listtostring("add_show", show_air_date of temp_show_info, ","))
@@ -1574,7 +1608,7 @@ on add_show_info(caller, hdhr_device)
 				--choose from list show_air_date of temp_show_info with prompt "Test1"
 				if show_air_date of temp_show_info is false then
 					return
-					--fall back into the idle() loop
+					--fall back into the idle() loop 
 				end if
 				if show_is_series of temp_show_info is false then
 					if hdhrGRID_response is {""} then
@@ -1608,9 +1642,9 @@ on add_show_info(caller, hdhr_device)
 						try
 							set show_transcode of temp_show_info to word 1 of item 1 of show_transcode_response
 							--my logger(true, "add_show_info2()", "INFO", word 1 of item 1 of show_transcode_response)
-						on error
+						on error errmsg
 							set show_transcode of temp_show_info to "None"
-							my logger(true, "add_show_info(" & caller & " transcode)", "INFO", "User clicked \"Run\"")
+							my logger(true, "add_show_info(" & caller & " transcode)", "INFO", "User clicked \"Run\", errmsg: " & errmsg)
 							return false
 						end try
 					else
@@ -2200,6 +2234,12 @@ on update_show(caller, the_show_id, force_update)
 					my logger(true, "update_shows(" & caller & ")", "WARN", "Unable to set show_seriesid")
 				end try
 				
+				try
+					set show_tags of item show_offset of show_info to Filter of hdhr_response_channel
+				on error errmsg
+					my logger(true, "update_shows(" & caller & ")", "WARN", "Unable to set show_tags, errmsg: " & errmsg)
+				end try
+				
 				
 				set progress completed steps to 2
 				if show_title of item show_offset of show_info is not equal to hdhr_response_channel_title then
@@ -2290,6 +2330,28 @@ on save_data(caller)
 				on error errmsg
 					set item i5 of temp_show_info to item i5 of temp_show_info & {show_seriesid:""}
 					my logger(true, "save_data_json", "INFO", "Added SeriesID to " & quote & show_title of item i5 of temp_show_info & quote)
+				end try
+				
+				try
+					set show_time_orig of item i5 of temp_show_info to (show_time_orig of item i5 of temp_show_info as text)
+					--my logger(true, "save_data_json", "INFO", show_seriesid of item i5 of temp_show_info)
+				on error errmsg
+					set item i5 of temp_show_info to item i5 of temp_show_info & {show_time_orig:show_time of item i5 of temp_show_info as number}
+					my logger(true, "save_data_json", "INFO", "Added show_time_orig to " & quote & show_title of item i5 of temp_show_info & quote)
+				end try
+				
+				try
+					set show_tags of item i5 of temp_show_info to show_tags of item i5 of temp_show_info as text
+				on error errmsg
+					set item i5 of temp_show_info to item i5 of temp_show_info & {show_tags:{}}
+					my logger(true, "save_data_json", "INFO", "Added show_tags to " & quote & show_title of item i5 of temp_show_info & quote)
+				end try
+				
+				try
+					set show_is_sport of item i5 of temp_show_info to show_is_sport of item i5 of temp_show_info as text
+				on error errmsg
+					set item i5 of temp_show_info to item i5 of temp_show_info & {show_is_sport:false}
+					my logger(true, "save_data_json", "INFO", "Added show_is_sport to " & quote & show_title of item i5 of temp_show_info & quote)
 				end try
 			else
 				set item i5 of temp_show_info to ""
@@ -2593,19 +2655,23 @@ end clean_icons
 
 on curl2icon(caller, thelink)
 	set savename to last item of my stringtolist("curl2icon(" & caller & ")", thelink, "/")
-	set temp_path to POSIX path of (path to home folder) & "Library/Caches/hdhr_VCR/" & savename as text
-	if my checkfileexists("curl2icon(" & caller & ")", temp_path) is true then
-		my logger(true, "curl2icon(" & caller & ")", "DEBUG", "File exists")
-		try
-			do shell script "touch " & temp_path
-		on error errmsg
-			my logger(true, "curl2icon(" & caller & ")", "WARN", "Unable to update date modified of " & savename)
-		end try
-	else
-		do shell script "curl --silent '" & thelink & "' -o '" & temp_path & "'"
-		my logger(true, "curl2icon(" & caller & ")", "INFO", "File does not exist: " & quote & temp_path & quote & ", creating")
-	end if
-	return POSIX file temp_path
+	try
+		set temp_path to POSIX path of (path to home folder) & "Library/Caches/hdhr_VCR/" & savename as text
+		if my checkfileexists("curl2icon(" & caller & ")", temp_path) is true then
+			my logger(true, "curl2icon(" & caller & ")", "DEBUG", "File exists")
+			try
+				do shell script "touch " & temp_path
+			on error errmsg
+				my logger(true, "curl2icon(" & caller & ")", "WARN", "Unable to update date modified of " & savename)
+			end try
+		else
+			do shell script "curl --silent '" & thelink & "' -o '" & temp_path & "'"
+			my logger(true, "curl2icon(" & caller & ")", "INFO", "File does not exist: " & quote & temp_path & quote & ", creating")
+		end if
+		return POSIX file temp_path
+	on error errmsg
+		return caution
+	end try
 end curl2icon
 
 on showid2PID(caller, show_id, kill_pid, logging)
