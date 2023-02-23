@@ -125,6 +125,8 @@ use application "JSON Helper"
 
 ##########    These are reserved handlers, we do specific things in them    ##########
 on run {}
+	log version of me
+	display dialog ""
 	set local_env to (name of current application)
 	set LF to "
 "
@@ -155,7 +157,8 @@ on run {}
 	set running_icon to character id {127939, 8205, 9794, 65039}
 	set add_icon to character id 127381
 	
-	set version_local to "20230223"
+	-- set version_local to "20230223"
+	set version_local to version of me
 	set config_version to 1
 	set progress description to "Loading " & name of me & " " & version_local
 	
@@ -479,7 +482,7 @@ end reopen
 on quit {}
 	my logger(true, "quit()", "INFO", "quit() called.  We have written " & loglines_written & " lines")
 	
-	--add check to see if we are recording. 
+	--add check to see if we are recording.  
 	set hdhr_quit_record to false
 	set hdhr_quit_record_titles to {}
 	repeat with i from 1 to length of show_info
@@ -487,8 +490,7 @@ on quit {}
 			set hdhr_quit_record to true
 			set end of hdhr_quit_record_titles to quote & show_title of item i of show_info & quote & " on " & show_channel of item i of show_info
 		end if
-	end repeat
-git	
+	end repeat 
 	if hdhr_quit_record is true then
 		my logger(true, "quit()", "INFO", "The following shows are marked as currently recording: " & my listtostring("quit()", hdhr_quit_record_titles, ","))
 		-- FIX We need to time out after some time, so if we handle restarts and shutdowns better (while recording)
