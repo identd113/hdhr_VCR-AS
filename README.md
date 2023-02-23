@@ -64,7 +64,7 @@ Select a show, and click "Next"
 
 You will then select where you want the file to be saved.  The default location is "/Volumes/", but you will need to select a specific location.  Any attempts to select "/Volumes/" as the destination will re prompt you for a valid location.
 
-If you own a "Extend" device, or a device that has transcode capabilities, you can select which profile you wish to you.
+If you own a "Extend" device, or a device that has transcode capabilities, you can select which profile you wish to use.
 
 #### Manual Add
 If you wish to schedule a recording outside of the 4 hour guide window, you can select Manual Add, and add this show/series.

@@ -11,7 +11,7 @@
 },
 {
 "hdhr_version":"20210905",
-"changelog":"We now use JSON to save the config.  We will attempt to convert your old config file.  We can now edit, and add multiple shows.  Main screen now shows the next upcoming shows, and what is currently recording. When adding a show, we now show the shows  thumbnail image.  We now roll logs as needed.  More progress bars!"
+"changelog":"We now use JSON to save the config.  We will attempt to convert your old config file.  We can now edit, and add multiple shows.  Main screen now shows the next upcoming shows, and what is currently recording. When adding a show, we now show the shows thumbnail image. We now roll logs as needed.  More progress bars!"
 },
 {
 "hdhr_version":"20210805",
