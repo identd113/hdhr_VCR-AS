@@ -30,9 +30,9 @@ I call it a VCR app, as while it does use guide data to pull name / season / epi
 
 ### How to use
 1. Download the file hdhr_VCR.applescript, and open this in Script Editor.
-2. Choose "Save as..." in the File Menu.
+2. Choose "Export..." in the File Menu.
 3. Save as "Application" and check "Stay open after run handler"  **MUST** be checked for this to work.
-4. Save the file with the name hdhr_VCR.  I save this in the Application Folder.
+4. Save the file with the name hdhr_VCR, and then save this in the Application Folder.
 5. Now we have a compiled application, we want to open it.
 
 When you first run this, OSX will prompt multiple times for various system permissions.  Please grant all of these.
