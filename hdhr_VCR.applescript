@@ -1,6 +1,13 @@
 
 (*
 
+We need to be able to know how many total tuners we have.
+ then run mytimeslot_build(num_of_tuners)
+ We can start with marking the existing shows in showlist
+
+
+
+
 Todo:
 Check existing recordiings, before we start the same show again.
 Add time to live sporting events -Done
@@ -115,6 +122,7 @@ global loglines_written
 global loglines_max
 
 global missing_tuner_retry_count
+global timeslot
 
 ## Since we use JSON helper to do some of the work, we should declare it, so we dont end up having to use tell blocks everywhere.  If we declare 1 thing, we have to declare everything we are using.
 use AppleScript version "2.4"
@@ -163,8 +171,7 @@ on run {}
 	set running_icon to character id {127939, 8205, 9794, 65039}
 	set add_icon to character id 127381
 	
-	-- set version_local to "20230223"
-	set version_local to version of me
+	set version_local to "20230226"
 	set config_version to 1
 	set progress description to "Loading " & name of me & " " & version_local
 	
@@ -204,6 +211,7 @@ on run {}
 	set back_channel to missing value
 	copy (current date) to idle_timer_dateobj
 	set missing_tuner_retry_count to 0
+	set timeslot to {}
 	my logger(true, "init", "INFO", "Started " & name of me & " " & version_local)
 	
 	--
@@ -1943,7 +1951,7 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 		--clear all devices, to see how we react:
 		--set HDHR_DEVICE_LIST to {}
 		--Add a fake device entry to make sure we dont break this for multiple devices.
-		--set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value, channel_mapping:missing value, BaseURL:BaseURL of item 1 of hdhr_device_discovery, statusURL:"http://10.0.1.101/status.json", Legacy:1, is_active:true}
+		set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value, channel_mapping:missing value, BaseURL:BaseURL of item 1 of hdhr_device_discovery, statusURL:"http://10.0.1.101/status.json", Legacy:1, is_active:true}
 		
 		--We now have a list of tuners, via a list of records in HDHR_TUNERS, now we want to pull a lineup, and a guide. 
 		
@@ -3276,3 +3284,128 @@ on ms2time(caller, totalMS, time_duration, level_precision)
 		return my listtostring("ms2time(" & caller & ")", "0ms", " ")
 	end if
 end ms2time
+
+
+
+
+
+----------  NEW --------
+
+on timeslot_range_clear(start_minute, end_minute, ts_tuner)
+	repeat with i from start_minute to end_minute
+		if item i of item ts_tuner of timeslot = true then
+			--log "timeslot_range_clear, tuner " & ts_tuner & ": false"
+			return false
+		end if
+	end repeat
+	log "timeslot_range_clear, tuner " & ts_tuner & ": true"
+	return true
+end timeslot_range_clear
+
+on timeslot_set(start_minute, end_minute, inclusive)
+	set busy_tuners to 0
+	--Checks to see if the available timeslot is available.  We may have many tuners, so we need to loop through each tuner, and then through each list
+	--set timeslot_tuner_count to 4 --on tuner_status2(caller, device_id)
+	repeat with i from 1 to length of timeslot
+		--log "length of timeslot: " & length of timeslot & "  /   " & i
+		if my timeslot_range_clear(start_minute, end_minute, i) = true then
+			repeat with i2 from start_minute to end_minute
+				set item i2 of item i of timeslot to true
+			end repeat
+			exit repeat
+		else
+			log "Tuner " & i & " full"
+		end if
+		--Anything under this will be per tuner
+		if length of item i of timeslot = 5 then -- We check to make sure this list isnt corrupted.
+			(*
+			repeat with i2 from start_minute to end_minute
+				--i2 is walking each list.
+				my timeslot_range_clear(
+				
+				if item i2 of item i of timeslot = true then
+					log "exit repeat" & i & " " & i2
+					set busy_tuners to busy_tuners + 1
+					exit repeat
+				else
+					set item i2 of item i of timeslot to true
+					if end_minute = i2 then
+						log "Exit called: " & i2
+						return true
+					end if
+				end if
+			end repeat
+		*)
+		else
+			log "timeslot set ERROR"
+			return false
+		end if
+	end repeat
+	if busy_tuners = length of timeslot then
+		log "set false"
+		return false -- all tuners are in use at this time
+	else
+		log "set true"
+		return true -- We successfully set the timeslot
+	end if
+	--return false means our 
+	--return true is that the time is available, on some tuner
+end timeslot_set
+
+on timeslot_get(start_minute, end_minute, inclusive)
+	set busy_tuners to 0
+	--Checks to see if the available timeslot is avilable.  We may have many tuners, so we need to loop through each tuner, and then through each list
+	--set timeslot_tuner_count to 4 --on tuner_status2(caller, device_id)
+	--	log "length of timeslot: " & length of timeslot
+	repeat with i from 1 to length of timeslot
+		--Anything under this will be per tuner
+		if length of item i of timeslot = 10800 then -- We check to make sure this list isnt corrupted.
+			repeat with i2 from start_minute to end_minute
+				--i2 is walking each list.
+				if item i2 of item i of timeslot = true then
+					set busy_tuners to busy_tuners + 1
+					log i & " " & i2
+					log "exit"
+					exit repeat
+				end if
+			end repeat
+		end if
+	end repeat
+	log "GET busy_tuner: " & busy_tuners
+	if busy_tuners = length of timeslot then
+		log "GET false"
+		return false -- all tuners are in use at this time
+	else
+		log "GET true"
+		return true -- We have a timeslot
+	end if
+	--return false is the time is not avilable, on any tuner
+	--return true is that the time is avilable, on some tuner
+end timeslot_get
+
+on timeslot_build(num_of_tuners)
+	try
+		set timeslot to {}
+		set templist to {}
+		--we need one list item per minute of the week, which brings us to 10800 items
+		repeat num_of_tuners times
+			repeat 10800 times
+				set end of templist to false
+			end repeat
+			set end of timeslot to templist
+			set templist to {}
+		end repeat
+		log "timeslot_build true"
+		return true
+	on error errnum
+		log "timeslot_build false"
+		return false
+	end try
+	(*
+	repeat with i from 1 to length of timeslot
+		choose from list item 1 of timeslot with title i
+	end repeat
+	*)
+	--return false means we errored
+	--return true means we built the list
+end timeslot_build
