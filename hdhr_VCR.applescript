@@ -171,7 +171,7 @@ on run {}
 	set running_icon to character id {127939, 8205, 9794, 65039}
 	set add_icon to character id 127381
 	
-	set version_local to "20230226"
+	set version_local to "20230307"
 	set config_version to 1
 	set progress description to "Loading " & name of me & " " & version_local
 	
@@ -298,6 +298,7 @@ on idle
 								end timeout
 								my save_data("PostHDHRDeviceDiscovery")
 							on error errnum
+								--FIX we fail here after awhile, maybe midnight switchover?, likely config file save related
 								my logger(true, "idle(6)", "ERROR", "Unable to update HDHRDeviceDiscovery " & errnum)
 							end try
 							
@@ -423,7 +424,7 @@ on idle
 									
 									--NEW 
 									
-									if (notify_upnext_time of item i of show_info is less than (cd) or notify_upnext_time of item i of show_info is missing value) and (show_next of item i of show_info) - (cd) is less than or equal to 1 * hours then
+									if (notify_upnext_time of item i of show_info is less than (cd) or notify_upnext_time of item i of show_info is missing value) and (show_next of item i of show_info) - (cd) is less than or equal to 1 * hours and show_recording of item i of show_info = false then
 										--my logger(true, "idle()", "INFO", "1-2")
 										display notification "Starts: " & my short_date("idle(11)", show_next of item i of show_info, false, false) & " (" & my ms2time("idle(12)", ((show_next of item i of show_info) - (cd)), "s", 3) & ")" with title film_icon & " Next Up on (" & hdhr_record of item i of show_info & ")" subtitle quote & show_title of item i of show_info & quote & " on " & show_channel of item i of show_info & " (" & my channel2name("idle(13)", show_channel of item i of show_info, hdhr_record of item i of show_info) & ")"
 										
@@ -561,7 +562,7 @@ on quit {}
 		set quit_response to button returned of (display dialog "Do you want to cancel these recordings already in progress?" & return & return & my listtostring("quit()", hdhr_quit_record_titles, return) buttons {"Go Back", "Yes", "No"} default button 3 with title my check_version_dialog() giving up after dialog_timeout with icon caution)
 		my logger(true, "quit()", "INFO", "quit() user choice for killing shows: " & quit_response)
 	else
-		my save_data("quit()")
+		my save_data("quit(noshows)")
 		continue quit
 	end if
 	
@@ -573,14 +574,16 @@ on quit {}
 				set quit_kill to my showid2PID("quit()", show_id of item i2 of show_info, true, true)
 			end if
 		end repeat
-		
+		my logger(true, "quit(yes)", "WARN", "start save_data")
 		my save_data("quit(yes)")
-		my logger(true, "quit()", "DEBUG", "end save_data")
+		my logger(true, "quit(yes)", "WARN", "end save_data")
 		continue quit
 	end if
 	
 	if quit_response is "No" then
+		my logger(true, "quit(no)", "WARN", "start save_data")
 		my save_data("quit(no)")
+		my logger(true, "quit(no)", "WARN", "end save_data")
 		continue quit
 	end if
 	
@@ -1819,10 +1822,10 @@ on record_now(caller, the_show_id, opt_show_length)
 			--This will not record a show if we are running it in script editor.
 			if local_env does not contain "Editor" then
 				do shell script "caffeinate -i curl -H '" & show_id of item i of show_info & "' -H 'show_end:" & temp_show_end & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now0", current date, true, true) & ".m2ts") & "> /dev/null 2>&1 &"
-				 
+				
 				
 				--do shell script "caffeinate -i curl -H '" & show_id of item i of show_info & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now0", current date, true, true) & ".m2ts") & "> /dev/null 2>&1 &"
-				my logger(true, "record_now(" & caller & ")", "INFO", "caffeinate -i curl -H '" & show_id of item i of show_info & "' -H 'show_end:" & temp_show_end & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now0", current date, true, true) & ".m2ts") & "> /dev/null 2>&1 &")
+				my logger(true, "record_now(" & caller & ")", "DEBUG", "caffeinate -i curl -H '" & show_id of item i of show_info & "' -H 'show_end:" & temp_show_end & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now0", current date, true, true) & ".m2ts") & "> /dev/null 2>&1 &")
 				my logger(true, "record_now(" & caller & ")", "INFO", "\"" & show_title of item i of show_info & "\" started recording for " & my ms2time("record_now(" & caller & ")", temp_show_length, "s", 3))
 				(*
 				if (curl_http_return is less than 200) or curl_http_return is greater than or equal to 300 then
@@ -1943,7 +1946,8 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 				try
 					set is_legacy to true
 					log Legacy of item i of hdhr_device_discovery
-				on error
+					my logger(true, "HDHRDeviceDiscovery(" & caller & ")", "WARN", "Unable to add tuner, device is legacy")
+				on error errmsg
 					set is_legacy to false
 				end try
 				
@@ -1951,8 +1955,9 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 				try
 					set is_valid to true
 					log DeviceID of item i of hdhr_device_discovery
-				on error
+				on error errmsg
 					set is_valid to false
+					my logger(true, "HDHRDeviceDiscovery(" & caller & ")", "WARN", "Unable to add tuner, device has no DeviceID, err: " & errmsg)
 				end try
 				if is_valid = false then
 					exit repeat
@@ -1960,8 +1965,8 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 				
 				try
 					set tuner_transcode_temp to Transcode of item i of hdhr_device_discovery
-				on error
-					my logger(true, "HDHRDeviceDiscovery(" & caller & ")", "WARN", "Unable to determine transcode settings")
+				on error errmsg
+					my logger(true, "HDHRDeviceDiscovery(" & caller & ")", "WARN", "Unable to determine transcode settings, err: " & errmsg)
 					set tuner_transcode_temp to 0
 				end try
 				
@@ -2235,7 +2240,7 @@ on channel_guide(caller, hdhr_device, hdhr_channel, hdhr_time)
 		--	end repeat
 		--end if
 	else
-		my logger(true, "channel_guide(" & caller & ")", "WARN", "hdhr list has an empty value")
+		my logger(true, "channel_guide(" & caller & ")", "ERROR", "HDHR_DEVICE_LIST has an empty value")
 	end if
 	return {}
 end channel_guide
@@ -2317,10 +2322,14 @@ on update_show(caller, the_show_id, force_update)
 				end if
 				set progress completed steps to 3
 				try
-					if (show_length of item show_offset of show_info as number) is not equal to (((EndTime of hdhr_response_channel) - (StartTime of hdhr_response_channel)) div 60 as number) then
-						my logger(true, "update_shows(" & caller & ")", "INFO", "Show length changed to " & ((EndTime of hdhr_response_channel) - (StartTime of hdhr_response_channel)) div 60 & " minutes")
+					if show_is_sport of item show_offset of show_info = false then
+						if (show_length of item show_offset of show_info as number) is not equal to (((EndTime of hdhr_response_channel) - (StartTime of hdhr_response_channel)) div 60 as number) then
+							my logger(true, "update_shows(" & caller & ")", "INFO", "Show length changed to " & ((EndTime of hdhr_response_channel) - (StartTime of hdhr_response_channel)) div 60 & " minutes")
+						end if
+						set show_length of item show_offset of show_info to ((EndTime of hdhr_response_channel) - (StartTime of hdhr_response_channel)) div 60
+					else
+						my logger(true, "update_shows_sport(" & caller & ")", "INFO", "Show length NOT changed. Show is sport")
 					end if
-					set show_length of item show_offset of show_info to ((EndTime of hdhr_response_channel) - (StartTime of hdhr_response_channel)) div 60
 				on error
 					my logger(true, "update_shows()", "ERROR", "Unable to set length of " & show_title of item show_offset of show_info)
 					--					display notification "3: " & show_title of item i of show_info
@@ -2376,81 +2385,85 @@ on save_data(caller)
 		my logger(true, "save_data(" & caller & ")", "INFO", "save_data() not run, we are in DEBUG mode")
 		return true
 	end if
-	if length of show_info is greater than 0 then
-		repeat with i5 from 1 to length of temp_show_info
-			if show_active of item i5 of temp_show_info is true then
-				set show_dir of item i5 of temp_show_info to (show_dir of item i5 of temp_show_info as text)
-				set show_temp_dir of item i5 of temp_show_info to (show_temp_dir of item i5 of temp_show_info as text)
-				set show_last of item i5 of temp_show_info to (show_last of item i5 of temp_show_info as text)
-				set show_next of item i5 of temp_show_info to (show_next of item i5 of temp_show_info as text)
-				set show_end of item i5 of temp_show_info to (show_end of item i5 of temp_show_info as text)
-				set notify_recording_time of item i5 of temp_show_info to (notify_recording_time of item i5 of temp_show_info as text)
-				set notify_upnext_time of item i5 of temp_show_info to (notify_upnext_time of item i5 of temp_show_info as text)
+	try
+		if length of show_info is greater than 0 then
+			repeat with i5 from 1 to length of temp_show_info
+				if show_active of item i5 of temp_show_info is true then
+					set show_dir of item i5 of temp_show_info to (show_dir of item i5 of temp_show_info as text)
+					set show_temp_dir of item i5 of temp_show_info to (show_temp_dir of item i5 of temp_show_info as text)
+					set show_last of item i5 of temp_show_info to (show_last of item i5 of temp_show_info as text)
+					set show_next of item i5 of temp_show_info to (show_next of item i5 of temp_show_info as text)
+					set show_end of item i5 of temp_show_info to (show_end of item i5 of temp_show_info as text)
+					set notify_recording_time of item i5 of temp_show_info to (notify_recording_time of item i5 of temp_show_info as text)
+					set notify_upnext_time of item i5 of temp_show_info to (notify_upnext_time of item i5 of temp_show_info as text)
+					
+					set show_length of item i5 of temp_show_info to (show_length of item i5 of temp_show_info as number)
+					set show_air_date of item i5 of temp_show_info to (show_air_date of item i5 of temp_show_info)
+					set show_title of item i5 of temp_show_info to (show_title of item i5 of temp_show_info as text)
+					set show_time of item i5 of temp_show_info to (show_time of item i5 of temp_show_info as number)
+					set show_channel of item i5 of temp_show_info to (show_channel of item i5 of temp_show_info as text)
+					try
+						set show_seriesid of item i5 of temp_show_info to (show_seriesid of item i5 of temp_show_info as text)
+						--my logger(true, "save_data_json", "INFO", show_seriesid of item i5 of temp_show_info)
+					on error errmsg
+						set item i5 of temp_show_info to item i5 of temp_show_info & {show_seriesid:""}
+						my logger(true, "save_data_json", "INFO", "Added SeriesID to " & quote & show_title of item i5 of temp_show_info & quote)
+					end try
+					
+					try
+						set show_time_orig of item i5 of temp_show_info to (show_time_orig of item i5 of temp_show_info as text)
+						--my logger(true, "save_data_json", "INFO", show_seriesid of item i5 of temp_show_info)
+					on error errmsg
+						set item i5 of temp_show_info to item i5 of temp_show_info & {show_time_orig:show_time of item i5 of temp_show_info as number}
+						my logger(true, "save_data_json", "INFO", "Added show_time_orig to " & quote & show_title of item i5 of temp_show_info & quote)
+					end try
+					
+					try
+						set show_tags of item i5 of temp_show_info to show_tags of item i5 of temp_show_info as text
+					on error errmsg
+						set item i5 of temp_show_info to item i5 of temp_show_info & {show_tags:{}}
+						my logger(true, "save_data_json", "INFO", "Added show_tags to " & quote & show_title of item i5 of temp_show_info & quote)
+					end try
+					
+					try
+						set show_is_sport of item i5 of temp_show_info to show_is_sport of item i5 of temp_show_info
+					on error errmsg
+						set item i5 of temp_show_info to item i5 of temp_show_info & {show_is_sport:false}
+						my logger(true, "save_data_json", "INFO", "Added show_is_sport to " & quote & show_title of item i5 of temp_show_info & quote)
+					end try
+				else
+					set item i5 of temp_show_info to ""
+					my logger(true, "save_data_json", "DEBUG", "JSON: Removed a show, as it was deactivated")
+				end if
+			end repeat
+			set temp_show_info to my emptylist(temp_show_info)
+			--	set temp_show_info_json to (make JSON from temp_show_info)
+			try
+				set ref_num to open for access file ((config_dir) & configfilename_json as text) with write permission
+				set eof of ref_num to 0
+				set json_temp to {the_shows:temp_show_info, config:hdhr_config}
 				
-				set show_length of item i5 of temp_show_info to (show_length of item i5 of temp_show_info as number)
-				set show_air_date of item i5 of temp_show_info to (show_air_date of item i5 of temp_show_info)
-				set show_title of item i5 of temp_show_info to (show_title of item i5 of temp_show_info as text)
-				set show_time of item i5 of temp_show_info to (show_time of item i5 of temp_show_info as number)
-				set show_channel of item i5 of temp_show_info to (show_channel of item i5 of temp_show_info as text)
-				try
-					set show_seriesid of item i5 of temp_show_info to (show_seriesid of item i5 of temp_show_info as text)
-					--my logger(true, "save_data_json", "INFO", show_seriesid of item i5 of temp_show_info)
-				on error errmsg
-					set item i5 of temp_show_info to item i5 of temp_show_info & {show_seriesid:""}
-					my logger(true, "save_data_json", "INFO", "Added SeriesID to " & quote & show_title of item i5 of temp_show_info & quote)
-				end try
-				
-				try
-					set show_time_orig of item i5 of temp_show_info to (show_time_orig of item i5 of temp_show_info as text)
-					--my logger(true, "save_data_json", "INFO", show_seriesid of item i5 of temp_show_info)
-				on error errmsg
-					set item i5 of temp_show_info to item i5 of temp_show_info & {show_time_orig:show_time of item i5 of temp_show_info as number}
-					my logger(true, "save_data_json", "INFO", "Added show_time_orig to " & quote & show_title of item i5 of temp_show_info & quote)
-				end try
-				
-				try
-					set show_tags of item i5 of temp_show_info to show_tags of item i5 of temp_show_info as text
-				on error errmsg
-					set item i5 of temp_show_info to item i5 of temp_show_info & {show_tags:{}}
-					my logger(true, "save_data_json", "INFO", "Added show_tags to " & quote & show_title of item i5 of temp_show_info & quote)
-				end try
-				
-				try
-					set show_is_sport of item i5 of temp_show_info to show_is_sport of item i5 of temp_show_info
-				on error errmsg
-					set item i5 of temp_show_info to item i5 of temp_show_info & {show_is_sport:false}
-					my logger(true, "save_data_json", "INFO", "Added show_is_sport to " & quote & show_title of item i5 of temp_show_info & quote)
-				end try
-			else
-				set item i5 of temp_show_info to ""
-				my logger(true, "save_data_json", "DEBUG", "JSON: Removed a show, as it was deactivated")
-			end if
-		end repeat
-		set temp_show_info to my emptylist(temp_show_info)
-		--	set temp_show_info_json to (make JSON from temp_show_info)
-		try
-			set ref_num to open for access file ((config_dir) & configfilename_json as text) with write permission
-			set eof of ref_num to 0
-			set json_temp to {the_shows:temp_show_info, config:hdhr_config}
-			
-			set temp_show_info_json to (make JSON from json_temp)
-			if temp_show_info_json is "" then
-				my logger(true, "save_data(" & caller & ")", "ERROR", "Error when attempting to save show list. Trying to recover")
-				set json_temp to {the_shows:temp_show_info, config:{}}
 				set temp_show_info_json to (make JSON from json_temp)
-			end if
-			my logger(true, "save_data(" & caller & ")", "DEBUG", temp_show_info_json)
-			write temp_show_info_json to ref_num
-			--write temp_show_info_json to ref_num
-			--set x to {shows:{test:"test1", test2:"Test2"}, config:{test3:"test3"}}
-			my logger(true, "save_data(" & caller & ")", "INFO", "Saved " & length of show_info & " shows to file")
-		on error errmsg
-			my logger(true, "save_data(" & caller & ")", "INFO", "Unable to save JSON file: " & errmsg)
-		end try
-	else
-		my logger(true, "save_data(" & caller & ")", "INFO", "No shows to save.")
-		return false
-	end if
+				if temp_show_info_json is "" then
+					my logger(true, "save_data(" & caller & ")", "ERROR", "Error when attempting to save show list. Trying to recover")
+					set json_temp to {the_shows:temp_show_info, config:{}}
+					set temp_show_info_json to (make JSON from json_temp)
+				end if
+				my logger(true, "save_data(" & caller & ")", "DEBUG", temp_show_info_json)
+				write temp_show_info_json to ref_num
+				--write temp_show_info_json to ref_num
+				--set x to {shows:{test:"test1", test2:"Test2"}, config:{test3:"test3"}}
+				my logger(true, "save_data(" & caller & ")", "INFO", "Saved " & length of show_info & " shows to file")
+			on error errmsg
+				my logger(true, "save_data(" & caller & ")", "ERROR", "Unable to save JSON file: " & errmsg)
+			end try
+		else
+			my logger(true, "save_data(" & caller & ")", "INFO", "No shows to save.")
+			return false
+		end if
+	on error errmsg
+		my logger(true, "save_data_end(" & caller & ")", "ERROR", "Unable to save JSON file: " & errmsg)
+	end try
 	close access ref_num
 end save_data
 
