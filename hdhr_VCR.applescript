@@ -171,14 +171,14 @@ on run {}
 	set running_icon to character id {127939, 8205, 9794, 65039}
 	set add_icon to character id 127381
 	
-	set version_local to "20230307"
+	set version_local to "20230309"
 	set config_version to 1
 	set progress description to "Loading " & name of me & " " & version_local
 	
 	--set globals    
 	set show_info to {}
 	set hdhr_config to {}
-	set notify_upnext to 30
+	set notify_upnext to 25
 	set notify_recording to 15.5
 	set locale to user locale of (system info)
 	set hdhr_setup_folder to "Volumes:"
@@ -370,7 +370,7 @@ on idle
 											exit repeat
 										else
 											set show_active of item i of show_info to false
-											my logger(true, "idle(9-2)", "WARN", show_title of item i of show_info & " is a single, and deactivated")
+											my logger(true, "idle(9-2)", "WARN", show_title of item i of show_info & " is a single, and passed, so it was deactivated")
 											exit repeat
 										end if
 									end if
@@ -423,16 +423,27 @@ on idle
 									--	my logger(true, "idle()", "INFO", "4") 
 									
 									--NEW 
-									
-									if (notify_upnext_time of item i of show_info is less than (cd) or notify_upnext_time of item i of show_info is missing value) and (show_next of item i of show_info) - (cd) is less than or equal to 1 * hours and show_recording of item i of show_info = false then
-										--my logger(true, "idle()", "INFO", "1-2")
-										display notification "Starts: " & my short_date("idle(11)", show_next of item i of show_info, false, false) & " (" & my ms2time("idle(12)", ((show_next of item i of show_info) - (cd)), "s", 3) & ")" with title film_icon & " Next Up on (" & hdhr_record of item i of show_info & ")" subtitle quote & show_title of item i of show_info & quote & " on " & show_channel of item i of show_info & " (" & my channel2name("idle(13)", show_channel of item i of show_info, hdhr_record of item i of show_info) & ")"
-										
-										--display notification "Starts: " & my short_date("is_next", show_next of item i of show_info, false, false) & " (" & my sec_to_time(((show_next of item i of show_info) - (current date))) & ")" with title film_icon & " Next Up on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info, hdhr_record of item i of show_info) & ")"
-										my logger(true, "idle(14)", "INFO", "Next Up: " & quote & show_title of item i of show_info & quote & " on " & hdhr_record of item i of show_info)
-										set notify_upnext_time of item i of show_info to (cd) + (notify_upnext * minutes)
-									end if
-									--/new
+									(*
+									try
+										if (notify_upnext_time of item i of show_info is less than (cd) or notify_upnext_time of item i of show_info is missing value) then
+											my logger(true, "up_next(1)", "INFO", "1-true")
+										else
+											my logger(true, "up_next(1)", "INFO", "1-false")
+										end if
+										if (show_next of item i of show_info) - (cd) is less than or equal to 1 * hours then
+											my logger(true, "up_next(1)", "INFO", "2-true")
+										else
+											my logger(true, "up_next(1)", "INFO", "2-false")
+										end if
+										if show_recording of item i of show_info = false then
+											my logger(true, "up_next(1)", "INFO", "3-true")
+										else
+											my logger(true, "up_next(1)", "INFO", "3-false")
+										end if
+									on error errmsg
+										my logger(true, "up_next(1)", "WARN", "up_next_info, errmsg: " & errmsg)
+									end try
+									*)
 									
 								else --show_recording true 
 									--display notification show_title of item i of show_info & " is recording until " & my short_date("recording", show_end of item i of show_info)
@@ -458,7 +469,15 @@ on idle
 									end if
 								end if
 							else
-								--show is not next
+								--show time has not passed.
+								if (notify_upnext_time of item i of show_info is less than (cd) or notify_upnext_time of item i of show_info is missing value) and (show_next of item i of show_info) - (cd) is less than or equal to 1 * hours and show_recording of item i of show_info = false then
+									--my logger(true, "idle()", "INFO", "1-2")
+									display notification "Starts: " & my short_date("idle(11)", show_next of item i of show_info, false, false) & " (" & my ms2time("idle(12)", ((show_next of item i of show_info) - (cd)), "s", 3) & ")" with title film_icon & " Next Up on (" & hdhr_record of item i of show_info & ")" subtitle quote & show_title of item i of show_info & quote & " on " & show_channel of item i of show_info & " (" & my channel2name("idle(13)", show_channel of item i of show_info, hdhr_record of item i of show_info) & ")"
+									
+									--display notification "Starts: " & my short_date("is_next", show_next of item i of show_info, false, false) & " (" & my sec_to_time(((show_next of item i of show_info) - (current date))) & ")" with title film_icon & " Next Up on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info, hdhr_record of item i of show_info) & ")"
+									my logger(true, "idle(14)", "INFO", "Next Up: " & quote & show_title of item i of show_info & quote & " on " & hdhr_record of item i of show_info)
+									set notify_upnext_time of item i of show_info to (cd) + (notify_upnext * minutes)
+								end if
 							end if
 						end if
 						
@@ -1141,7 +1160,7 @@ on main(caller, emulated_button_press)
 	--on error
 	--We likely do not have any shows.  
 	--fix
-	--set show_list_empty to true  
+	--set show_list_empty to true   
 	--end try 
 	if emulated_button_press is not in {"Add", "Shows"} then
 		activate me
@@ -1753,8 +1772,9 @@ on add_show_info(caller, hdhr_device)
 				--	my logger(true, "add_show_info(" & caller & ")", "WARN", show_title of temp_show_info & " VV MATCH?")
 				repeat with i from 1 to length of show_info
 					--my logger(true, "add_show_info(" & caller & ")", "WARN", show_title of temp_show_info & " TEST")
-					if show_title of temp_show_info is show_title of item i of show_info then
+					if show_title of temp_show_info is show_title of item i of show_info and show_active of item i of show_info = true then
 						my logger(true, "add_show_info(" & caller & ")", "WARN", show_title of temp_show_info & " may be a dupe")
+						--FIX Dupe warning here
 					end if
 				end repeat
 				
@@ -1779,8 +1799,10 @@ on add_show_info(caller, hdhr_device)
 				my update_show("add_show_info(" & caller & ")", show_id of last item of show_info, false)
 				my save_data("add_show_info(" & caller & ")")
 				--log show_info
-				set progress description to "This show has been added!"
 				display notification with title add_icon & " Show Added! (" & hdhr_device & ")" subtitle "" & quote & show_title of last item of show_info & quote & " at " & show_time of last item of show_info
+				set progress description to "This show has been added!"
+				set progress additional description to "Show: " & quote & show_title of last item of show_info & quote & " at " & show_time of last item of show_info
+				my repeatProgress(0.5, 4)
 			end repeat
 		end repeat
 	else
@@ -3422,3 +3444,11 @@ on dayofweek(caller, the_day, next_or_last)
 		return false
 	end if
 end dayofweek
+
+on repeatProgress(loop_delay, loop_total)
+	set progress total steps to loop_total
+	repeat with i from 1 to loop_total
+		set progress completed steps to i
+		delay loop_delay
+	end repeat
+end repeatProgress
