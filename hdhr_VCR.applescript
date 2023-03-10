@@ -246,13 +246,14 @@ on run {}
 		set hdhr_config to {notify_upnext:notify_upnext, notify_recording:notify_recording, hdhr_setup_folder:hdhr_setup_folder, config_version:config_version}
 	else
 		my logger(true, "init", "ERROR", "hdhr_detected is " & hdhr_detected)
-	end if
+	end if 
 	
 	## Dump all show info.  Onlt print when run in debug mode
 	my show_info_dump("run3", "", false)
 	## Adds X lines to length of log file.  We add 50 lines per show added
 	set loglines_max to loglines_max + ((length of show_info) * 100)
-	
+	my existing_shows("run()")
+	--my fix_show_orig("run()")
 	--Test
 	## Main is the start of the UI for the user. on main
 	my main("run()", "run")
@@ -457,7 +458,7 @@ on idle
 										-- display notification "Ends " & my short_date("rec progress", show_end of item i of show_info, false, false) & " (" & (my sec_to_time_OLD((show_end of item i of show_info) - (current date))) & ") " with title record_icon & " Recording in progress on (" & hdhr_record of item i of show_info & ")" subtitle show_title of item i of show_info & " on " & show_channel of item i of show_info & " (" & my channel2name(show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")"
 										--try to refresh the file, so it shows it refreshes finder.
 										my logger(true, "idle(21)", "INFO", "Recording in progress for " & quote & (show_title of item i of show_info & quote & " on " & show_channel of item i of show_info))
-										my update_folder("idle(22)", show_dir of item i of show_info)
+										--my update_folder("idle(22)", show_dir of item i of show_info)
 										set notify_recording_time of item i of show_info to (current date) + (notify_recording * minutes)
 									end if
 									set check_showid_recording to item 2 of my showid2PID("idle(check_showid_recording)", show_id of item i of show_info, false, false)
@@ -512,8 +513,10 @@ on idle
 									display notification "Show marked inactive" with title stop_icon & " Recording Complete" subtitle (quote & show_title of item i of show_info & quote & " on " & show_channel of item i of show_info & " (" & my channel2name("idle(27)", show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
 								end if
 								try
-									set show_time of item i of show_info to show_time_orig of item i of show_info
-									my logger(true, "idle(28.1)", "INFO", "Show " & show_title of item i of show_info & " reverted to " & show_time_orig of item i of show_info)
+									if show_time_orig of item i of show_info is not in {missing value, "missing value"} then
+										set show_time of item i of show_info to show_time_orig of item i of show_info
+										my logger(true, "idle(28.1)", "INFO", "Show " & show_title of item i of show_info & " reverted to " & show_time_orig of item i of show_info)
+									end if
 								on error errmsg
 									my logger(true, "idle(28.2)", "WARN", "Show " & show_title of item i of show_info & " unable to revert to show_time_orig, err: " & errmsg)
 								end try
@@ -1508,6 +1511,7 @@ on add_show_info(caller, hdhr_device)
 							my logger(true, "add_show_info(" & caller & ")", "INFO", "default_record_day set to " & default_record_day)
 						end if
 						set show_time of temp_show_info to text returned of show_time_temp as number
+						set show_time_orig of temp_show_info to show_time of temp_show_info
 						
 					end repeat
 					set end of temp_show_progress to "Air time: " & show_time of temp_show_info
@@ -1561,8 +1565,8 @@ on add_show_info(caller, hdhr_device)
 					--auto length 
 					try
 						set show_length of temp_show_info to ((EndTime of item i3 of hdhrGRID_response) - (StartTime of item i3 of hdhrGRID_response)) div 60
-					on error
-						my logger(true, "add_show_info(" & caller & ")", "ERROR", "(Auto) show time defaulted to 30")
+					on error errmsg
+						my logger(true, "add_show_info(" & caller & ")", "ERROR", "(Auto) show length defaulted to 30 minutes, errmsg: " & errmsg)
 						set show_length of temp_show_info to 30
 					end try
 					set end of temp_show_progress to "Length: " & show_length of temp_show_info
@@ -1572,6 +1576,7 @@ on add_show_info(caller, hdhr_device)
 					
 					--auto show_time 
 					set show_time of temp_show_info to my epoch2show_time("hdhrGRID(4)", my getTfromN(StartTime of item i3 of hdhrGRID_response))
+					set show_time_orig of temp_show_info to show_time of temp_show_info
 					my logger(true, "add_show_info(" & caller & ")", "INFO", "(Auto) show time: " & show_time of temp_show_info)
 					set end of temp_show_progress to "Air time: " & show_time of temp_show_info
 					set progress additional description to my listtostring("add_show()", temp_show_progress, return)
@@ -1746,19 +1751,28 @@ on add_show_info(caller, hdhr_device)
 				
 				set progress description to "Choose Folder..."
 				set temp_dir to alias "Volumes:"
+				set update_folder_result to true
+				set failed_showdir to {}
 				if temp_show_dir is missing value then
-					repeat until temp_dir is not alias "Volumes:"
+					repeat until temp_dir is not alias "Volumes:" and update_folder_result = true
 						try
 							set temp_dir to show_dir of last item of show_info
 						end try
 						try
-							set show_dir of temp_show_info to choose folder with prompt "Select Shows Directory" default location temp_dir
-						on error
+							if update_folder_result = true then
+								set show_dir of temp_show_info to choose folder with prompt "Select Show location" default location temp_dir
+							else if update_folder_result = false then
+								set show_dir of temp_show_info to choose folder with prompt "Unable to write to location:" & return & (failed_showdir as text) & return & "Select another location" default location temp_dir
+							end if
+						on error errmsg
+							my logger(true, "add_show_info(" & caller & ")", "ERROR", "Unable to select show location, errmsg: " & errmsg)
 							exit repeat
 						end try
 						if show_dir of temp_show_info is not temp_dir then
 							set temp_dir to show_dir of temp_show_info
 						end if
+						set update_folder_result to my update_folder("add_show_info(" & caller & ")", show_dir of temp_show_info)
+						set failed_showdir to show_dir of temp_show_info
 					end repeat
 				else
 					set show_dir of temp_show_info to temp_show_dir
@@ -1767,7 +1781,6 @@ on add_show_info(caller, hdhr_device)
 				--FIX We error here if we click "Cancel" in the dialog.  We may need to return out of function if error occurs with the folder selection.
 				set end of temp_show_progress to "Where: " & POSIX path of show_dir of temp_show_info
 				my logger(true, "add_show_info(" & caller & ")", "INFO", "Show Directory: " & show_dir of temp_show_info)
-				my update_folder("add_show_info(" & caller & ")", show_dir of temp_show_info)
 				set show_temp_dir of temp_show_info to show_dir of temp_show_info
 				--	my logger(true, "add_show_info(" & caller & ")", "WARN", show_title of temp_show_info & " VV MATCH?")
 				repeat with i from 1 to length of show_info
@@ -1816,6 +1829,7 @@ on record_now(caller, the_show_id, opt_show_length)
 	-- FIX We need to return a true/false if this is successful.  We may be able to do this with showid2PID
 	--display notification opt_show_length
 	set i to my HDHRShowSearch(the_show_id)
+	my update_folder("record_now(" & caller & ")", show_dir of item i of show_info)
 	set temp_show_end to my short_date("rec started", show_end of item i of show_info, true, false)
 	my update_show("record_now(" & caller & ")", the_show_id, true)
 	set hdhr_device to hdhr_record of item i of show_info
@@ -2461,11 +2475,18 @@ on save_data(caller)
 			set temp_show_info to my emptylist(temp_show_info)
 			--	set temp_show_info_json to (make JSON from temp_show_info)
 			try
-				set ref_num to open for access file ((config_dir) & configfilename_json as text) with write permission
+				try
+					set ref_num to open for access file ((config_dir) & configfilename_json as text) with write permission
+				on error errmsg
+					my logger(true, "save_data(" & caller & ")", "ERROR", "Error reading the file, errmsg: " & errmsg)
+				end try
 				set eof of ref_num to 0
 				set json_temp to {the_shows:temp_show_info, config:hdhr_config}
-				
-				set temp_show_info_json to (make JSON from json_temp)
+				try
+					set temp_show_info_json to (make JSON from json_temp)
+				on error errmsg
+					my logger(true, "save_data(" & caller & ")", "ERROR", "Error convert the file to JSON, errmsg: " & errmsg)
+				end try
 				if temp_show_info_json is "" then
 					my logger(true, "save_data(" & caller & ")", "ERROR", "Error when attempting to save show list. Trying to recover")
 					set json_temp to {the_shows:temp_show_info, config:{}}
@@ -2474,7 +2495,7 @@ on save_data(caller)
 				my logger(true, "save_data(" & caller & ")", "DEBUG", temp_show_info_json)
 				write temp_show_info_json to ref_num
 				--write temp_show_info_json to ref_num
-				--set x to {shows:{test:"test1", test2:"Test2"}, config:{test3:"test3"}}
+				--set x to {shows:{test:"test1", test2:"Test2"}, config:{test3:"test3"}} 
 				my logger(true, "save_data(" & caller & ")", "INFO", "Saved " & length of show_info & " shows to file")
 			on error errmsg
 				my logger(true, "save_data(" & caller & ")", "ERROR", "Unable to save JSON file: " & errmsg)
@@ -2486,7 +2507,11 @@ on save_data(caller)
 	on error errmsg
 		my logger(true, "save_data_end(" & caller & ")", "ERROR", "Unable to save JSON file: " & errmsg)
 	end try
-	close access ref_num
+	try
+		close access ref_num
+	on error errmsg
+		my logger(true, "save_data_end(" & caller & ")", "ERROR", "We attempted to close a handler that was not open")
+	end try
 end save_data
 
 on checkfileexists(caller, filepath)
@@ -2760,16 +2785,6 @@ on recording_search(caller, start_time, end_time, channel, hdhr_model)
 		end if
 	end repeat
 end recording_search
-
-on existing_recordings2(caller, show_id)
-	my logger(true, "existing_recordings(" & caller & ")", "INFO", "")
-	try
-		set showid2PID_result to do shell script "ps -Aa|grep " & show_id & "|grep -v 'grep\\|caffeinate'"
-		return true
-	on error errmsg
-		return false
-	end try
-end existing_recordings2
 
 ##########    These are custom handlers.  They are more like libraries    ##########
 
@@ -3229,8 +3244,10 @@ on update_folder(caller, update_path)
 		do shell script "touch \"" & posix_update_path & "hdhr_test_write\""
 		delay 0.1
 		do shell script "rm \"" & posix_update_path & "hdhr_test_write\""
+		return true
 	on error err_string
 		my logger(true, "update_folder(" & caller & ")", "ERROR", "Unable to write to " & posix_update_path & ", " & err_string)
+		return false
 	end try
 end update_folder
 
@@ -3452,3 +3469,27 @@ on repeatProgress(loop_delay, loop_total)
 		delay loop_delay
 	end repeat
 end repeatProgress
+
+on existing_shows(caller)
+	try
+		set showid2PID_result to do shell script "ps -Aa|grep show_end|grep -v 'grep\\|caffeinate'"
+		set showid2PID_result_list to my stringtolist("existing_shows(" & caller & ")", showid2PID_result, return)
+		if length of showid2PID_result_list is greater than 0 then
+			repeat with i from 1 to length of showid2PID_result_list
+				set temp_show_id to item 2 of my stringtolist("existing_shows(" & caller & ")", item i of showid2PID_result_list, " -H ")
+				set show_recording of item (my HDHRShowSearch(temp_show_id)) of show_info to true
+				my logger(true, "existing_shows(" & caller & ")", "INFO", "The show " & temp_show_id & ", was already recording, so show_recording set to true")
+			end repeat
+		end if
+	end try
+end existing_shows
+
+on fix_show_orig(caller)
+	repeat with i from 1 to length of show_info
+		if show_time_orig of item i of show_info is in {missing value, "missing value"} then
+			set show_time_orig of item i of show_info to show_time of item i of show_info
+			my logger(true, "fix_show_orig(" & caller & ")", "INFO", "The show, '" & show_title of item i of show_info & "', had an invalid show_time_org, and this was fixed")
+		end if
+	end repeat
+end fix_show_orig
+
