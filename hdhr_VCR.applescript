@@ -246,7 +246,7 @@ on run {}
 		set hdhr_config to {notify_upnext:notify_upnext, notify_recording:notify_recording, hdhr_setup_folder:hdhr_setup_folder, config_version:config_version}
 	else
 		my logger(true, "init", "ERROR", "hdhr_detected is " & hdhr_detected)
-	end if 
+	end if
 	
 	## Dump all show info.  Onlt print when run in debug mode
 	my show_info_dump("run3", "", false)
@@ -465,7 +465,7 @@ on idle
 									
 									--NEW FIX 
 									if length of check_showid_recording is 0 then
-										my logger(true, "idle(21)", "ERROR", quote & show_id of item i of show_info & quote & " is marked as recording, but we do not have a valid PID")
+										my logger(true, "idle(21)", "WARN", quote & show_id of item i of show_info & quote & " is marked as recording, but we do not have a valid PID, setting show_recording to false")
 										set show_recording of item i of show_info to false
 									end if
 								end if
@@ -959,7 +959,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 	--if we return true here, we should re pop the shows list.
 	--display dialog show_to_check & " ! " & should_edit
 	--(*show_title:news, show_time:12, show_length:30, show_air_date:Monday, Tuesday, Wednesday, Thursday, show_transcode:false, show_temp_dir:alias Macintosh HD:Users:TEST:Dropbox:, show_dir:alias Macintosh HD:Users:TESTl:Dropbox:, show_channel:11.1, show_active:true, show_id:bf4fcd8b7ac428594a386b373ef55874, show_recording:false, show_last:date Tuesday, August 30, 2016 at 11:35:04 AM, show_next:date Tuesday, August 30, 2016 at 12:00:00 PM, show_end:date Tuesday, August 30, 2016 at 12:30:00 PM*)
-	
+	set show_active_changed to false
 	if show_to_check is "" then
 		repeat with i2 from 1 to length of show_info
 			my validate_show_info("validate_show_info" & i2 & "(" & caller & ")", show_id of item i2 of show_info, should_edit)
@@ -978,6 +978,8 @@ on validate_show_info(caller, show_to_check, should_edit)
 				
 				if button returned of show_deactivate is "Deactivate" then
 					set show_active of item i of show_info to false
+					--NEW
+					set show_recording of item i of show_info to false
 					my showid2PID("main()", show_id of item i of show_info, true, true)
 					my logger(true, "validate_show_info(" & caller & ")", "INFO", "Deactivated: " & show_title of item i of show_info)
 					return true
@@ -989,6 +991,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 				set show_deactivate to (display dialog "Would you like to activate: " & return & "\"" & show_title of item i of show_info & "\"" & return & return & "Active shows can be edited" buttons {running_icon & " Run", "Activate"} cancel button 1 default button 2 with title my check_version_dialog() with icon caution)
 				if button returned of show_deactivate is "Activate" then
 					set show_active of item i of show_info to true
+					set show_active_changed to true
 					my logger(true, "validate_show_info(" & caller & ")", "INFO", "Reactivated: " & show_title of item i of show_info)
 				else if button returned of show_deactivate contains "Run" then
 					my logger(true, "validate_show_info(" & caller & ")", "INFO", "User clicked " & quote & "Run" & quote)
@@ -997,8 +1000,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 		end if
 		
 		--	my logger(true, "validate_show_info()", "DEBUG", show_title of item i of show_info & " is active? " & show_active of item i of show_info)
-		if show_active of item i of show_info is true then
-			
+		if show_active of item i of show_info is true and show_active_changed is false then
 			if show_title of item i of show_info is missing value or show_title of item i of show_info is "" or should_edit is true then
 				
 				if show_is_series of item i of show_info is false then
@@ -1086,7 +1088,8 @@ on validate_show_info(caller, show_to_check, should_edit)
 				my logger(true, "validate_show_info(" & caller & ")", "WARN", "The show " & quote & show_title of item i of show_info & quote & ", will not be recorded, as the tuner " & hdhr_record of item i of show_info & ", is no longer detected")
 				--FIX We need to add a notification with this, as this is an important issue they should know about. 
 			end if
-			
+		else
+			set show_active_changed to false
 		end if
 	end if
 end validate_show_info
@@ -1783,14 +1786,20 @@ on add_show_info(caller, hdhr_device)
 				my logger(true, "add_show_info(" & caller & ")", "INFO", "Show Directory: " & show_dir of temp_show_info)
 				set show_temp_dir of temp_show_info to show_dir of temp_show_info
 				--	my logger(true, "add_show_info(" & caller & ")", "WARN", show_title of temp_show_info & " VV MATCH?")
+				set maybe_dupe_show to false
 				repeat with i from 1 to length of show_info
 					--my logger(true, "add_show_info(" & caller & ")", "WARN", show_title of temp_show_info & " TEST")
 					if show_title of temp_show_info is show_title of item i of show_info and show_active of item i of show_info = true then
 						my logger(true, "add_show_info(" & caller & ")", "WARN", show_title of temp_show_info & " may be a dupe")
-						--FIX Dupe warning here
+						set maybe_dupe_show to true
 					end if
 				end repeat
-				
+				if maybe_dupe_show = true then
+					set maybe_dupe_show_response to button returned of (display dialog "The show name matches another recording, do you wish to proceed?" buttons {"Abort", "Add Anyways"} default button 1 with title my check_version_dialog() giving up after dialog_timeout with icon stop)
+					if maybe_dupe_show_response is "Abort" then
+						exit repeat
+					end if
+				end if
 				--commit the temp_show_info to show_info 
 				set end of show_info to temp_show_info
 				
@@ -1857,11 +1866,11 @@ on record_now(caller, the_show_id, opt_show_length)
 		if show_transcode of item i of show_info is missing value or show_transcode of item i of show_info is "None" then
 			--This will not record a show if we are running it in script editor.
 			if local_env does not contain "Editor" then
-				do shell script "caffeinate -i curl -H '" & show_id of item i of show_info & "' -H 'show_end:" & temp_show_end & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now0", current date, true, true) & ".m2ts") & "> /dev/null 2>&1 &"
+				do shell script "caffeinate -i curl -H '" & show_id of item i of show_info & "' -H 'show_end:" & temp_show_end & "' -H 'appname:" & name of me & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now0", current date, true, true) & ".m2ts") & "> /dev/null 2>&1 &"
 				
 				
-				--do shell script "caffeinate -i curl -H '" & show_id of item i of show_info & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now0", current date, true, true) & ".m2ts") & "> /dev/null 2>&1 &"
-				my logger(true, "record_now(" & caller & ")", "DEBUG", "caffeinate -i curl -H '" & show_id of item i of show_info & "' -H 'show_end:" & temp_show_end & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now0", current date, true, true) & ".m2ts") & "> /dev/null 2>&1 &")
+				--do shell script "caffeinate -i curl -H '" & show_id of item i of show_info & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now0", current date, true, true) & ".m2ts") & "> /dev/null 2>&1 &" 
+				my logger(true, "record_now(" & caller & ")", "DEBUG", "caffeinate -i curl -H '" & show_id of item i of show_info & "' -H 'show_end:" & temp_show_end & "' -H 'appname:" & name of me & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now0", current date, true, true) & ".m2ts") & "> /dev/null 2>&1 &")
 				my logger(true, "record_now(" & caller & ")", "INFO", "\"" & show_title of item i of show_info & "\" started recording for " & my ms2time("record_now(" & caller & ")", temp_show_length, "s", 3))
 				(*
 				if (curl_http_return is less than 200) or curl_http_return is greater than or equal to 300 then
@@ -3472,15 +3481,17 @@ end repeatProgress
 
 on existing_shows(caller)
 	try
-		set showid2PID_result to do shell script "ps -Aa|grep show_end|grep -v 'grep\\|caffeinate'"
+		set showid2PID_result to do shell script "ps -Aa|grep " & name of me & "|grep -v 'grep\\|caffeinate'"
 		set showid2PID_result_list to my stringtolist("existing_shows(" & caller & ")", showid2PID_result, return)
 		if length of showid2PID_result_list is greater than 0 then
 			repeat with i from 1 to length of showid2PID_result_list
 				set temp_show_id to item 2 of my stringtolist("existing_shows(" & caller & ")", item i of showid2PID_result_list, " -H ")
 				set show_recording of item (my HDHRShowSearch(temp_show_id)) of show_info to true
-				my logger(true, "existing_shows(" & caller & ")", "INFO", "The show " & temp_show_id & ", was already recording, so show_recording set to true")
+				my logger(true, "existing_shows(" & caller & ")", "WARN", "The show " & temp_show_id & " was already recording, so show_recording set to true")
 			end repeat
 		end if
+	on error errmsg
+		my logger(true, "existing_shows(" & caller & ")", "WARN", "Check for existing_shows() failed, errmsg: " & errmsg)
 	end try
 end existing_shows
 
@@ -3488,7 +3499,7 @@ on fix_show_orig(caller)
 	repeat with i from 1 to length of show_info
 		if show_time_orig of item i of show_info is in {missing value, "missing value"} then
 			set show_time_orig of item i of show_info to show_time of item i of show_info
-			my logger(true, "fix_show_orig(" & caller & ")", "INFO", "The show, '" & show_title of item i of show_info & "', had an invalid show_time_org, and this was fixed")
+			my logger(true, "fix_show_orig(" & caller & ")", "WARN", "The show, '" & show_title of item i of show_info & "', had an invalid show_time_orig, and this was fixed")
 		end if
 	end repeat
 end fix_show_orig
