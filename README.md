@@ -145,3 +145,5 @@ hdhr_VCR now has a logger, which by default is named hdhr_VCR.log, that gives us
 I want to make these notifications better, but AppleScript has very limited ways to interact with the user.  Notifications make sense to me, as the app is faceless/background app
 
 I hope this can be collaborative project, so other options that you use can be added.
+
+Hi Harrison!

@@ -4,7 +4,7 @@
 We need to be able to know how many total tuners we have.
  then run mytimeslot_build(num_of_tuners)
  We can start with marking the existing shows in showlist
-
+--Added ability to fix invalid show directory on launch.
 
 Fix issue where selecting  multipe shows may cause an issue with is_sport popup
 
@@ -171,7 +171,7 @@ on run {}
 	set running_icon to character id {127939, 8205, 9794, 65039}
 	set add_icon to character id 127381
 	
-	set version_local to "20230309"
+	set version_local to "20230311"
 	set config_version to 1
 	set progress description to "Loading " & name of me & " " & version_local
 	
@@ -247,7 +247,7 @@ on run {}
 	else
 		my logger(true, "init", "ERROR", "hdhr_detected is " & hdhr_detected)
 	end if
-	
+	my showPathVerify("run()", "")
 	## Dump all show info.  Onlt print when run in debug mode
 	my show_info_dump("run3", "", false)
 	## Adds X lines to length of log file.  We add 50 lines per show added
@@ -513,7 +513,7 @@ on idle
 									display notification "Show marked inactive" with title stop_icon & " Recording Complete" subtitle (quote & show_title of item i of show_info & quote & " on " & show_channel of item i of show_info & " (" & my channel2name("idle(27)", show_channel of item i of show_info as text, hdhr_record of item i of show_info) & ")")
 								end if
 								try
-									if show_time_orig of item i of show_info is not in {missing value, "missing value"} then
+									if show_time_orig of item i of show_info is not in {missing value, "missing value"} and show_time of item i of show_info is not show_time_orig of item i of show_info then
 										set show_time of item i of show_info to show_time_orig of item i of show_info
 										my logger(true, "idle(28.1)", "INFO", "Show " & show_title of item i of show_info & " reverted to " & show_time_orig of item i of show_info)
 									end if
@@ -1069,8 +1069,13 @@ on validate_show_info(caller, show_to_check, should_edit)
 			end if
 			if show_dir of item i of show_info is missing value or (class of (show_temp_dir of item i of show_info) as text) is not "alias" or should_edit is true then
 				
-				set show_dir of item i of show_info to choose folder with prompt "Select Shows Directory" default location show_dir of item i of show_info
-				set show_temp_dir of item i of show_info to show_dir of item i of show_info
+				try
+					set show_dir of item i of show_info to choose folder with prompt "Select shows Directory" default location show_dir of item i of show_info
+				on error errmsg
+					set show_dir of item i of show_info to choose folder with prompt "The show: " & return & show_title of item i of show_info & return & " has an invalid directory. Please choose another"
+					my logger(true, "main()", "WARN", "Invalid path")
+				end try
+				set show_temp_dir of item i of show_info to show_dir of item i of show_info 
 			end if
 			
 			if show_next of item i of show_info is missing value or (class of (show_next of item i of show_info) as text) is not "date" or should_edit is true then
@@ -2361,7 +2366,7 @@ on update_show(caller, the_show_id, force_update)
 				
 				set progress completed steps to 2
 				if show_title of item show_offset of show_info is not equal to hdhr_response_channel_title then
-					my logger(true, "update_showsDEBUG(" & caller & ")", "INFO", "FAIL?")
+					--					my logger(true, "update_showsDEBUG(" & caller & ")", "INFO", "FAIL?")
 					my logger(true, "update_shows(" & caller & ")", "INFO", "Title changed from " & quote & show_title of item show_offset of show_info & quote & " to " & quote & hdhr_response_channel_title & quote)
 					set show_title of item show_offset of show_info to hdhr_response_channel_title
 				end if
@@ -2523,30 +2528,52 @@ on save_data(caller)
 	end try
 end save_data
 
+on showPathVerify(caller, show_id)
+	if show_id is "" then
+		repeat with i3 from 1 to (length of show_info)
+			my showPathVerify("showPathVerify(" & caller & ")", show_id of item i3 of show_info)
+		end repeat
+	else
+		set show_offset to my HDHRShowSearch(show_id)
+		try
+			if my checkfileexists("showPathVerify(" & caller & ")", show_dir of item show_offset of show_info) is false then
+				my logger(true, "showPathVerify(" & caller & ")", "WARN", "The show, " & show_title of item show_offset of show_info & " has a invalid save directory")
+			else
+				my logger(true, "showPathVerify(" & caller & ")", "INFO", "The show, " & show_title of item show_offset of show_info & " has a valid save directory")
+			end if
+		on error errmsg
+			my logger(true, "showPathVerify(" & caller & ")", "ERROR", "An error occured, errmsg: " & errmsg)
+		end try
+	end if
+end showPathVerify
 on checkfileexists(caller, filepath)
 	try
-		my logger(true, "read_data(" & caller & ")", "INFO", filepath as text)
+		my logger(true, "checkfileexists(" & caller & ")", "INFO", filepath as text)
 		if class of filepath is not alias then
+			my logger(true, "checkfileexists(" & caller & ")", "WARN", "filepath is not alias")
 			set filepath to POSIX file filepath
+			my logger(true, "checkfileexists(" & caller & ")", "WARN", "filepath is now posix file")
 		end if
 		tell application "Finder" to return (exists filepath)
 	on error errmsg
-		my logger(true, "read_data(" & caller & ")", "ERROR", "Finder reported: " & errmsg)
+		my logger(true, "checkfileexists(" & caller & ")", "ERROR", "Finder reported: " & errmsg)
+		return false
 	end try
 end checkfileexists
 
 on read_data(caller)
 	--read .config file, if .json is not available
 	set hdhr_vcr_config_file to ((config_dir) & configfilename_json as text)
+	(*
 	if my checkfileexists("read_data(" & caller & ")", hdhr_vcr_config_file) is false and my checkfileexists("read_data(" & caller & ")", (config_dir) & configfilename as text) is true then
 		my logger(true, "read_data(" & caller & ")", "INFO", "Using old .config file loader")
 		my read_data_old()
 		my save_data("read_data(old_config)")
 		my read_data("read_data(old_config)")
-		--If this works, just wow  
+		--If this works, just wow   
 		return
 	end if
-	
+	*)
 	set ref_num to open for access hdhr_vcr_config_file
 	try
 		set hdhr_vcr_config_data to read ref_num
@@ -2563,8 +2590,14 @@ on read_data(caller)
 		
 		my logger(true, "read_data(" & caller & ")", "INFO", "Loading config from \"" & POSIX path of hdhr_vcr_config_file & "\"...")
 		repeat with i5 from 1 to length of show_info
-			set show_dir of item i5 of show_info to (show_dir of item i5 of show_info as alias)
-			set show_temp_dir of item i5 of show_info to (show_temp_dir of item i5 of show_info as alias)
+			try
+				set show_dir of item i5 of show_info to (show_dir of item i5 of show_info as alias)
+				set show_temp_dir of item i5 of show_info to (show_temp_dir of item i5 of show_info as alias)
+			on error errmsg
+				set show_dir of item i5 of show_info to {}
+				set show_temp_dir of item i5 of show_info to {}
+				my logger(true, "read_data(" & caller & ")", "ERROR", "A show has an invalid directory")
+			end try
 			
 			set show_last of item i5 of show_info to date (show_last of item i5 of show_info as text)
 			set show_next of item i5 of show_info to date (show_next of item i5 of show_info as text)
@@ -2601,6 +2634,7 @@ on read_data(caller)
 end read_data
 
 --takes the the data in the filesystem, and writes to to a variable   
+(*
 on read_data_old()
 	--FIX We need to figure out how we can allow this handler to read whatever files we point it at.  Then we can add custom json sets for testing
 	--set ref_num to missing value 
@@ -2682,6 +2716,7 @@ on read_data_old()
 	my validate_show_info("read_data()", "", false)
 	
 end read_data_old
+*)
 
 on recording_now(caller)
 	my logger(true, "recording_now(" & caller & ")", "INFO", "Called")
@@ -3481,13 +3516,16 @@ end repeatProgress
 
 on existing_shows(caller)
 	try
-		set showid2PID_result to do shell script "ps -Aa|grep " & name of me & "|grep -v 'grep\\|caffeinate'"
+		set showid2PID_result to do shell script "ps -Aa|grep appname|grep -v 'grep\\|caffeinate'"
 		set showid2PID_result_list to my stringtolist("existing_shows(" & caller & ")", showid2PID_result, return)
 		if length of showid2PID_result_list is greater than 0 then
 			repeat with i from 1 to length of showid2PID_result_list
 				set temp_show_id to item 2 of my stringtolist("existing_shows(" & caller & ")", item i of showid2PID_result_list, " -H ")
-				set show_recording of item (my HDHRShowSearch(temp_show_id)) of show_info to true
-				my logger(true, "existing_shows(" & caller & ")", "WARN", "The show " & temp_show_id & " was already recording, so show_recording set to true")
+				set show_offset to my HDHRShowSearch(temp_show_id)
+				if show_recording of item show_offset of show_info is false then
+					set show_recording of item show_offset of show_info to true
+					my logger(true, "existing_shows(" & caller & ")", "WARN", "The show " & show_title of item show_offset of show_info & " is already recording, so show_recording set to true!")
+				end if
 			end repeat
 		end if
 	on error errmsg
