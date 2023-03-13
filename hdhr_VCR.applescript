@@ -2,20 +2,17 @@
 (*
 
 We need to be able to know how many total tuners we have.
-then run mytimeslot_build(num_of_tuners)
-We can start with marking the existing shows in showlist
-Added ability to fix invalid show directory on launch.
-add display on main screen to show next recording.  Check that time, and see if multiple shows are being recorded at the time. -Done
-This may just evolve into a futurerecording search, which we could use to not over book recording times. -In Progress
-on recording_search(caller, start_time, end_time, hdhr_model)
+ then run mytimeslot_build(num_of_tuners)
+ We can start with marking the existing shows in showlist
+--Added ability to fix invalid show directory on launch.
 
+Fix issue where selecting  multipe shows may cause an issue with is_sport popup
 
 Todo:
-added a couple more options to show list ?
-create backup of config file 
 NEED option to quit after recording is complete.
 NEED Prompt user to update show with a valid tuner.
-
+--add display on main screen to show next recording.  Check that time, and see if multiple shows are being recorded at the time. -Done
+--This may just evolve into a futurerecording search, which we could use to not over book recording times. -In Progress
 --rewrite next_show to be more like recording_now 
 
 tell application "JSON Helper"  
@@ -26,6 +23,7 @@ end tell
 
 --First variable sets capitalization  
 
+--on recording_search(caller,start_time, end_time, hdhr_model)
 --This would return the number of shows being recorded at the time 
 --I can use JSONHelper to make a config file, but items need to be a number, a string, or a boolen.  We may need to stringify anything else, to get it to save, This is pretty consistant, but if we hit an error, we really blow up
 
@@ -37,7 +35,7 @@ end tell
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -60,10 +58,8 @@ global Idle_count
 global Version_local
 global Version_remote
 global Version_url
-
 global Online_detected
 global Hdhr_detected
-
 global Hdhr_config
 global Hdhr_setup_folder
 global Notify_upnext
@@ -77,7 +73,6 @@ global Dialog_timeout
 global Temp_dir
 global Config_dir
 global Log_dir
---global next_save_dt
 global Idle_timer_dateobj
 global Back_channel
 global Config_version
@@ -107,15 +102,13 @@ global Done_icon
 global Running_icon
 global Add_icon
 global Futureshow_icon
-
 global Lf
---global quot
 global Logger_levels
 global Loglines_written
 global Loglines_max
-
 global Missing_tuner_retry_count
 global Timeslot
+global Check_after_midnight_time
 
 ## Since we use JSON helper to do some of the work, we should declare it, so we dont end up having to use tell blocks everywhere.  If we declare 1 thing, we have to declare everything we are using.
 use AppleScript version "2.4"
@@ -164,7 +157,7 @@ on run {}
 	set Running_icon to character id {127939, 8205, 9794, 65039}
 	set Add_icon to character id 127381
 	
-	set Version_local to "20230311"
+	set Version_local to "20230313"
 	set Config_version to 1
 	set progress description to "Loading " & name of me & " " & Version_local
 	
@@ -205,7 +198,7 @@ on run {}
 	copy (current date) to Idle_timer_dateobj
 	set Missing_tuner_retry_count to 0
 	set Timeslot to {}
-	my timeslot_firstrun()
+	--my timeslot_firstrun()
 	my logger(true, "init", "INFO", "Started " & name of me & " " & Version_local)
 	
 	--
@@ -498,6 +491,7 @@ on idle
 								
 								if show_is_series of item i of Show_info is true then
 									set show_next of item i of Show_info to my nextday("idle(24)", show_id of item i of Show_info)
+									set show_recorded_today of item i of Show_info to true
 									my logger(true, "idle(25)", "INFO", "Recording Complete for " & quote & (show_title of item i of Show_info & quote & " on " & show_channel of item i of Show_info))
 									display notification "Next Showing: " & my short_date("idle(26)", show_next of item i of Show_info, false, false) with title Stop_icon & " Recording Complete" subtitle (quote & show_title of item i of Show_info & quote & " on " & show_channel of item i of Show_info & " (" & my channel2name("idle(27)", show_channel of item i of Show_info as text, hdhr_record of item i of Show_info) & ")")
 								else
@@ -540,6 +534,12 @@ on idle
 	on error errmsg
 		my logger(true, "idle(31)", "ERROR", errmsg)
 	end try
+	if check_after_midnight("idle()") = true then
+		repeat with i from 1 to length of Show_info
+			set show_recorded_today of item i of Show_info to false
+		end repeat
+	end if
+	
 	return Idle_timer
 end idle
 
@@ -1282,11 +1282,13 @@ on main(caller, emulated_button_press)
 			if (date (date string of (current date))) is less than (date (date string of (show_next of item i of Show_info))) and show_active of item i of Show_info is true then
 				set temp_show_line to Futureshow_icon & temp_show_line
 			end if
-			
-			if my recorded_today(show_id of item i of Show_info) is true then
-				set temp_show_line to Done_icon & temp_show_line
-			end if
-			
+			try
+				if (show_recorded_today of item i of Show_info) is true then
+					set temp_show_line to Done_icon & temp_show_line
+				end if
+			on error errmsg
+				my logger(true, "main_show_sort()", "ERROR", "Error with show_recorded_today, errmsg: " & errmsg)
+			end try
 			(*
 				if (date (date string of (current date))) = (date (date string of (show_last of item i of show_info))) and show_active of item i of show_info = true and (show_last of item i of show_info) < (current date) then
 				set temp_show_line to calendar2_icon & temp_show_line
@@ -1378,24 +1380,6 @@ on main(caller, emulated_button_press)
 		return
 	end if
 end main
-
-
-on recorded_today(the_show_id)
-	---- show_info model: (*show_title:Happy_Holidays_America, show_time:16, show_length:60, show_air_date:Sunday, show_transcode:missing value, show_temp_dir:alias Backups:, show_dir:alias Backups:, show_channel:5.1, show_active:true, show_id:221fbe1126389e6af35f405aa681cf19, show_recording:false, show_last:date Sunday, December 13, 2020 at 4:04:54 PM, show_next:date Sunday, December 13, 2020 at 4:00:00 PM, show_end:date Sunday, December 13, 2020 at 5:00:00 PM, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:XX105404BE,show_is_series:false*
-	
-	--takes show_id and returns true if the show has already recorded today.
-	repeat with i from 1 to length of Show_info
-		if show_id of item i of Show_info is the_show_id then
-			if show_last of item i of Show_info is less than or equal to (current date) and date string of ((show_last of item i of Show_info) - (show_length of item i of Show_info) * minutes) is date string of (current date) and time string of show_last of item i of Show_info is less than time string of (current date) and show_active of item i of Show_info is true then
-				--if show_last of item i of show_info is less than or equal to (current date) and date string of show_last of item i of show_info = date string of (current date) and time string of show_last of item i of show_info is less than time string of (current date) then
-				--if show_last of item i of show_info is less than or equal to (current date) and date string of show_next of item i of show_info = date string of (current date) and time string of show_last of item i of show_info is less than time string of (current date) then
-				my logger(true, "recorded_today()", "DEBUG", "show_title: " & show_title of item i of Show_info & ", show_last: " & show_last of item i of Show_info & ", show_next: " & show_next of item i of Show_info)
-				return true
-			end if
-		end if
-	end repeat
-	return false
-end recorded_today
 
 on add_show_info(caller, hdhr_device)
 	set progress additional description to ""
@@ -1625,7 +1609,6 @@ on add_show_info(caller, hdhr_device)
 					
 					try
 						set show_originalairdate to OriginalAirdate of item i3 of hdhrGRID_response
-						----on short_date(the_caller, the_date_object, twentyfourtime, show_seconds)
 						set show_originalairdate_real to my short_date("add_show_info", my epoch2datetime("add_show_info1", show_originalairdate), false, false)
 					on error errmsg
 						set show_originalairdate_real to "Unknown"
@@ -1822,7 +1805,7 @@ on add_show_info(caller, hdhr_device)
 				display notification with title Add_icon & " Show Added! (" & hdhr_device & ")" subtitle "" & quote & show_title of last item of Show_info & quote & " at " & show_time of last item of Show_info
 				set progress description to "This show has been added!"
 				set progress additional description to "Show: " & quote & show_title of last item of Show_info & quote & " at " & show_time of last item of Show_info
-				my repeatProgress(0.5, 4)
+				my repeatProgress(0.2, 10)
 			end repeat
 		end repeat
 	else
@@ -2462,6 +2445,15 @@ on save_data(caller)
 					end try
 					
 					try
+						set show_recorded_today of item i5 of temp_show_info to (show_recorded_today of item i5 of temp_show_info as text)
+						--my logger(true, "save_data_json", "INFO", show_seriesid of item i5 of temp_show_info)
+					on error errmsg
+						set item i5 of temp_show_info to item i5 of temp_show_info & {show_recorded_today:false}
+						my logger(true, "save_data_json", "INFO", "Added show_recorded_today to " & quote & show_title of item i5 of temp_show_info & quote)
+					end try
+					
+					
+					try
 						set show_tags of item i5 of temp_show_info to show_tags of item i5 of temp_show_info as text
 					on error errmsg
 						set item i5 of temp_show_info to item i5 of temp_show_info & {show_tags:{}}
@@ -2513,14 +2505,18 @@ on save_data(caller)
 		end if
 	on error errmsg
 		my logger(true, "save_data_end(" & caller & ")", "ERROR", "Unable to save JSON file: " & errmsg)
-		set save_data_error_reply to button returned of (display dialog "We were unable to save the config file.  Would you like to try again?" buttons {"Quit without save", "Retry"} default button 2 with title my check_version_dialog() giving up after Dialog_timeout with icon caution)
-		if save_data_error_reply is "retry" then
-			my save_data("save_data_retry")
-			return false
-		end if
-		if save_data_error_reply is "Quit without save" then
-			return false
-		end if
+		try
+			set save_data_oops to button returned of (display dialog "We ran into an error when attempting to save the config file" & return & quote & errmsg & quote & return & return & "What would you like to do?" buttons {"Save Again", "Exit without saving"} with title my check_version_dialog() giving up after Dialog_timeout with icon caution)
+			if save_data_oops is "Save Again" then
+				my save_data("save_data_retry(" & caller & ")")
+				return
+			end if
+			if save_data_oops is "Exit without saving" then
+				return false
+			end if
+		on error errmsg
+			my logger(true, "save_data(" & caller & ")", "ERROR", "Much uh oh.  We errored out of another error, errmsg: " & errmsg)
+		end try
 		
 	end try
 	try
@@ -2541,7 +2537,7 @@ on showPathVerify(caller, show_id)
 			if my checkfileexists("showPathVerify(" & caller & ")", show_dir of item show_offset of Show_info) is false then
 				my logger(true, "showPathVerify(" & caller & ")", "WARN", "The show, " & show_title of item show_offset of Show_info & " has a invalid save directory")
 			else
-				my logger(true, "showPathVerify(" & caller & ")", "DEBUG", "The show, " & show_title of item show_offset of Show_info & " has a valid save directory")
+				my logger(true, "showPathVerify(" & caller & ")", "INFO", "The show, " & show_title of item show_offset of Show_info & " has a valid save directory")
 			end if
 		on error errmsg
 			my logger(true, "showPathVerify(" & caller & ")", "ERROR", "An error occured, errmsg: " & errmsg)
@@ -2551,10 +2547,11 @@ end showPathVerify
 on checkfileexists(caller, filepath)
 	try
 		my logger(true, "checkfileexists(" & caller & ")", "INFO", filepath as text)
-		if class of filepath is not in {file, alias} then
-			my logger(true, "checkfileexists(" & caller & ")", "DEBUG", "filepath is not filepath or alias")
+		--if class of filepath is not Çclass furlÈ then
+		if class of filepath is not alias then
+			my logger(true, "checkfileexists(" & caller & ")", "WARN", "filepath class is " & class of filepath)
 			set filepath to POSIX file filepath
-			my logger(true, "checkfileexists(" & caller & ")", "WARN", "filepath is now posix file")
+			my logger(true, "checkfileexists(" & caller & ")", "DEBUG", "filepath is now posix file")
 		end if
 		tell application "Finder" to return (exists filepath)
 	on error errmsg
@@ -2773,9 +2770,9 @@ on next_shows(caller)
 				end if
 			end if
 		end repeat
-		log "next_shows"
-		log soonest_show_time
-		log next_shows_final
+		--	log "next_shows"
+		--	log soonest_show_time
+		--	log next_shows_final
 		return {soonest_show_time, next_shows_final}
 	else
 		return {soonest_show_time, "Nope!"}
@@ -2789,7 +2786,7 @@ on show_collision(caller, check_show_id)
 		end repeat
 	else
 		set show_offset to my HDHRShowSearch(check_show_id)
-		log "show_offset: " & show_offset
+		--		log "show_offset: " & show_offset
 		
 		repeat with i from 1 to (length of Show_info)
 			if show_active of item i of Show_info then
@@ -2870,7 +2867,8 @@ on showid2PID(caller, show_id, kill_pid, logging)
 		set show_offset to my HDHRShowSearch(show_id)
 		if show_offset is greater than 0 then
 			try
-				set showid2PID_result to do shell script "ps -Aa|grep '" & show_id & "'|grep -v 'grep\\|caffeinate'"
+				set showid2PID_result to do shell script "ps -Aa|grep appname|grep -v 'grep\\|caffeinate'"
+				--set showid2PID_result to do shell script "ps -Aa|grep '" & show_id & "'|grep -v 'grep\\|caffeinate'"
 			on error errmsg
 				--my logger(true, "showid2PID(" & caller & ")", "WARN", errmsg)
 				return {show_id, {}}
@@ -3145,12 +3143,12 @@ on time_set(caller, adate_object, time_shift)
 	return dateobject
 end time_set
 
-on padnum(thenum)
-	log (length of thenum as text)
+on padnum(caller, thenum)
+	my logger(true, "padnum(" & caller & ")", "DEBUG", thenum)
 	if (length of thenum) is 1 then
-		set thenum to "0" & thenum
+		set thenum to ("0" & thenum) as text
 	else
-		return thenum
+		return (thenum) as text
 	end if
 end padnum
 
@@ -3164,7 +3162,7 @@ on is_number(number_string)
 end is_number
 
 on stringtolist(the_caller, theString, delim)
-	--log "stringtolist: " & the_caller & ":" & theString
+	log "stringtolist: " & the_caller & ":" & theString
 	set oldelim to AppleScript's text item delimiters
 	set AppleScript's text item delimiters to delim
 	set dlist to (every text item of theString)
@@ -3225,7 +3223,7 @@ on short_date(the_caller, the_date_object, twentyfourtime, show_seconds)
 						end if
 					end if
 				else
-					set hours_string to (hours_string)
+					set hours_string to my padnum("short_date(" & the_caller & ")", hours_string)
 					set timeAMPM to " AM"
 				end if
 			end if
@@ -3279,7 +3277,7 @@ on list_position(caller, this_item, this_list, is_strict)
 			end if
 		end repeat
 	end if
-	--log "list_post3: 0"
+	--	log "list_post3: 0"
 	return 0
 end list_position
 
@@ -3303,31 +3301,22 @@ on logger(logtofile, caller, loglevel, message)
 	## loglevel is a string that tell us how severe the log line is 
 	## message is the actual message we want to log.
 	## We cannot do any logging here, or recursion will occur!
-	--log caller 
-	--log loglevel & " " & caller & " " & message
-	--caller can be "init" or "flush"
 	--We dont want to write out everything we write, so lets maintain a buffer.  We can add a hook into the idle() handler to flush the queue. 
 	set logger_max_queued to 1
 	--if caller is  "init" then
 	set queued_log_lines to {}
 	--end if  
 	set end of queued_log_lines to my short_date("logger", current date, true, true) & " " & Local_env & " " & loglevel & " " & caller & " " & message
-	if length of queued_log_lines is greater than or equal to logger_max_queued or caller is "flush" then
-	end if
+	--if length of queued_log_lines is greater than or equal to logger_max_queued or caller is "flush" then
+	--end if
 	if loglevel is in Logger_levels then
 		
 		try
 			set logfile to open for access file ((Log_dir) & (Logfilename) as text) with write permission
 		on error
-			set logfile to ""
+			set logfile to "" 
 		end try
 		if logfile is not "" then
-			--set ref_num to get eof of logfile
-			--set eof of ref_num to 0
-			--log "- - -"
-			--log ref_num
-			--log "length of queued_log_lines"
-			--log length of queued_log_lines
 			repeat with i from 1 to length of queued_log_lines
 				set ref_num to get eof of logfile
 				--write (item i of queued_log_lines & LF) to logfile starting at ref_num 
@@ -3433,8 +3422,8 @@ end timeslot_feed
 on timeslot_firstrun()
 	my timeslot_build(2)
 	repeat with i from 1 to 2
-		--log "timeslot_firstrun: " & i
-		--log (length of item i of timeslot as text)
+		--		log "timeslot_firstrun: " & i
+		--		log (length of item i of Timeslot as text)
 	end repeat
 	--We need to feed a showID into something and mark the shows off that are already being tracked.	
 end timeslot_firstrun
@@ -3451,10 +3440,10 @@ on timeslot_build(num_of_tuners)
 			set end of Timeslot to templist
 			set templist to {}
 		end repeat
-		--log "timeslot_build true"
+		--		log "timeslot_build true"
 		return true
 	on error errnum
-		--log "timeslot_build false"
+		--		log "timeslot_build false"
 		return false
 	end try
 	(*
@@ -3521,6 +3510,7 @@ on existing_shows(caller)
 		set showid2PID_result to do shell script "ps -Aa|grep appname|grep -v 'grep\\|caffeinate'"
 	on error errmsg
 		set showid2PID_result to ""
+		return
 	end try
 	try
 		set showid2PID_result_list to my stringtolist("existing_shows(" & caller & ")", showid2PID_result, return)
@@ -3539,7 +3529,7 @@ on existing_shows(caller)
 	end try
 end existing_shows
 
-on fix_show_orig(caller) 
+on fix_show_orig(caller)
 	repeat with i from 1 to length of Show_info
 		if show_time_orig of item i of Show_info is in {missing value, "missing value"} then
 			set show_time_orig of item i of Show_info to show_time of item i of Show_info
@@ -3548,3 +3538,15 @@ on fix_show_orig(caller)
 	end repeat
 end fix_show_orig
 
+on check_after_midnight(caller)
+	set temp_time to day of (current date)
+	try
+		if Check_after_midnight_time is not temp_time then
+			return true
+			set Check_after_midnight_time to temp_time
+		end if
+	on error errmsg
+		set Check_after_midnight_time to temp_time
+	end try
+	return false
+end check_after_midnight
