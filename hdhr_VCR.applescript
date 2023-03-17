@@ -1,6 +1,7 @@
 
 (*
 
+Add indication if show_list data has been updatted, or if its the old show information
 We need to be able to know how many total tuners we have.
  then run mytimeslot_build(num_of_tuners)
  We can start with marking the existing shows in showlist
@@ -9,7 +10,7 @@ We need to be able to know how many total tuners we have.
 Fix issue where selecting  multipe shows may cause an issue with is_sport popup
 
 Todo:
-NEED option to quit after recording is complete.
+NEED option to quit after recording is complete. 
 NEED Prompt user to update show with a valid tuner.
 --add display on main screen to show next recording.  Check that time, and see if multiple shows are being recorded at the time. -Done
 --This may just evolve into a futurerecording search, which we could use to not over book recording times. -In Progress
@@ -157,7 +158,7 @@ on run {}
 	set Running_icon to character id {127939, 8205, 9794, 65039}
 	set Add_icon to character id 127381
 	
-	set Version_local to "20230313"
+	set Version_local to "20230316"
 	set Config_version to 1
 	set progress description to "Loading " & name of me & " " & Version_local
 	
@@ -193,7 +194,7 @@ on run {}
 		set Logger_levels to {"INFO", "WARN", "ERROR", "NEAT"}
 	end if
 	set Loglines_written to 0
-	set Loglines_max to 1000 as text
+	set Loglines_max to 100000 as text
 	set Back_channel to missing value
 	copy (current date) to Idle_timer_dateobj
 	set Missing_tuner_retry_count to 0
@@ -239,7 +240,6 @@ on run {}
 	## Adds X lines to length of log file.  We add 50 lines per show added
 	set Loglines_max to Loglines_max + ((length of Show_info) * 100)
 	my existing_shows("run()")
-	--my fix_show_orig("run()")
 	--Test
 	## Main is the start of the UI for the user. on main
 	my main("run()", "run")
@@ -256,17 +256,17 @@ on idle
 	--This should give us an approximate time in seconds the script was launched. 
 	if (current date) is greater than Idle_timer_dateobj then
 		set Idle_timer to Idle_timer_default
-		my logger(true, "idle(1)", "DEBUG", "idle_timer set to " & Idle_timer_default)
+		--my logger(true, "idle(1)", "DEBUG", "idle_timer set to " & Idle_timer_default)
 		set Idle_timer_dateobj to current date
 	end if
 	
 	try
 		set Idle_count to Idle_count + Idle_timer
-		my logger(true, "idle()", "DBEUG", "Idle seconds: " & Idle_count)
+		--my logger(true, "idle(1.5)", "DEBUG", "Idle seconds: " & Idle_count)
 		copy (current date) to cd
 		copy cd + (Idle_timer + 2) to cd_object
-		my logger(true, "idle(2)", "DEBUG", "" & cd)
-		my logger(true, "idle(3)", "DEBUG", "" & cd_object)
+		--my logger(true, "idle(2)", "DEBUG", "" & cd)
+		--my logger(true, "idle(3)", "DEBUG", "" & cd_object)
 		--Re run auto discover every 1 hour, or once we flip past midnight  
 		try
 			if length of HDHR_DEVICE_LIST is greater than 0 then
@@ -1047,7 +1047,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 				my logger(true, "validate_show_info(" & caller & ")", "INFO", "Channel Prompt returned: " & channel_temp)
 				set show_channel of item i of Show_info to channel_temp --set show_channel of item i of show_info to word 1 of item 1 of (choose from list channel_list with prompt "What channel does this show air on?" default items show_channel of item i of show_info without empty selection allowed) 
 			end if
-			--end repeat  
+			--end repeat   
 			
 			if show_time of item i of Show_info is missing value or (show_time of item i of Show_info as number) is greater than or equal to 24 or my is_number(show_time of item i of Show_info) is false or should_edit is true then
 				set show_time of item i of Show_info to text returned of (display dialog "What time does this show air? " & return & "(0-24, use decimals, ie 9.5 for 9:30)" default answer show_time of item i of Show_info buttons {Running_icon & " Run", "Next.."} with title my check_version_dialog() giving up after Dialog_timeout default button 2 cancel button 1) as number
@@ -1184,7 +1184,7 @@ on main(caller, emulated_button_press)
 	if button returned of title_response contains "Add" then
 		my logger(true, "main()", "INFO", "UI:Clicked " & quote & "Add" & quote)
 		
-		if option_down of my isModifierKeyPressed("main_opt", "option") is true then
+		if option_down of my isModifierKeyPressed("main_opt", "option", "Reruns HDHRDeviceDiscovery") is true then
 			my HDHRDeviceDiscovery("main_opt", "")
 			--my update_show("main()", "", true)
 		end if
@@ -1230,7 +1230,7 @@ on main(caller, emulated_button_press)
 		set progress additional description to ""
 		set progress completed steps to 0
 		set progress total steps to length of Show_info
-		if option_down of my isModifierKeyPressed("main()", "option") is true then
+		if option_down of my isModifierKeyPressed("main()", "option", "Runs Setup") is true then
 			my setup()
 			return
 		end if
@@ -1318,9 +1318,9 @@ on main(caller, emulated_button_press)
 				return
 			end try
 		else if length of show_list is greater than 0 then
-			set temp_show_list to (choose from list show_list with title my check_version_dialog() with prompt "" & length of show_list & " shows to edit: " & return & Single_icon & " Single   " & Series_icon & " Series" & "   " & Record_icon & " Recording" & "   " & Uncheck_icon & " Inactive" & return & Film_icon & " Up Next < 1h" & "  " & Up_icon & " Up Next < 4h" & "  " & Up2_icon & " Up Next > 4h" & "  " & Futureshow_icon & " Future Show" OK button name Edit_icon & " Edit.." cancel button name Running_icon & " Run" default items item 1 of show_list with multiple selections allowed without empty selection allowed)
+			set temp_show_list to (choose from list show_list with title my check_version_dialog() with prompt "" & length of show_list & " shows to edit: " & return & Single_icon & " Single   " & Series_icon & " Series" & "   " & Record_icon & " Recording" & "   " & Uncheck_icon & " Inactive" & return & Film_icon & " Up Next < 1h" & "  " & Up_icon & " Up Next < 4h" & "  " & Up2_icon & " Up Next > 4h" & "  " & Futureshow_icon & " Future Show" & "   " & Done_icon & " Recorded today" OK button name Edit_icon & " Edit.." cancel button name Running_icon & " Run" default items item 1 of show_list with multiple selections allowed without empty selection allowed)
 			
-			if command_down of my isModifierKeyPressed("main_command3()", "command") is true then
+			if command_down of my isModifierKeyPressed("main_command3()", "command", "Mass deactivate") is true then
 				set mass_deactivate to button returned of (display dialog "Do you wish to activate or deactivate the shows selected?" buttons {Running_icon & " Run", "Activate", "Deactivate"} with title my check_version_dialog() giving up after Dialog_timeout with icon my curl2icon("main(" & caller & ")", "https://raw.githubusercontent.com/identd113/hdhr_VCR-AS/master/app.jpg") default button 1)
 				
 				if mass_deactivate contains "Deactivate" then
@@ -1374,7 +1374,7 @@ on main(caller, emulated_button_press)
 	end if
 	if button returned of title_response contains "Run" or gave up of title_response is true then
 		my logger(true, "main(" & caller & ")", "INFO", "2User clicked \"Run\"")
-		if option_down of my isModifierKeyPressed("main_opt", "option") is true then
+		if option_down of my isModifierKeyPressed("main_opt", "option", "Quit?") is true then
 			quit {}
 		end if
 		return
@@ -1424,7 +1424,7 @@ on add_show_info(caller, hdhr_device)
 			set show_channel_temp to word 1 of item 1 of hdhrGRID_list_response
 			set end of temp_show_progress to "Channel: " & show_channel_temp & " (" & my channel2name("add_show_info(" & caller & ")", show_channel_temp, hdhr_device) & ")"
 			set progress additional description to my listtostring("add_show(" & caller & ")", temp_show_progress, return)
-			if option_down of my isModifierKeyPressed("add", "option") is true then
+			if option_down of my isModifierKeyPressed("add", "option", "Returns false for hdhrGRID_response") is true then
 				set hdhrGRID_response to false
 			else
 				set hdhrGRID_response to my hdhrGRID("add_show_info(" & caller & ")", hdhr_device, show_channel_temp)
@@ -1805,7 +1805,7 @@ on add_show_info(caller, hdhr_device)
 				display notification with title Add_icon & " Show Added! (" & hdhr_device & ")" subtitle "" & quote & show_title of last item of Show_info & quote & " at " & show_time of last item of Show_info
 				set progress description to "This show has been added!"
 				set progress additional description to "Show: " & quote & show_title of last item of Show_info & quote & " at " & show_time of last item of Show_info
-				my repeatProgress(0.2, 10)
+				my repeatProgress(0.75, 4)
 			end repeat
 		end repeat
 	else
@@ -2061,29 +2061,33 @@ end HDHRDeviceSearch
 on hdhr_api(caller, hdhr_ready, hdhr_IP, hdhr_PORT, hdhr_endpoint) --FIX This is kind of a hot mess right now.
 	try
 		--error -128
-		with timeout of 8 seconds
-			--log "raw_hdhrapi: " & hdhr_IP & hdhr_PORT & hdhr_endpoint
-			if hdhr_IP is in {"", {}, missing value} and hdhr_ready is in {"", {}, missing value} then
-				set hdhr_IP to "https://my.hdhomerun.com"
-			end if
-			--log "raw_hdhrapi2: " & hdhr_IP & hdhr_PORT & hdhr_endpoint
-			
-			if hdhr_ready is in {"", {}, missing value} then
-				set temp_endpoint to hdhr_IP & hdhr_PORT & hdhr_endpoint
-				set hdhr_api_result to (fetch JSON from hdhr_IP & hdhr_PORT & hdhr_endpoint with cleaning feed)
-			else
-				--Connection issue here hangs up jsonhelper
-				set temp_endpoint to hdhr_ready
-				set hdhr_api_result to (fetch JSON from hdhr_ready with cleaning feed)
-			end if
-			--set HDHR_api_result_cached to hdhr_api_result
-			--set HDHR_api_result_date_cached to current date
-			my logger(true, "hdhr_api(" & caller & ")", "DEBUG", "API call: " & temp_endpoint)
-			set Hdhr_detected to true
-			return hdhr_api_result
-		end timeout
-	on error errnum
-		my logger(true, "hdhr_api(" & caller & ")", "ERROR", "API timeout")
+		--with timeout of 8 seconds
+		set temp_err to "0"
+		--log "raw_hdhrapi: " & hdhr_IP & hdhr_PORT & hdhr_endpoint
+		if hdhr_IP is in {"", {}, missing value} and hdhr_ready is in {"", {}, missing value} then
+			set hdhr_IP to "https://my.hdhomerun.com"
+		end if
+		--log "raw_hdhrapi2: " & hdhr_IP & hdhr_PORT & hdhr_endpoint
+		
+		if hdhr_ready is in {"", {}, missing value} then
+			set temp_err to "1"
+			set temp_endpoint to hdhr_IP & hdhr_PORT & hdhr_endpoint
+			set hdhr_api_result to (fetch JSON from hdhr_IP & hdhr_PORT & hdhr_endpoint with cleaning feed)
+		else
+			--Connection issue here hangs up jsonhelper
+			set temp_err to "2"
+			set temp_endpoint to hdhr_ready
+			set hdhr_api_result to (fetch JSON from hdhr_ready with cleaning feed)
+		end if
+		--set HDHR_api_result_cached to hdhr_api_result
+		--set HDHR_api_result_date_cached to current date
+		set temp_err to "3"
+		my logger(true, "hdhr_api(" & caller & ")", "DEBUG", "API call: " & temp_endpoint)
+		set Hdhr_detected to true
+		return hdhr_api_result
+		--end timeout
+	on error errmsg
+		my logger(true, "hdhr_api(" & caller & ")", "ERROR", "API timeout, errmsg: " & errmsg & " at " & hdhr_endpoint)
 		set Hdhr_detected to false
 		return {}
 	end try
@@ -2134,7 +2138,7 @@ on getHDHR_Guide(caller, hdhr_device)
 				display notification "" with title "Firmware Update Available" subtitle hdhr_model of item tuner_offset of HDHR_DEVICE_LIST & " is ready to update."
 			end if
 			
-			if caps_down of my isModifierKeyPressed("getHDHR_Guide", "caps") is true then
+			if caps_down of my isModifierKeyPressed("getHDHR_Guide", "caps", "Not in use") is true then
 				-- set hdhr_guide_data to select file and read
 			else
 				set hdhr_guide_data to my hdhr_api("getHDHR_Guide1()", "http://api.hdhomerun.com/api/guide.php?DeviceAuth=" & device_auth, "", "", "")
@@ -2161,7 +2165,7 @@ on getHDHR_Lineup(caller, hdhr_device)
 	set progress additional description to "LineUP Refresh: " & hdhr_device
 	set tuner_offset to my HDHRDeviceSearch("getHDHR_Lineup0", hdhr_device)
 	
-	if caps_down of my isModifierKeyPressed("getHDHR_Lineup(" & caller & ")", "caps") is true then
+	if caps_down of my isModifierKeyPressed("getHDHR_Lineup(" & caller & ")", "caps", "Not in use") is true then
 		--do stuff
 		--FIX  we need to re write the read file handler to allow other filrs to be read
 	else
@@ -2281,8 +2285,6 @@ on update_show(caller, the_show_id, force_update)
 		--    set progress additional description to 
 		--	set progress completed steps to 0 
 		set show_offset to my HDHRShowSearch(the_show_id)
-		
-		my logger(true, "update_show(" & caller & ")", "INFO", "Updating \"" & show_title of item show_offset of Show_info & "\" " & the_show_id)
 		--set i to my HDHRShowSearch(the_show_id)
 		set progress description to "Updating Show: " & show_title of item show_offset of Show_info
 		set progress total steps to 7
@@ -2290,6 +2292,7 @@ on update_show(caller, the_show_id, force_update)
 		--We should allow the time we can grab this to the end of the show. VVV
 		set progress additional description to "Updating Show: " & show_title of item show_offset of Show_info
 		if time2show_next is less than or equal to 5 * hours and time2show_next is greater than or equal to -60 and show_active of item show_offset of Show_info is true or force_update is true then
+			my logger(true, "update_show(" & caller & ")", "INFO", "Updating \"" & show_title of item show_offset of Show_info & "\" " & the_show_id)
 			set hdhr_response_channel to {}
 			set hdhr_response_channel to my channel_guide("update_shows(" & caller & ")", hdhr_record of item show_offset of Show_info, show_channel of item show_offset of Show_info, show_time of item show_offset of Show_info)
 			
@@ -2397,7 +2400,7 @@ on update_show(caller, the_show_id, force_update)
 			--my save_data("update_show")
 			set progress completed steps to 7
 		else
-			my logger(true, "update_shows(" & caller & ")", "DEBUG", "Did not update the show " & show_title of item show_offset of Show_info & ", next_show in " & my ms2time("update_show1", ((show_next of item show_offset of Show_info) - (current date)), "s", 4))
+			my logger(true, "update_shows(" & caller & ")", "INFO", "Did not update the show " & show_title of item show_offset of Show_info & ", next_show in " & my ms2time("update_show1", ((show_next of item show_offset of Show_info) - (current date)), "s", 4))
 		end if
 	end if
 end update_show
@@ -2428,25 +2431,23 @@ on save_data(caller)
 					set show_title of item i5 of temp_show_info to (show_title of item i5 of temp_show_info as text)
 					set show_time of item i5 of temp_show_info to (show_time of item i5 of temp_show_info as number)
 					set show_channel of item i5 of temp_show_info to (show_channel of item i5 of temp_show_info as text)
+					
 					try
 						set show_seriesid of item i5 of temp_show_info to (show_seriesid of item i5 of temp_show_info as text)
-						--my logger(true, "save_data_json", "INFO", show_seriesid of item i5 of temp_show_info)
 					on error errmsg
 						set item i5 of temp_show_info to item i5 of temp_show_info & {show_seriesid:""}
 						my logger(true, "save_data_json", "INFO", "Added SeriesID to " & quote & show_title of item i5 of temp_show_info & quote)
 					end try
 					
 					try
-						set show_time_orig of item i5 of temp_show_info to (show_time_orig of item i5 of temp_show_info as text)
-						--my logger(true, "save_data_json", "INFO", show_seriesid of item i5 of temp_show_info)
+						set show_time_orig of item i5 of temp_show_info to (show_time_orig of item i5 of temp_show_info)
 					on error errmsg
 						set item i5 of temp_show_info to item i5 of temp_show_info & {show_time_orig:show_time of item i5 of temp_show_info as number}
 						my logger(true, "save_data_json", "INFO", "Added show_time_orig to " & quote & show_title of item i5 of temp_show_info & quote)
 					end try
 					
 					try
-						set show_recorded_today of item i5 of temp_show_info to (show_recorded_today of item i5 of temp_show_info as text)
-						--my logger(true, "save_data_json", "INFO", show_seriesid of item i5 of temp_show_info)
+						set show_recorded_today of item i5 of temp_show_info to (show_recorded_today of item i5 of temp_show_info)
 					on error errmsg
 						set item i5 of temp_show_info to item i5 of temp_show_info & {show_recorded_today:false}
 						my logger(true, "save_data_json", "INFO", "Added show_recorded_today to " & quote & show_title of item i5 of temp_show_info & quote)
@@ -2602,17 +2603,24 @@ on read_data(caller)
 			set show_next of item i5 of Show_info to date (show_next of item i5 of Show_info as text)
 			set show_end of item i5 of Show_info to date (show_end of item i5 of Show_info as text)
 			
-			if notify_recording_time of item i5 of Show_info is "missing value" then
-				set notify_recording_time of item i5 of Show_info to missing value
-			else
-				set notify_recording_time of item i5 of Show_info to (notify_recording_time of item i5 of Show_info as text)
-			end if
+			try
+				if notify_recording_time of item i5 of Show_info is "missing value" then
+					set notify_recording_time of item i5 of Show_info to missing value
+				else
+					set notify_recording_time of item i5 of Show_info to (notify_recording_time of item i5 of Show_info as text)
+				end if
+			on error errmsg
+				my logger(true, "read_data()", "WARN", "Unable to change class of notify_recording_time, err: " & errmsg)
+			end try
 			
-			if notify_upnext_time of item i5 of Show_info is "missing value" then
-				set notify_upnext_time of item i5 of Show_info to missing value
-			else
-				set notify_upnext_time of item i5 of Show_info to (notify_upnext_time of item i5 of Show_info as text)
-			end if
+			
+			try
+				if notify_upnext_time of item i5 of Show_info is "missing value" then
+					set notify_upnext_time of item i5 of Show_info to missing value
+				end if
+			on error errmsg
+				my logger(true, "read_data()", "WARN", "Unable to change class of notify_upnext_time, err: " & errmsg)
+			end try
 			
 			try
 				if show_is_sport of item i5 of Show_info is "false" then
@@ -2624,98 +2632,25 @@ on read_data(caller)
 			on error errmsg
 				my logger(true, "read_data()", "WARN", "Unable to change class of show_is_sport, err: " & errmsg)
 			end try
+			
+			try
+				if show_recorded_today of item i5 of Show_info is "false" then
+					set show_recorded_today of item i5 of Show_info to false
+				end if
+				if show_recorded_today of item i5 of Show_info is "true" then
+					set show_recorded_today of item i5 of Show_info to true
+				end if
+			on error errmsg
+				my logger(true, "read_data()", "WARN", "Unable to change class of show_recorded_today, err: " & errmsg)
+			end try
+			
 		end repeat
 	on error errmsg
-		--log errmsg 
+		my logger(true, "read_data()", "ERROR", "Unable to read file, err: " & errmsg)
 	end try
 	close access ref_num
 	my validate_show_info("read_data(" & caller & ")", "", false)
 end read_data
-
---takes the the data in the filesystem, and writes to to a variable   
-(*
-on read_data_old()
-	--FIX We need to figure out how we can allow this handler to read whatever files we point it at.  Then we can add custom json sets for testing
-	--set ref_num to missing value 
-	set hdhr_vcr_config_file to ((config_dir) & configfilename as text)
-	my logger(true, "read_data()", "INFO", "Loading config from \"" & POSIX path of hdhr_vcr_config_file & "\"...")
-	set ref_num to open for access file hdhr_vcr_config_file
-	try
-		set hdhr_vcr_config_data to read ref_num
-		set temp_show_info to {}
-		set hdhr_vcr_config_data_parsed to my stringtolist("read_data", hdhr_vcr_config_data, return)
-		--log "read_data"
-		--set temp_show_info_template to {show_title:missing value, show_time:missing value, show_length:missing value, show_air_date:missing value, show_transcode:missing value, show_temp_dir:missing value, show_dir:missing value, show_channel:missing value, show_active:true, show_id:(do shell script "date | md5") as text, show_recording:false, show_last:(current date), show_next:missing value, show_end:missing value, notify_upnext_time:missing value, notify_recording_time:missing value}
-		repeat with i from 1 to length of hdhr_vcr_config_data_parsed
-			--fix we can add progress bars here
-			if item i of hdhr_vcr_config_data_parsed is "--NEXT SHOW--" then
-				--log "read_data_start"
-				--log i
-				set end of temp_show_info to {show_title:(item (i + 1) of hdhr_vcr_config_data_parsed), show_time:(item (i + 2) of hdhr_vcr_config_data_parsed), show_length:(item (i + 3) of hdhr_vcr_config_data_parsed), show_air_date:my stringtolist("read_data_showairdate", (item (i + 4) of hdhr_vcr_config_data_parsed), ", "), show_transcode:(item (i + 5) of hdhr_vcr_config_data_parsed), show_temp_dir:(item (i + 6) of hdhr_vcr_config_data_parsed) as alias, show_dir:(item (i + 7) of hdhr_vcr_config_data_parsed) as alias, show_channel:(item (i + 8) of hdhr_vcr_config_data_parsed), show_active:((item (i + 9) of hdhr_vcr_config_data_parsed as boolean)), show_id:(item (i + 10) of hdhr_vcr_config_data_parsed), show_recording:((item (i + 11) of hdhr_vcr_config_data_parsed as boolean)), show_last:date (item (i + 12) of hdhr_vcr_config_data_parsed), show_next:date (item (i + 13) of hdhr_vcr_config_data_parsed), show_end:date (item (i + 14) of hdhr_vcr_config_data_parsed), notify_upnext_time:missing value, notify_recording_time:missing value, show_is_series:((item (i + 15) of hdhr_vcr_config_data_parsed as boolean)), hdhr_record:(item (i + 16) of hdhr_vcr_config_data_parsed)}
-				--Fix We might be losing shows here
-				--Fix We can check for imcompatible tuners in showList here
-				
-				my HDHRDeviceSearch("read_data()", (item (i + 16) of hdhr_vcr_config_data_parsed))
-				set show_info to temp_show_info
-				--log show_info
-				if show_is_series of last item of temp_show_info is true then
-					set show_next of last item of temp_show_info to my nextday("read_data_old(" & caller & ")", show_id of last item of temp_show_info)
-				end if
-				my logger(true, "read_data()", "DEBUG", "Class of transcode: " & class of show_transcode of last item of show_info & " / " & show_transcode of last item of show_info)
-			end if
-		end repeat
-		my logger(true, "read_data()", "INFO", "Config loaded")
-		try
-			--log "temp_show_info: " & temp_show_info
-		end try
-		
-		(*
-				log "show_time of item 1 of show_info"
-		log class of show_time of item 1 of show_info
-		
-		log "show_title of item 1 of show_info"  
-		log class of show_title of item 1 of show_info 
-		log "show_time of item 1 of show_info"
-		log class of show_time of item 1 of show_info
-		log "show_length of item 1 of show_info"
-		log class of show_length of item 1 of show_info
-		log my listtostring(show_air_date of item 1 of show_info, ", ")
-		log class of my listtostring(show_air_date of item 1 of show_info, ", ")
-		log "show_transcode of item 1 of show_info"
-		log class of show_transcode of item 1 of show_info
-		log "show_temp_dir of item 1 of show_info" 
-		log class of show_temp_dir of item 1 of show_info
-		log "show_temp_dir of item 1 of show_info"
-		log class of show_temp_dir of item 1 of show_info
-		log "show_dir of item 1 of show_info "
-		log class of show_dir of item 1 of show_info
-		log "show_channel of item 1 of show_info"
-		log class of show_channel of item 1 of show_info
-		log "show_active of item 1 of show_info"
-		log class of show_active of item 1 of show_info
-		log " show_id of item 1 of show_info"
-		log class of show_id of item 1 of show_info
-		log "show_recording of item 1 of show_info "
-		log class of show_recording of item 1 of show_info
-		log "show_last of item 1 of show_info" 
-		log class of show_last of item 1 of show_info
-		log "show_next of item 1 of show_info"
-		log class of show_next of item 1 of show_info
-		log "show_end of item 1 of show_info"
-		log class of show_end of item 1 of show_info
-		log "show_is_series of item 1 of show_info"
-		log class of show_is_series of item 1 of show_info
-		log "hdhr_record of item 1 of show_info"
-		log class of hdhr_record of item 1 of show_info
-	*)
-	on error errmsg
-		log errmsg
-	end try
-	close access ref_num
-	my validate_show_info("read_data()", "", false)
-	
-end read_data_old
-*)
 
 on recording_now(caller)
 	my logger(true, "recording_now(" & caller & ")", "INFO", "Called")
@@ -2750,8 +2685,8 @@ on next_shows(caller)
 	copy (current date) to cd
 	set soonest_show to 9999999
 	set soonest_show_time to cd
-	log "length of showinfo"
-	log length of Show_info
+	--log "length of showinfo"
+	--log length of Show_info
 	repeat with i from 1 to length of Show_info
 		if ((show_next of item i of Show_info) - (cd)) is less than soonest_show and show_next of item i of Show_info is greater than (cd) and show_active of item i of Show_info is true then
 			set soonest_show_time to show_next of item i of Show_info
@@ -2867,7 +2802,7 @@ on showid2PID(caller, show_id, kill_pid, logging)
 		set show_offset to my HDHRShowSearch(show_id)
 		if show_offset is greater than 0 then
 			try
-				set showid2PID_result to do shell script "ps -Aa|grep appname|grep -v 'grep\\|caffeinate'"
+				set showid2PID_result to do shell script "ps -Aa|grep " & show_id & "|grep -v 'grep\\|caffeinate'"
 				--set showid2PID_result to do shell script "ps -Aa|grep '" & show_id & "'|grep -v 'grep\\|caffeinate'"
 			on error errmsg
 				--my logger(true, "showid2PID(" & caller & ")", "WARN", errmsg)
@@ -3004,12 +2939,12 @@ on emptylist(klist)
 	return nlist
 end emptylist
 
-on isModifierKeyPressed(caller, checkKey)
+on isModifierKeyPressed(caller, checkKey, desc)
 	
 	set modiferKeysDOWN to {command_down:false, option_down:false, control_down:false, shift_down:false, caps_down:false, numlock_down:false, function_down:false, help_down:false}
 	
 	try
-		my logger(true, "isModifierKeyPressed(" & caller & ")", "INFO", "isModifierKeyPressed: " & checkKey)
+		my logger(true, "isModifierKeyPressed(" & caller & ")", "INFO", "isModifierKeyPressed: " & checkKey & ", reason: " & desc)
 	on error errmsg
 		my logger(true, "isModifierKeyPressed(" & caller & ")", "WARN", "isModifierKeyPressed check failed: " & errmsg)
 	end try
@@ -3064,7 +2999,11 @@ on isModifierKeyPressed(caller, checkKey)
 		end if
 	end if
 	--Set if any function key is pressed. The function keys include the F keys at the top of most keyboards (F1, F2, and so on) and the navigation keys in the center of most keyboards (Help, Forward Delete, Home, End, Page Up, Page Down, and the arrow keys)
-	
+	try
+		set temp to modiferKeysDOWN as text
+	on error errmsg
+		my logger(true, "isModifierKeyPressed(" & caller & ")", "DEBUG", item 2 of my stringtolist("isModifierKeyPressed(" & caller & ")", errmsg, {"{", "}"}))
+	end try
 	return modiferKeysDOWN
 end isModifierKeyPressed
 
@@ -3131,7 +3070,7 @@ on isModifierKeyPressed2(caller, checkKey)
 end isModifierKeyPressed2
 
 on time_set(caller, adate_object, time_shift)
-	log adate_object
+	--log adate_object
 	log time_shift
 	set dateobject to adate_object
 	--set to midnight
@@ -3161,8 +3100,8 @@ on is_number(number_string)
 	end try
 end is_number
 
-on stringtolist(the_caller, theString, delim)
-	log "stringtolist: " & the_caller & ":" & theString
+on stringtolist(caller, theString, delim)
+	--log "stringtolist: " & the_caller & ":" & theString
 	set oldelim to AppleScript's text item delimiters
 	set AppleScript's text item delimiters to delim
 	set dlist to (every text item of theString)
@@ -3314,7 +3253,7 @@ on logger(logtofile, caller, loglevel, message)
 		try
 			set logfile to open for access file ((Log_dir) & (Logfilename) as text) with write permission
 		on error
-			set logfile to "" 
+			set logfile to ""
 		end try
 		if logfile is not "" then
 			repeat with i from 1 to length of queued_log_lines
@@ -3528,15 +3467,6 @@ on existing_shows(caller)
 		my logger(true, "existing_shows(" & caller & ")", "WARN", "Check for existing_shows() failed, errmsg: " & errmsg)
 	end try
 end existing_shows
-
-on fix_show_orig(caller)
-	repeat with i from 1 to length of Show_info
-		if show_time_orig of item i of Show_info is in {missing value, "missing value"} then
-			set show_time_orig of item i of Show_info to show_time of item i of Show_info
-			my logger(true, "fix_show_orig(" & caller & ")", "WARN", "The show, '" & show_title of item i of Show_info & "', had an invalid show_time_orig, and this was fixed")
-		end if
-	end repeat
-end fix_show_orig
 
 on check_after_midnight(caller)
 	set temp_time to day of (current date)
