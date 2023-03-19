@@ -158,7 +158,7 @@ on run {}
 	set Running_icon to character id {127939, 8205, 9794, 65039}
 	set Add_icon to character id 127381
 	
-	set Version_local to "20230316"
+	set Version_local to "20230318"
 	set Config_version to 1
 	set progress description to "Loading " & name of me & " " & Version_local
 	
@@ -182,7 +182,6 @@ on run {}
 	set Idle_count to 0
 	set Temp_dir to alias "Volumes:"
 	set Config_dir to path to documents folder
-	--set next_save_dt to ((current date) + (random number from 200 to 2000))
 	set Online_detected to false
 	set Hdhr_detected to false
 	--logging    
@@ -253,6 +252,9 @@ end run
 ## This script will loop through this every 12 seconds, or whatever the return value is, in second is at the bottom of this handler.
 on idle
 	## We manually called idle() handler before popping any notification windows.  This allows us to start a show that may already be started when openong the app.
+	-- Create random number to allow better tracking of idle loops
+	copy (round (random number from 1 to 9999)) to idle_uniq
+	
 	--This should give us an approximate time in seconds the script was launched. 
 	if (current date) is greater than Idle_timer_dateobj then
 		set Idle_timer to Idle_timer_default
@@ -283,7 +285,7 @@ on idle
 								with timeout of 15 seconds
 									my HDHRDeviceDiscovery("idle(5)", "")
 								end timeout
-								my save_data("PostHDHRDeviceDiscovery")
+								my save_data("idle(PostHDHRDeviceDiscovery)")
 							on error errnum
 								--FIX we fail here after awhile, maybe midnight switchover?, likely config file save related
 								my logger(true, "idle(6)", "ERROR", "Unable to update HDHRDeviceDiscovery " & errnum)
@@ -372,7 +374,7 @@ on idle
 									--NEW
 									if show_is_sport of item i of Show_info is true then
 										try
-											my logger(true, "idle901()", "INFO", "Setting show run time to an additional 30 minutes")
+											my logger(true, "idle901(" & idle_uniq & ")", "INFO", "Setting show run time to an additional 30 minutes")
 											set show_runtime to show_runtime + 1800
 											
 											--NEW Line below should fix issue where a sport show continues recording past old end time, but it doesnt show up on the overview
@@ -523,14 +525,6 @@ on idle
 		on error errmsg
 			my logger(true, "idle(31-1)", "ERROR", errmsg)
 		end try
-		--FIX We can likely remove this, we will just save after the periodic tuner update
-		(*
-		if next_save_dt is less than (cd) then
-			--my logger(true, "idle()", "INFO", "Periodic Save")
-			my save_data("PeriodicSave")
-			set next_save_dt to ((cd) + (random number from 200 to 2000))
-		end if
-		*)
 	on error errmsg
 		my logger(true, "idle(31)", "ERROR", errmsg)
 	end try
@@ -1020,7 +1014,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 				--display dialog temp_tuner 
 				set tuner_offset to my HDHRDeviceSearch("channel2name0", temp_tuner)
 				--display dialog "tuner_offset: " & tuner_offset
-				--FIX we need to watch for instances of HDHRDeviceSearch returning 0, and gracefully deal with it.
+				--FIX we need to watch for instances of HDHRDeviceSearch returning 0, and gracefully deal with it. 
 				if tuner_offset is greater than 0 then
 					--	set temp_channel_offset to my list_position("validate_show_info1", show_channel of item i of show_info, channel_mapping of item tuner_offset of HDHR_DEVICE_LIST, false)
 					--set channel_temp to word 1 of item 1 of (choose from list channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with prompt "What channel does this show air on?" default items item temp_channel_offset of channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with title my check_version_dialog() cancel button name play_icon & " Run" OK button name "Next.." without empty selection allowed)
@@ -3472,8 +3466,8 @@ on check_after_midnight(caller)
 	set temp_time to day of (current date)
 	try
 		if Check_after_midnight_time is not temp_time then
-			return true
 			set Check_after_midnight_time to temp_time
+			return true
 		end if
 	on error errmsg
 		set Check_after_midnight_time to temp_time
