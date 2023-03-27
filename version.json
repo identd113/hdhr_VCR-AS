@@ -2,6 +2,10 @@
 	"versions": 
 [
 {
+"hdhr_version":"20230319",
+"changelog":"Stable release with lots of features!  See commit of this file, to see list of changes."
+},
+{
 "hdhr_version":"20230223",
 "changelog":"Release! Fixed error when missing the cache folder, Replaced obsolete python2 requirement, display is logs if a channel does not contains MPEG or AC3 for codec types. General code cleanup"
 },
