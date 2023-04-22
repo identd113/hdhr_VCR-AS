@@ -80,6 +80,7 @@ global Config_version
 --Icons
 global Play_icon
 global Record_icon
+global Recordsoon_icon
 global Tv_icon
 global Plus_icon
 global Single_icon
@@ -134,6 +135,7 @@ on run {}
 	--Icons! 
 	set Play_icon to character id 9654
 	set Record_icon to character id 128308
+	set Recordsoon_icon to character id 11093
 	set Tv_icon to character id 128250
 	set Plus_icon to character id 10133
 	set Single_icon to character id {49, 65039, 8419}
@@ -158,7 +160,7 @@ on run {}
 	set Running_icon to character id {127939, 8205, 9794, 65039}
 	set Add_icon to character id 127381
 	
-	set Version_local to "20230318"
+	set Version_local to "20230422"
 	set Config_version to 1
 	set progress description to "Loading " & name of me & " " & Version_local
 	
@@ -287,7 +289,6 @@ on idle
 								end timeout
 								my save_data("idle(PostHDHRDeviceDiscovery)")
 							on error errnum
-								--FIX we fail here after awhile, maybe midnight switchover?, likely config file save related
 								my logger(true, "idle(6)", "ERROR", "Unable to update HDHRDeviceDiscovery " & errnum)
 							end try
 							
@@ -344,9 +345,12 @@ on idle
 										--We could walk the user through reassigning a tuner.										
 										if Missing_tuner_retry_count is less than 3 then
 											my logger(true, "idle(8-1)", "WARN", "The tuner, " & hdhr_record of item i of Show_info & ", does not exist, refreshing tuners")
-											my HDHRDeviceDiscovery("idle(8-2)", "")
+											my HDHRDeviceDiscovery("idle(8-2)", hdhr_record of item i of Show_info)
 											set Missing_tuner_retry_count to Missing_tuner_retry_count + 1
 											-- FIX Add option to reassign tuner
+										end if
+										if Missing_tuner_retry_count is greater than 3 then
+											my missing_tuner("idle(8-3)", hdhr_record of item i of Show_info)
 										end if
 										exit repeat
 									end if
@@ -397,7 +401,7 @@ on idle
 										if item 2 of my showid2PID("idle155", show_id of item i of Show_info, false, true) is {} then
 											--if my existing_recordings("idle155", show_id of item i of show_info) = false then --new 
 											my record_now("idle(32)", (show_id of item i of Show_info), show_runtime)
-											display notification "Ends " & my short_date("rec started", show_end of item i of Show_info, false, false) with title Record_icon & " Started Recording on (" & hdhr_record of item i of Show_info & ")" subtitle quote & show_title of item i of Show_info & quote & " on " & show_channel of item i of Show_info & " (" & my channel2name("idle(16)", show_channel of item i of Show_info as text, hdhr_record of item i of Show_info) & ")"
+											display notification "Ends " & my short_date("rec started", show_end of item i of Show_info, false, false) with title Recordsoon_icon & " Started Recording on (" & hdhr_record of item i of Show_info & ")" subtitle quote & show_title of item i of Show_info & quote & " on " & show_channel of item i of Show_info & " (" & my channel2name("idle(16)", show_channel of item i of Show_info as text, hdhr_record of item i of Show_info) & ")"
 											set notify_recording_time of item i of Show_info to (cd) + (2 * minutes)
 											my logger(true, "idle(17)", "INFO", "Started recording " & quote & show_title of item i of Show_info & quote & " until " & show_end of item i of Show_info & " on channel " & show_channel of item i of Show_info & " using " & hdhr_record of item i of Show_info)
 											--display notification show_title of item i of show_info & " on channel " & show_channel of item i of show_info & " started for " & show_runtime of item i of show_info & " minutes."
@@ -452,8 +456,8 @@ on idle
 									set check_showid_recording to item 2 of my showid2PID("idle(check_showid_recording)", show_id of item i of Show_info, false, false)
 									
 									--NEW FIX 
-									if length of check_showid_recording is 0 then
-										my logger(true, "idle(21)", "WARN", quote & show_id of item i of Show_info & quote & " is marked as recording, but we do not have a valid PID, setting show_recording to false")
+								 	if length of check_showid_recording is 0 then
+										my logger(true, "idle(21-2)", "WARN", quote & show_id of item i of Show_info & quote & " is marked as recording, but we do not have a valid PID, setting show_recording to false")
 										set show_recording of item i of Show_info to false
 									end if
 								end if
@@ -1119,7 +1123,6 @@ on main(caller, emulated_button_press)
 	if length of HDHR_DEVICE_LIST is 0 then
 		my HDHRDeviceDiscovery("main(no_tuners_found)", "")
 	end if
-	idle {}
 	my logger(true, "main(" & caller & ", " & emulated_button_press & ")", "INFO", "Main screen called")
 	--my read_data() 
 	(*
@@ -2532,13 +2535,14 @@ on showPathVerify(caller, show_id)
 			if my checkfileexists("showPathVerify(" & caller & ")", show_dir of item show_offset of Show_info) is false then
 				my logger(true, "showPathVerify(" & caller & ")", "WARN", "The show, " & show_title of item show_offset of Show_info & " has a invalid save directory")
 			else
-				my logger(true, "showPathVerify(" & caller & ")", "INFO", "The show, " & show_title of item show_offset of Show_info & " has a valid save directory")
+				my logger(true, "showPathVerify(" & caller & ")", "DEBUG", "The show, " & show_title of item show_offset of Show_info & " has a valid save directory")
 			end if
 		on error errmsg
 			my logger(true, "showPathVerify(" & caller & ")", "ERROR", "An error occured, errmsg: " & errmsg)
 		end try
 	end if
 end showPathVerify
+
 on checkfileexists(caller, filepath)
 	try
 		my logger(true, "checkfileexists(" & caller & ")", "INFO", filepath as text)
@@ -3474,3 +3478,9 @@ on check_after_midnight(caller)
 	end try
 	return false
 end check_after_midnight
+
+on missing_tuner(caller, missing_tuner)
+	my logger(true, "missing_tune(" & caller & ")", "WARN", "Missing tuner, errmsg: " & missing_tuner)
+	--display dialog "The tuner, " & missing_tuner & " is not available, would you like to reassign chows to another tuner"
+end missing_tuner
+
