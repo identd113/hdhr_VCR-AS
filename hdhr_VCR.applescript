@@ -160,7 +160,7 @@ on run {}
 	set Running_icon to character id {127939, 8205, 9794, 65039}
 	set Add_icon to character id 127381
 	
-	set Version_local to "20230422"
+	set Version_local to "20230429"
 	set Config_version to 1
 	set progress description to "Loading " & name of me & " " & Version_local
 	
@@ -201,7 +201,7 @@ on run {}
 	set Missing_tuner_retry_count to 0
 	set Timeslot to {}
 	--my timeslot_firstrun()
-	my logger(true, "init", "INFO", "Started " & name of me & " " & Version_local)
+	my logger(true, "init", "INFO", "***** Starting " & name of me & " " & Version_local & " *****")
 	
 	--
 	-- Esnure that the cache folder for images is created 
@@ -216,7 +216,7 @@ on run {}
 	*)
 	
 	if Locale is not "en_US" then
-		display dialog "Due to poor planning, only en_US regions can use this script."
+		display dialog "Due to poor planning, only en_US regions can use this script, sorry!"
 		quit {}
 		return
 	end if
@@ -236,7 +236,7 @@ on run {}
 		my logger(true, "init", "ERROR", "hdhr_detected is " & Hdhr_detected)
 	end if
 	my showPathVerify("run()", "")
-	## Dump all show info.  Onlt print when run in debug mode
+	## Dump all show info.  Only print when run in debug mode
 	my show_info_dump("run3", "", false)
 	## Adds X lines to length of log file.  We add 50 lines per show added
 	set Loglines_max to Loglines_max + ((length of Show_info) * 100)
@@ -456,7 +456,7 @@ on idle
 									set check_showid_recording to item 2 of my showid2PID("idle(check_showid_recording)", show_id of item i of Show_info, false, false)
 									
 									--NEW FIX 
-								 	if length of check_showid_recording is 0 then
+									if length of check_showid_recording is 0 then
 										my logger(true, "idle(21-2)", "WARN", quote & show_id of item i of Show_info & quote & " is marked as recording, but we do not have a valid PID, setting show_recording to false")
 										set show_recording of item i of Show_info to false
 									end if
@@ -742,10 +742,11 @@ on tuner_status2(caller, device_id)
 		return {tunermax:0, tuneractive:0}
 	end if
 	try
-		with timeout of 6 seconds
+		with timeout of 8 seconds
 			set hdhr_discover_temp to my hdhr_api("tuner_status2(" & caller & ")", statusURL of item tuner_offset of HDHR_DEVICE_LIST, "", "", "")
 		end timeout
-	on error
+	on error errmsg
+		my logger(true, "tuner_status2(" & caller & ")", "WARN", "Timeout, errmsg: " & errmsg)
 		set hdhr_discover_temp to ""
 		return false
 	end try
@@ -1063,8 +1064,16 @@ on validate_show_info(caller, show_to_check, should_edit)
 				try
 					set show_dir of item i of Show_info to choose folder with prompt "Select shows Directory" default location show_dir of item i of Show_info
 				on error errmsg
-					set show_dir of item i of Show_info to choose folder with prompt "The show: " & return & show_title of item i of Show_info & return & " has an invalid directory. Please choose another"
-					my logger(true, "main()", "WARN", "Invalid path")
+					my logger(true, "main()", "WARN", "Invalid path, errmsg: " & errmsg)
+					
+					try
+						set show_dir of item i of Show_info to choose folder with prompt "The show: " & return & show_title of item i of Show_info & return & " has an invalid directory. Please choose another"
+					on error errmsg
+						my logger(true, "main()", "WARN", "Invalid path, errmsg: " & errmsg)
+						my validate_show_info("main(" & caller & ")", show_id of item i of Show_info, false)
+						
+					end try
+					
 				end try
 				set show_temp_dir of item i of Show_info to show_dir of item i of Show_info
 			end if
@@ -1148,12 +1157,13 @@ on main(caller, emulated_button_press)
 	--activate me
 	--try
 	set show_list_empty to false
-	--try
+	--try 
 	set next_show_main_temp to my next_shows("main(" & caller & ")")
-	
+	my logger(true, "main(" & caller & ")", "WARN", "Tracking non open00")
 	set next_show_main to my listtostring("main(" & caller & ")", item 2 of next_show_main_temp, return)
 	set next_show_main_time to my short_date("main(" & caller & ")", item 1 of next_show_main_temp, false, false)
 	set next_show_main_time_real to item 1 of next_show_main_temp
+	my logger(true, "main(" & caller & ")", "WARN", "Tracking non open01")
 	--	on error
 	--	set next_show_main to ""
 	--set next_show_main_time to "" 
@@ -1164,20 +1174,25 @@ on main(caller, emulated_button_press)
 	--set show_list_empty to true   
 	--end try 
 	if emulated_button_press is not in {"Add", "Shows"} then
+		my logger(true, "main(" & caller & ")", "WARN", "Tracking non open1")
 		activate me
 		if show_list_empty is true then
+			my logger(true, "main(" & caller & ")", "WARN", "Tracking non open2")
 			set title_response to (display dialog "Would you like to add a show?" & return & return & "Tuner(s): " & return & my listtostring("main(" & caller & ")", my tuner_overview("main(" & caller & ")"), return) buttons {Tv_icon & " Shows..", Plus_icon & " Add..", Running_icon & " Run"} with title my check_version_dialog() giving up after (Dialog_timeout * 0.5) with icon my curl2icon("main(" & caller & ")", "https://raw.githubusercontent.com/identd113/hdhr_VCR-AS/master/app.jpg") default button 2)
 			my logger(true, "main(" & caller & ")", "INFO", "EMPTY LIST")
 		else
+			my logger(true, "main(" & caller & ")", "WARN", "Tracking non open3")
 			set title_response to (display dialog "Would you like to add a show?" & return & return & "Tuner(s): " & return & my listtostring("main()", my tuner_overview("main(" & caller & ")"), return) & return & return & my recording_now("main(" & caller & ")") & return & return & Up_icon & " Next Show: " & next_show_main_time & " (" & my ms2time("main(next_show_countdown)", (next_show_main_time_real) - (current date), "s", 2) & ")" & return & next_show_main buttons {Tv_icon & " Shows..", Plus_icon & " Add..", Running_icon & " Run"} with title my check_version_dialog() giving up after (Dialog_timeout * 0.5) with icon my curl2icon("main(" & caller & ")", "https://raw.githubusercontent.com/identd113/hdhr_VCR-AS/master/app.jpg") default button 2)
 			my logger(true, "main(" & caller & ")", "INFO", "SHOW LIST")
 		end if
+		my logger(true, "main(" & caller & ")", "WARN", "Tracking non open4")
 	else
 		my logger(true, "main(" & caller & ")", "INFO", "ELSE")
 		set title_response to {button returned:emulated_button_press}
 	end if
 	my logger(true, "main(" & caller & ")", "INFO", "Main screen called2 " & quote & emulated_button_press & quote & " " & quote & button returned of title_response & quote)
 	--ADD
+	my logger(true, "main(" & caller & ")", "WARN", "Tracking non open5")
 	if button returned of title_response contains "Add" then
 		my logger(true, "main()", "INFO", "UI:Clicked " & quote & "Add" & quote)
 		
@@ -1343,9 +1358,6 @@ on main(caller, emulated_button_press)
 			if temp_show_list is not false then
 				repeat with i3 from 1 to length of temp_show_list
 					set temp_show_list_offset to (my list_position("main1(" & caller & ")", (item i3 of temp_show_list as text), show_list, true))
-					
-					--Fix this.  Returning for every show
-					--	my show_info_dump("shows(main(" & caller & "))", show_id of item temp_show_list_offset of show_info, true)
 					my logger(true, "main(" & caller & ")", "DEBUG", "Pre validate for " & show_title of item temp_show_list_offset of Show_info)
 					
 					my validate_show_info("main(" & caller & ")", show_id of item temp_show_list_offset of Show_info, true)
@@ -1943,7 +1955,8 @@ end HDHRShowSearch
 on HDHRDeviceDiscovery(caller, hdhr_device)
 	--log "HDHRDeviceDiscovery: " & caller
 	if hdhr_device is not "" then
-		set tuner_offset to my HDHRDeviceSearch(caller & "-> HDHRDeviceDiscovery0", hdhr_device)
+		--fix new
+		--set tuner_offset to my HDHRDeviceSearch(caller & "-> HDHRDeviceDiscovery0", hdhr_device)
 		--set hdhr_lineup of item tuner_offset of HDHR_TUNERS to my HDHR_api(lineup_url of item tuner_offset of HDHR_TUNERS, "", "", "")
 		my logger(true, "HDHRDeviceDiscovery(" & caller & ")", "DEBUG", "Pre getHDHR_Lineup")
 		my getHDHR_Lineup("HDHRDeviceDiscovery(" & caller & ")", hdhr_device)
@@ -1968,7 +1981,7 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 				set progress completed steps to i
 				try
 					set is_legacy to true
-					log Legacy of item i of hdhr_device_discovery
+					set temp to Legacy of item i of hdhr_device_discovery
 					my logger(true, "HDHRDeviceDiscovery(" & caller & ")", "WARN", "Unable to add tuner, device is legacy")
 				on error errmsg
 					set is_legacy to false
@@ -1977,7 +1990,7 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 				--This is to weed out invalid devices.
 				try
 					set is_valid to true
-					log DeviceID of item i of hdhr_device_discovery
+					set temp to DeviceID of item i of hdhr_device_discovery
 				on error errmsg
 					set is_valid to false
 					my logger(true, "HDHRDeviceDiscovery(" & caller & ")", "WARN", "Unable to add tuner, device has no DeviceID, err: " & errmsg)
@@ -2135,7 +2148,7 @@ on getHDHR_Guide(caller, hdhr_device)
 				display notification "" with title "Firmware Update Available" subtitle hdhr_model of item tuner_offset of HDHR_DEVICE_LIST & " is ready to update."
 			end if
 			
-			if caps_down of my isModifierKeyPressed("getHDHR_Guide", "caps", "Not in use") is true then
+			if caps_down of my isModifierKeyPressed("getHDHR_Guide", "caps", "Not in use2") is true then
 				-- set hdhr_guide_data to select file and read
 			else
 				set hdhr_guide_data to my hdhr_api("getHDHR_Guide1()", "http://api.hdhomerun.com/api/guide.php?DeviceAuth=" & device_auth, "", "", "")
@@ -2145,13 +2158,13 @@ on getHDHR_Guide(caller, hdhr_device)
 			my logger(true, "getHDHR_Guide(" & caller & ")", "INFO", "Updated Guide for " & hdhr_device)
 			set progress completed steps to 1
 		end if
-	on error
+	on error errmsg
 		set progress completed steps to -1
 		set progress additional description to "ERROR on Guide Refresh: " & hdhr_device
-		my logger(true, "getHDHR_Guide(" & caller & ")", "ERROR", "ERROR on Guide Refresh: " & hdhr_device & ", will retry in 10 seconds")
+		my logger(true, "getHDHR_Guide(" & caller & ")", "ERROR", "ERROR on Guide Refresh: " & hdhr_device & ", will retry in 10 seconds, errmsg: " & errmsg)
 		--my getHDHR_Guide("getHDHR_Guide_error", hdhr_device)
 	end try
-	--	display notification "Last Updated: " & (my short_date("getHDHR_Guide", current date, false)) with title hdhr_device subtitle "Guide and Lineup Data"
+	--	display notification "Last Updated: " & (my short_date("getHDHR_Guide", current date, false)) with title hdhr_device subtitle "Guide and Lineup Data" 
 	--display dialog length of hdhr_guide_data
 	--each item is a different channel, so we can walk these to pull information.  
 end getHDHR_Guide
@@ -2162,7 +2175,7 @@ on getHDHR_Lineup(caller, hdhr_device)
 	set progress additional description to "LineUP Refresh: " & hdhr_device
 	set tuner_offset to my HDHRDeviceSearch("getHDHR_Lineup0", hdhr_device)
 	
-	if caps_down of my isModifierKeyPressed("getHDHR_Lineup(" & caller & ")", "caps", "Not in use") is true then
+	if caps_down of my isModifierKeyPressed("getHDHR_Lineup(" & caller & ")", "caps", "Not in use1") is true then
 		--do stuff
 		--FIX  we need to re write the read file handler to allow other filrs to be read
 	else
@@ -2545,7 +2558,7 @@ end showPathVerify
 
 on checkfileexists(caller, filepath)
 	try
-		my logger(true, "checkfileexists(" & caller & ")", "INFO", filepath as text)
+		my logger(true, "checkfileexists(" & caller & ")", "DEBUG", filepath as text)
 		--if class of filepath is not Çclass furlÈ then
 		if class of filepath is not alias then
 			my logger(true, "checkfileexists(" & caller & ")", "WARN", "filepath class is " & class of filepath)
@@ -2836,9 +2849,15 @@ on rotate_logs(caller, filepath)
 	set progress completed steps to -1
 	--set log_length_now to (do shell script "") 
 	delay 0.1
-	do shell script "tail -n " & Loglines_max & " '" & filepath & "'>" & filepath & ".temp;mv '" & filepath & ".temp' '" & filepath & "'"
-	set progress completed steps to 1
-	my logger(true, "rotate_logs(" & caller & ")", "INFO", "Log file " & filepath & " rotated to " & Loglines_max & " lines")
+	try
+		if length of Show_info is not 0 then
+			do shell script "tail -n " & Loglines_max & " '" & filepath & "'>" & filepath & ".temp;mv '" & filepath & ".temp' '" & filepath & "'"
+			set progress completed steps to 1
+			my logger(true, "rotate_logs(" & caller & ")", "INFO", "Log file " & filepath & " rotated to " & Loglines_max & " lines")
+		else
+			my logger(true, "rotate_logs(" & caller & ")", "WARN", "Show List is empty, so logs not trimmed")
+		end if
+	end try
 end rotate_logs
 
 on checkDiskSpace(caller, the_path)
@@ -3069,7 +3088,7 @@ end isModifierKeyPressed2
 
 on time_set(caller, adate_object, time_shift)
 	--log adate_object
-	log time_shift
+	--log time_shift
 	set dateobject to adate_object
 	--set to midnight
 	set hours of dateobject to 0
