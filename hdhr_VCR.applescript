@@ -72,7 +72,6 @@ global Hdhr_setup_folder
 global Notify_upnext
 global Notify_recording
 global Hdhr_setup_ran
-global Configfilename
 global Configfilename_json
 global Logfilename
 global Time_slide
@@ -111,6 +110,7 @@ global Done_icon
 global Running_icon
 global Add_icon
 global Futureshow_icon
+
 global Lf
 global Logger_levels
 global Loglines_written
@@ -180,7 +180,6 @@ on run {}
 	set Notify_recording to 15.5
 	set Locale to user locale of (system info)
 	set Hdhr_setup_folder to "Volumes:"
-	set Configfilename to (name of me) & ".config" as text
 	set Configfilename_json to (name of me) & ".json" as text
 	set Logfilename to (name of me) & ".log" as text
 	--set quot to "\""
@@ -204,7 +203,7 @@ on run {}
 		set Logger_levels to {"INFO", "WARN", "ERROR", "NEAT"}
 	end if
 	set Loglines_written to 0
-	set Loglines_max to 100000 as text
+	set Loglines_max to 1000 as text
 	set Back_channel to missing value
 	copy (current date) to Idle_timer_dateobj
 	set Missing_tuner_retry_count to 0
@@ -1792,6 +1791,8 @@ on add_show_info(caller, hdhr_device)
 					repeat until Temp_dir is not alias "Volumes:" and update_folder_result = true
 						try
 							set Temp_dir to show_dir of last item of Show_info
+						on error errmsg
+							set Temp_dir to alias "Volumes:" 
 						end try
 						try
 							if update_folder_result = true then
@@ -2628,16 +2629,6 @@ end checkfileexists
 on read_data(caller)
 	--read .config file, if .json is not available
 	set hdhr_vcr_config_file to ((Config_dir) & Configfilename_json as text)
-	(*
-	if my checkfileexists("read_data(" & caller & ")", hdhr_vcr_config_file) is false and my checkfileexists("read_data(" & caller & ")", (config_dir) & configfilename as text) is true then
-		my logger(true, "read_data(" & caller & ")", "INFO", "Using old .config file loader")
-		my read_data_old()
-		my save_data("read_data(old_config)")
-		my read_data("read_data(old_config)")
-		--If this works, just wow   
-		return
-	end if
-	*)
 	set ref_num to open for access hdhr_vcr_config_file
 	try
 		set hdhr_vcr_config_data to read ref_num
