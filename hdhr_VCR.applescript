@@ -1,10 +1,11 @@
 
 (*
-added error shows
 added sleep to end of show, to hopefull change the date
+
 if a show starts before midnight, and we roill over to the next day, and then try to record that show, we get an error, or we schedule this for next week, like we missed it, but the show isstill running
-create icon for show list to show we are trying to record, but there is no tuner
+
 Add indication if show_list data has been updatted, or if its the old show information
+
 We need to be able to know how many total tuners we have.
  then run mytimeslot_build(num_of_tuners)
  We can start with marking the existing shows in showlist
@@ -169,7 +170,7 @@ on run {}
 	set Running_icon to character id {127939, 8205, 9794, 65039}
 	set Add_icon to character id 127381
 	
-	set Version_local to "20230510"
+	set Version_local to "20230511"
 	set Config_version to 1
 	set progress description to "Loading " & name of me & " " & Version_local
 	
@@ -377,7 +378,7 @@ on idle
 										end if
 									end if
 									
-									--	my logger(true, "idle()", "INFO", "1-1")  
+									--	my logger(true, "idle()", "INFO", "1-1")    
 									
 									
 									--Make sure if we are start early, we dont end early.  This causes us to call the tuner status API every 8 seconds.  Since this call is hosted locally, I suspect there is not APi limit set, as the APi is returning cached data from silicondust
@@ -1437,7 +1438,7 @@ on add_show_info(caller, hdhr_device)
 	set tuner_status_result to my tuner_status2("add_show(" & caller & ")", hdhr_device)
 	set tuner_status_icon to "Tuner: " & hdhr_device
 	if tunermax of tuner_status_result is tuneractive of tuner_status_result then
-		set tuner_status_icon to hdhr_device & " has no available tuners" & return & "Next timeout: " & my ms2time("add_show_info", my tuner_end("add_show_info()", hdhr_device), "s", 3)
+		set tuner_status_icon to hdhr_device & " has no available tuners" & return & "Next timeout: " & my ms2time("add_show_info(" & caller & ")", my tuner_end("add_show_info(" & caller & ")", hdhr_device), "s", 3)
 	end if
 	set tuner_offset to my HDHRDeviceSearch("add_show_info0(" & caller & ")", hdhr_device)
 	set show_channel to missing value
@@ -1792,7 +1793,7 @@ on add_show_info(caller, hdhr_device)
 						try
 							set Temp_dir to show_dir of last item of Show_info
 						on error errmsg
-							set Temp_dir to alias "Volumes:" 
+							set Temp_dir to alias "Volumes:"
 						end try
 						try
 							if update_folder_result = true then
@@ -1876,10 +1877,16 @@ on record_now(caller, the_show_id, opt_show_length)
 	my update_show("record_now(" & caller & ")", the_show_id, true)
 	set hdhr_device to hdhr_record of item i of Show_info
 	set tuner_offset to my HDHRDeviceSearch("record_now(" & caller & ")", hdhr_device)
+	
 	if opt_show_length is not missing value then
 		set temp_show_length to opt_show_length as number
 	else
 		set temp_show_length to show_length of item i of Show_info as number
+	end if
+	if show_is_sport of item i of Show_info is true then
+		my logger(true, "record_now(" & caller & ")", "INFO", "Show is sport, show_end current: " & show_end of item i of Show_info)
+		set show_end of item i of Show_info to (show_end of item i of Show_info) + 1800
+		my logger(true, "record_now(" & caller & ")", "INFO", "Show is sport, show_end now: " & show_end of item i of Show_info)
 	end if
 	--my logger(true, "record_now(" & caller & ")", "ERROR", "hdhr_detected: " & hdhr_detected)
 	--my logger(true, "record_now(" & caller & ")", "ERROR", "online_detected: " & online_detected)
@@ -1895,7 +1902,6 @@ on record_now(caller, the_show_id, opt_show_length)
 	--if checkDiskSpace_percent is 95 then
 	if checkDiskSpace_percent is less than or equal to 95 then
 		my logger(true, "record_now(" & caller & ")", "INFO", "Path: " & quote & checkDiskSpace_path & quote & " is " & checkDiskSpace_percent & "% full")
-		--if checkDiskSpace_percent < 95 then
 		if show_transcode of item i of Show_info is missing value or show_transcode of item i of Show_info is "None" then
 			--This will not record a show if we are running it in script editor.
 			if Local_env does not contain "Editor" then
@@ -2192,11 +2198,11 @@ on getHDHR_Guide(caller, hdhr_device)
 				display notification "" with title "Firmware Update Available" subtitle hdhr_model of item tuner_offset of HDHR_DEVICE_LIST & " is ready to update."
 			end if
 			
-			if caps_down of my isModifierKeyPressed("getHDHR_Guide", "caps", "Not in use2") is true then
-				-- set hdhr_guide_data to select file and read
-			else
-				set hdhr_guide_data to my hdhr_api("getHDHR_Guide1()", "http://api.hdhomerun.com/api/guide.php?DeviceAuth=" & device_auth, "", "", "")
-			end if
+			--	if caps_down of my isModifierKeyPressed("getHDHR_Guide", "caps", "Not in use2") is true then
+			-- set hdhr_guide_data to select file and read
+			--	else
+			set hdhr_guide_data to my hdhr_api("getHDHR_Guide1()", "http://api.hdhomerun.com/api/guide.php?DeviceAuth=" & device_auth, "", "", "")
+			--end if  
 			set hdhr_guide of item tuner_offset of HDHR_DEVICE_LIST to hdhr_guide_data
 			set hdhr_guide_update of item tuner_offset of HDHR_DEVICE_LIST to current date
 			my logger(true, "getHDHR_Guide(" & caller & ")", "INFO", "Updated Guide for " & hdhr_device)
@@ -2279,7 +2285,8 @@ on channel_guide(caller, hdhr_device, hdhr_channel, hdhr_time)
 			
 			--FIX some channels returning nothing.. display notification.
 			my logger(true, "channel_guide(" & caller & ")", "ERROR", hdhr_channel & " no longer exists on " & hdhr_device & ", exiting...")
-			return false
+			my main("channel_gone(" & caller & ")", "Add")
+			--return false
 		end if
 		
 		if hdhr_time is "" then
@@ -2454,7 +2461,7 @@ on update_show(caller, the_show_id, force_update)
 			--my save_data("update_show")
 			set progress completed steps to 7
 		else
-			my logger(true, "update_shows(" & caller & ")", "INFO", "Did not update the show " & show_title of item show_offset of Show_info & ", next_show in " & my ms2time("update_show1", ((show_next of item show_offset of Show_info) - (current date)), "s", 4))
+			my logger(true, "update_shows(" & caller & ")", "DEBUG", "Did not update the show " & show_title of item show_offset of Show_info & ", next_show in " & my ms2time("update_show1", ((show_next of item show_offset of Show_info) - (current date)), "s", 4))
 		end if
 	end if
 end update_show
