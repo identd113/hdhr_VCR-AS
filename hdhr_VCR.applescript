@@ -176,7 +176,7 @@ on run {}
 	set Running_icon to character id {127939, 8205, 9794, 65039}
 	set Add_icon to character id 127381
 	my configReload()
-	set Version_local to "20230511"
+	set Version_local to "20230520"
 	set Config_version to 1
 	set progress description to "Loading " & name of me & " " & Version_local
 	
@@ -271,6 +271,12 @@ end run
 
 ## This script will loop through this every 12 seconds, or whatever the return value is, in second is at the bottom of this handler.
 on idle
+	if "DEBUG" is in Logger_levels then
+		set progress description to "Start Idle Loop"
+		set progress total steps to 2
+		set progress completed steps to 1
+		delay 0.5
+	end if
 	## We manually called idle() handler before popping any notification windows.  This allows us to start a show that may already be started when openong the app.
 	-- Create random number to allow better tracking of idle loops
 	copy (round (random number from 1 to 9999)) to idle_uniq
@@ -281,7 +287,6 @@ on idle
 		--my logger(true, "idle(1)", "DEBUG", "idle_timer set to " & Idle_timer_default)
 		set Idle_timer_dateobj to current date
 	end if
-	
 	try
 		set Idle_count to Idle_count + Idle_timer
 		--my logger(true, "idle(1.5)", "DEBUG", "Idle seconds: " & Idle_count)
@@ -575,6 +580,11 @@ on idle
 	if First_open = true then
 		my logger(true, "init", "INFO", "Intial run command skipped, and run at the end of idle")
 		my main("idle()", "run")
+	end if
+	if "DEBUG" is in Logger_levels then
+		set progress description to "END Idle Loop"
+		set progress completed steps to 2
+		delay 0.5
 	end if
 	return Idle_timer
 end idle
@@ -1153,7 +1163,7 @@ end validate_show_info
 on setup()
 	
 	--loglines_max
-	set hdhr_setup_response to (display dialog "hdhr_VCR Setup" buttons {"Defaults", "Run"} default button 1 cancel button 2 with title my check_version_dialog() giving up after Dialog_timeout)
+	set hdhr_setup_response to (display dialog "hdhr_VCR Setup" buttons {"Logging", "Defaults", "Run"} default button 1 cancel button 2 with title my check_version_dialog() giving up after Dialog_timeout)
 	if button returned of hdhr_setup_response is "Defaults" then
 		set Temp_dir to alias "Volumes:"
 		--repeat until temp_dir is not alias "Volumes:"
@@ -1174,7 +1184,15 @@ on setup()
 		set Hdhr_setup_ran to true
 		--			set hdhr_config to {notify_upnext:notify_upnext, notify_recording:notify_recording, hdhr_setup_folder:hdhr_setup_folder}
 	end if
-	
+	if button returned of hdhr_setup_response is "Logging" then
+		set logging_response to button returned of (display dialog "Set logging levels to all?" buttons {"Run", "Default", "Yes"} default button 3)
+		if logging_response = "Yes" then
+			set Logger_levels to {"INFO", "WARN", "ERROR", "DEBUG"}
+		end if
+		if logging_response = "Default" then
+			set Logger_levels to {"INFO", "WARN", "ERROR", "NEAT"}
+		end if
+	end if
 end setup
 
 on AreWeOnline(caller)
@@ -1948,6 +1966,7 @@ on record_now(caller, the_show_id, opt_show_length, force_update)
 			--fix we are messing up here with titles that conmtain ' and "  we need to make sure the file paths dont contain '' as part of the string
 			if Local_env does not contain "Editor" then
 				set temp_save_path to quoted form of (POSIX path of (show_temp_dir of item i of Show_info) & show_title of item i of Show_info & "_" & my short_date("record_now0", current date, true, true) & ".m2ts")
+				--set temp_save_path to (POSIX path of (show_temp_dir of item i of Show_info) & show_title of item i of Show_info & "_" & my short_date("record_now0", current date, true, true) & ".m2ts")
 				do shell script "caffeinate -i curl -H 'show_id:" & show_id of item i of Show_info & "' -H 'show_end:" & temp_show_end & "' -H 'appname:" & name of me & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of Show_info & "?duration=" & (temp_show_length) & "' -o " & temp_save_path & "> /dev/null 2>&1 &"
 				set show_recording_path of item i of Show_info to temp_save_path
 				
@@ -2114,9 +2133,10 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 		
 		--clear all devices, to see how we react:
 		--set HDHR_DEVICE_LIST to {}
-		--Add a fake device entry to make sure we dont break this for multiple devices.
+		--Add a fake device entry to make sure we dont break this for multiple devices. 
 		--set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value, channel_mapping:missing value, BaseURL:BaseURL of item 1 of hdhr_device_discovery, statusURL:"http://10.0.1.101/status.json", Legacy:1, is_active:true}
-		
+		--set end of HDHR_DEVICE_LIST to item 1 of HDHR_DEVICE_LIST
+		--set device_id of last item of HDHR_DEVICE_LIST to "DEADBEEF"
 		--We now have a list of tuners, via a list of records in HDHR_TUNERS, now we want to pull a lineup, and a guide. 
 		
 		if length of HDHR_DEVICE_LIST is greater than 0 then
@@ -2921,7 +2941,7 @@ on showid2PID(caller, show_id, kill_pid, logging)
 				my logger(true, "showid2PID(" & caller & ")", "WARN", errmsg)
 				return {show_id, {}}
 			end try
-			set showid2PID_data_parsed to my stringtolist("showid2PID(" & caller & ")", showid2PID_result, return) 
+			set showid2PID_data_parsed to my stringtolist("showid2PID(" & caller & ")", showid2PID_result, return)
 			if length of showid2PID_data_parsed is greater than 0 then
 				repeat with i from 1 to length of showid2PID_data_parsed
 					set end of showid2PID_perline to word 1 of item i of showid2PID_data_parsed
@@ -3622,4 +3642,30 @@ on missing_tuner(caller, missing_tuner)
 	my logger(true, "missing_tuner(" & caller & ")", "WARN", "Missing tuner, errmsg: " & missing_tuner)
 	--display dialog "The tuner, " & missing_tuner & " is not available, would you like to reassign chows to another tuner"
 end missing_tuner
+
+
+#  7366 ??         0:08.89 curl -H show_id:1b76c987b711efafc2953a7bc87c0b6c -H show_end:05.20.23 10.30 -H appname:hdhr_VCR http://10.0.1.101:5004/auto/v2.4?duration=1135 -o /Volumes/Raid6/DVR Tests/Daniel Tiger's Neighborhood S04E02 Daniel's Lunch; Daniel's Toy_05.20.23 10.11.06.m2ts
+
+
+on existing_shows2(caller, show_id)
+	set temp_record to {show_id:show_id, show_end:"", appname:"", localpath:""}
+	set showid2PID_result to {}
+	try
+		set end of showid2PID_result to do shell script "ps -Aa|grep " & show_id & "|grep -v 'grep\\|caffeinate'"
+		--my logger(true, "existing_shows(" & caller & ")", "DEBUG", "ps -Aa|grep appname|grep -v 'grep\\|caffeinate', msg: " & showid2PID_result)
+	on error errmsg
+		log errmsg
+		--my logger(true, "existing_shows(" & caller & ")", "WARN", "ERROR while grepping, " & errmsg)
+		--new
+		set showid2PID_result to {}
+		return
+	end try
+	if length of showid2PID_result = 1 then
+		--parse line
+		set temp_psresult to my stringtolist("existing_shows2", item 1 of showid2PID_result, {"-H", "-o"})
+		choose from list temp_psresult
+	else
+		log "no"
+	end if
+end existing_shows2
 
