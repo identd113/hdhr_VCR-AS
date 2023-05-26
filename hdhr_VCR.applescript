@@ -1,6 +1,7 @@
 
 (*
-added sleep to end of show, to hopefull change the date
+
+
 Changed how we call intial main() from run handler.  We mark this as a first_open, and defer main until end of current idle loop
 if a show starts before midnight, and we roill over to the next day, and then try to record that show, we get an error, or we schedule this for next week, like we missed it, but the show isstill running
 
@@ -16,7 +17,7 @@ Fix issue where selecting  multipe shows may cause an issue with is_sport popup
 Todo:
 sports recording past there normal time do not show in front screen, triggering "The number of available tuners on"  in extra time
 show information, last record path, update when we start recording.
---once this is done, we can update date modified of the files after recording. 
+--once this is done, we can update date modified of the files after recording.  
 NEED option to quit after recording is complete. 
 NEED Prompt user to update show with a valid tuner.
 --add display on main screen to show next recording.  Check that time, and see if multiple shows are being recorded at the time. -Done
@@ -24,7 +25,7 @@ NEED Prompt user to update show with a valid tuner.
 --rewrite next_show to be more like recording_now  
 
 tell application "JSON Helper"  
-	fetch JSON from "http://10.0.1.101/discover.json"
+	fetch JSON from "http://10.0.1.101/discover.json" 
 		--> {ModelNumber:"HDTC 2US", UpgradeAvailable:"20210624", BaseURL:"http://10.0.1.101:80", FirmwareVersion:"20210210", DeviceAuth:"nrwqkmEpZNhIzf539VfjHyYP", FirmwareName:"hdhomeruntc_atsc", FriendlyName:"HDHomeRun EXTEND", LineupURL:"http://10.0.1.101:80/lineup.json", TunerCount:2, DeviceID:"105404BE"}
 end tell 
 *)
@@ -703,6 +704,7 @@ on hdhrGRID(caller, hdhr_device, hdhr_channel)
 		my logger(true, "hdhrGRID()", "WARN", "The show time has already passed, returning...")
 		display notification "The show has already passed, refreshing tuner...."
 		my HDHRDeviceDiscovery("hdhrGRID", hdhr_device)
+		set Back_channel to hdhr_channel
 		return true
 	end if
 	if hdhrGRID_selected is not false then
@@ -1519,7 +1521,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 	--What channel?  We need at least this to pull a guide. 
 	set temp_show_progress to {}
 	set hdhrGRID_response to true
-	set progress description to "Select a channel on tuner: " & hdhr_device & "..." 
+	set progress description to "Select a channel on tuner: " & hdhr_device & "..."
 	--set reload_channel to ""
 	repeat until hdhrGRID_response is not true
 		--my logger(true, "add_show_info(" & caller & ")", "INFO", "show_channel_temp: " & reload_channel)
@@ -1528,10 +1530,11 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 		else
 			set default_selection to item (my list_position("add_show_info()", Back_channel, channel_mapping of item tuner_offset of HDHR_DEVICE_LIST, false)) of channel_mapping of item tuner_offset of HDHR_DEVICE_LIST
 		end if
+		my logger(true, "add_show_info(" & caller & ")", "INFO", "default_selection: " & default_selection)
 		--if reload_channel is "" then
 		set hdhrGRID_list_response to (choose from list channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with prompt "What channel does this show air?" & return & return & tuner_status_icon with title my check_version_dialog() OK button name "Next.." cancel button name Running_icon & " Run" default items default_selection without empty selection allowed)
 		--else
-		--	set show_channel_temp to reload_channel
+		--	set show_channel_temp to reload_channel 
 		--end if
 		--FIX 
 		--display dialog hdhrGRID_list_response
@@ -1547,6 +1550,8 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 			else
 				set hdhrGRID_response to my hdhrGRID("add_show_info(" & caller & ")", hdhr_device, show_channel_temp)
 				-- set reload_channel to show_channel_temp
+				--set Back_channel to 
+				
 			end if
 		else
 			my logger(true, "add_show_info(" & caller & ")", "INFO", "User clicked \"Run\"")
@@ -1970,16 +1975,18 @@ on record_now(caller, the_show_id, opt_show_length, force_update)
 	set checkDiskSpace_temp to my checkDiskSpace("record_now(" & caller & ")", (POSIX path of (show_temp_dir of item i of Show_info)))
 	set checkDiskSpace_percent to item 2 of checkDiskSpace_temp
 	set checkDiskSpace_path to item 1 of checkDiskSpace_temp
-	--if checkDiskSpace_percent is 95 then
+	--if checkDiskSpace_percent is 95 then 
 	if checkDiskSpace_percent is less than or equal to 95 then
 		my logger(true, "record_now(" & caller & ")", "INFO", "Path: " & quote & checkDiskSpace_path & quote & " is " & checkDiskSpace_percent & "% full")
 		if show_transcode of item i of Show_info is missing value or show_transcode of item i of Show_info is "None" then
 			--This will not record a show if we are running it in script editor.
 			--fix we are messing up here with titles that conmtain ' and "  we need to make sure the file paths dont contain '' as part of the string
 			if Local_env does not contain "Editor" then
-				set temp_save_path to quoted form of (POSIX path of (show_temp_dir of item i of Show_info) & show_title of item i of Show_info & "_" & my short_date("record_now0", current date, true, true) & ".m2ts")
+				--set temp_save_path to quoted form of (POSIX path of (show_temp_dir of item i of Show_info) & show_title of item i of Show_info & "_" & my short_date("record_now0", current date, true, true) & ".m2ts")
+				set temp_save_path to (POSIX path of (show_temp_dir of item i of Show_info) & show_title of item i of Show_info & "_" & my short_date("record_now0", current date, true, true) & ".m2ts")
+				--	my logger(true, "record_now(" & caller & ")", "ERROR", "\"" & temp_save_path & "\"")
 				--set temp_save_path to (POSIX path of (show_temp_dir of item i of Show_info) & show_title of item i of Show_info & "_" & my short_date("record_now0", current date, true, true) & ".m2ts")
-				do shell script "caffeinate -i curl -H 'show_id:" & show_id of item i of Show_info & "' -H 'show_end:" & temp_show_end & "' -H 'appname:" & name of me & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of Show_info & "?duration=" & (temp_show_length) & "' -o " & temp_save_path & "> /dev/null 2>&1 &"
+				do shell script "caffeinate -i curl -H 'show_id:" & show_id of item i of Show_info & "' -H 'show_end:" & temp_show_end & "' -H 'appname:" & name of me & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of Show_info & "?duration=" & (temp_show_length) & "' -o \"" & temp_save_path & "\"> /dev/null 2>&1 &"
 				set show_recording_path of item i of Show_info to temp_save_path
 				
 				--do shell script "caffeinate -i curl -H '" & show_id of item i of show_info & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now0", current date, true, true) & ".m2ts") & "> /dev/null 2>&1 &" 
