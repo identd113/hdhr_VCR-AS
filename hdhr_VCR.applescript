@@ -263,6 +263,9 @@ on run {}
 		my main("run()", "run")
 	end if
 	
+	if Local_env contains "Editor" then
+		my main("run(debug_loop)", "run")
+	end if
 	## Make sure the log file doesnt get too big
 	if Local_env does not contain "Editor" then
 		my rotate_logs("run()", (Log_dir & Logfilename as text))
@@ -692,11 +695,13 @@ on hdhrGRID(caller, hdhr_device, hdhr_channel)
 			set Back_channel to hdhr_channel
 			return true
 		end if
+	on error errmsg
+		my logger(true, "hdhrGRID(" & caller & ")", "WARN", "Back failed, errmsg: " & errmsg)
 	end try
 	--fix If we select multiple shows, we miss this check.  Since we refresh the guide data on the hour, this may not even matter anymore, and we may need to remove it.
 	if my epoch2datetime("hdhrGRID(2)", EndTime of item ((my list_position("hdhrGRID1", hdhrGRID_selected, hdhrGRID_sort, false)) - 1) of Guide of hdhrGRID_temp) is less than (current date) then
 		my logger(true, "hdhrGRID()", "WARN", "The show time has already passed, returning...")
-		display notification "The show has already passed, returning..."
+		display notification "The show has already passed, refreshing tuner...."
 		my HDHRDeviceDiscovery("hdhrGRID", hdhr_device)
 		return true
 	end if
@@ -1318,7 +1323,7 @@ on main(caller, emulated_button_press)
 			else
 				set hdhr_device to device_id of item 1 of HDHR_DEVICE_LIST
 			end if
-			my add_show_info("main(" & caller & ")", hdhr_device)
+			my add_show_info("main(" & caller & ")", hdhr_device, "")
 		else
 			try
 				with timeout of 15 seconds
@@ -1489,7 +1494,7 @@ on main(caller, emulated_button_press)
 	end if
 end main
 
-on add_show_info(caller, hdhr_device)
+on add_show_info(caller, hdhr_device, hdhr_channel)
 	set progress additional description to ""
 	set progress description to "Adding a show on " & hdhr_device & "..."
 	set tuner_status_result to my tuner_status2("add_show(" & caller & ")", hdhr_device)
@@ -1514,18 +1519,23 @@ on add_show_info(caller, hdhr_device)
 	--What channel?  We need at least this to pull a guide. 
 	set temp_show_progress to {}
 	set hdhrGRID_response to true
-	set progress description to "Select a channel on tuner: " & hdhr_device & "..."
-	
+	set progress description to "Select a channel on tuner: " & hdhr_device & "..." 
+	--set reload_channel to ""
 	repeat until hdhrGRID_response is not true
+		--my logger(true, "add_show_info(" & caller & ")", "INFO", "show_channel_temp: " & reload_channel)
 		if Back_channel is missing value then
 			set default_selection to item 1 of channel_mapping of item tuner_offset of HDHR_DEVICE_LIST
 		else
 			set default_selection to item (my list_position("add_show_info()", Back_channel, channel_mapping of item tuner_offset of HDHR_DEVICE_LIST, false)) of channel_mapping of item tuner_offset of HDHR_DEVICE_LIST
 		end if
-		set hdhrGRID_list_response to (choose from list channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with prompt "What channel does this show air on?" & return & return & tuner_status_icon with title my check_version_dialog() OK button name "Next.." cancel button name Running_icon & " Run" default items default_selection without empty selection allowed)
+		--if reload_channel is "" then
+		set hdhrGRID_list_response to (choose from list channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with prompt "What channel does this show air?" & return & return & tuner_status_icon with title my check_version_dialog() OK button name "Next.." cancel button name Running_icon & " Run" default items default_selection without empty selection allowed)
+		--else
+		--	set show_channel_temp to reload_channel
+		--end if
 		--FIX 
 		--display dialog hdhrGRID_list_response
-		--FIX offset of hdhrGRID_list_response in channel mapping
+		--FIX offset of hdhrGRID_list_response in channel mapping 
 		--set temp_channel_offset to my list_position("add_show_info("&caller&")", show_channel of item i of show_info, channel_mapping of item tuner_offset of HDHR_DEVICE_LIST, false)
 		--fix get default item to 1 or to the last item selected.
 		if hdhrGRID_list_response is not false then
@@ -1536,6 +1546,7 @@ on add_show_info(caller, hdhr_device)
 				set hdhrGRID_response to false
 			else
 				set hdhrGRID_response to my hdhrGRID("add_show_info(" & caller & ")", hdhr_device, show_channel_temp)
+				-- set reload_channel to show_channel_temp
 			end if
 		else
 			my logger(true, "add_show_info(" & caller & ")", "INFO", "User clicked \"Run\"")
@@ -1859,8 +1870,9 @@ on add_show_info(caller, hdhr_device)
 								set show_dir of temp_show_info to choose folder with prompt "Unable to write to location:" & return & (failed_showdir as text) & return & "Select another location" default location Temp_dir
 							end if
 						on error errmsg
+							set show_dir of temp_show_info to choose folder with prompt "Unable to write to location:" & return & (failed_showdir as text) & return & "Select another location"
 							my logger(true, "add_show_info(" & caller & ")", "ERROR", "Unable to select show location, errmsg: " & errmsg)
-							exit repeat
+							-- exit repeat
 						end try
 						if show_dir of temp_show_info is not Temp_dir then
 							set Temp_dir to show_dir of temp_show_info
