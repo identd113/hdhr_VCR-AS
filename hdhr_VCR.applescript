@@ -177,7 +177,7 @@ on run {}
 	set Running_icon to character id {127939, 8205, 9794, 65039}
 	set Add_icon to character id 127381
 	my configReload()
-	set Version_local to "20230520"
+	set Version_local to "202300601"
 	set Config_version to 1
 	set progress description to "Loading " & name of me & " " & Version_local
 	
@@ -190,7 +190,6 @@ on run {}
 	set Hdhr_setup_folder to "Volumes:"
 	set Configfilename_json to (name of me) & ".json" as text
 	set Logfilename to (name of me) & ".log" as text
-	--set quot to "\""
 	set Time_slide to 0
 	set Dialog_timeout to 60
 	set Version_url to "https://raw.githubusercontent.com/identd113/hdhr_VCR-AS/master/version.json"
@@ -217,7 +216,6 @@ on run {}
 	set Missing_tuner_retry_count to 0
 	set Timeslot to {}
 	set Recording_paths to {}
-	--my timeslot_firstrun()
 	my logger(true, "init", "INFO", "***** Starting " & name of me & " " & Version_local & " *****")
 	
 	--
@@ -489,7 +487,7 @@ on idle
 									my logger(true, "idle(21-2)", "DEBUG", "check_showid_recording: " & check_showid_recording)
 									--NEW FIX 
 									if length of check_showid_recording is 0 then
-										my logger(true, "idle(21-2)", "WARN", quote & show_id of item i of Show_info & quote & " is marked as recording, but we do not have a valid PID, setting show_recording to false")
+										my logger(true, "idle(21-2)", "WARN", show_title of item i of Show_info & " (" & show_id of item i of Show_info & ") is marked as recording, but we do not have a valid PID, setting show_recording to false")
 										set show_recording of item i of Show_info to false
 									end if
 								end if
@@ -552,7 +550,7 @@ on idle
 								try
 									if show_time_orig of item i of Show_info is not in {missing value, "missing value"} and show_time of item i of Show_info is not show_time_orig of item i of Show_info then
 										set show_time of item i of Show_info to show_time_orig of item i of Show_info
-										my logger(true, "idle(28.1)", "INFO", "Show " & show_title of item i of Show_info & " reverted to " & show_time_orig of item i of Show_info)
+										my logger(true, "idle(28.1)", "INFO", "Show: " & show_title of item i of Show_info & " reverted to " & show_time_orig of item i of Show_info)
 									end if
 								on error errmsg
 									my logger(true, "idle(28.2)", "WARN", "Show " & show_title of item i of Show_info & " unable to revert to show_time_orig, err: " & errmsg)
@@ -560,8 +558,8 @@ on idle
 							end if
 						else if show_is_series of item i of Show_info is false and show_end of item i of Show_info is less than or equal to (cd) and show_active of item i of Show_info is true then
 							set show_active of item i of Show_info to false
-							my logger(true, "idle(29)", "INFO", "Show " & show_title of item i of Show_info & " was deactivated, as it is a single, and record time has passed")
-							display notification show_title of item i of Show_info & " removed" with title Stop_icon
+							my logger(true, "idle(29)", "INFO", "Show: " & show_title of item i of Show_info & " was deactivated, as it is a single, and record time has passed")
+							display notification "Show: " & show_title of item i of Show_info & " removed" with title Stop_icon
 						end if
 					end repeat
 				end repeat
@@ -1931,8 +1929,10 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				--log show_info
 				display notification with title Add_icon & " Show Added! (" & hdhr_device & ")" subtitle "" & quote & show_title of last item of Show_info & quote & " at " & show_time of last item of Show_info
 				set progress description to "This show has been added!"
-				set progress additional description to "Show: " & quote & show_title of last item of Show_info & quote & " at " & show_time of last item of Show_info
-				--my repeatProgress(0.1, 5)
+				set end of temp_show_progress to return & "Show: " & quote & show_title of last item of Show_info & quote & " at " & show_time of last item of Show_info
+				set progress additional description to my listtostring("add_show(" & caller & ")", temp_show_progress, return)
+				--set progress additional description to "Show: " & quote & show_title of last item of Show_info & quote & " at " & show_time of last item of Show_info
+				my repeatProgress(0.2, 10)
 			end repeat
 		end repeat
 	else
@@ -1984,28 +1984,30 @@ on record_now(caller, the_show_id, opt_show_length, force_update)
 			if Local_env does not contain "Editor" then
 				--set temp_save_path to quoted form of (POSIX path of (show_temp_dir of item i of Show_info) & show_title of item i of Show_info & "_" & my short_date("record_now0", current date, true, true) & ".m2ts")
 				set temp_save_path to (POSIX path of (show_temp_dir of item i of Show_info) & show_title of item i of Show_info & "_" & my short_date("record_now0", current date, true, true) & ".m2ts")
-				--	my logger(true, "record_now(" & caller & ")", "ERROR", "\"" & temp_save_path & "\"")
-				--set temp_save_path to (POSIX path of (show_temp_dir of item i of Show_info) & show_title of item i of Show_info & "_" & my short_date("record_now0", current date, true, true) & ".m2ts")
+				my logger(true, "record_now(" & caller & ")", "INFO", "caffeinate -i curl -H 'show_id:" & show_id of item i of Show_info & "' -H 'show_end:" & temp_show_end & "' -H 'appname:" & name of me & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of Show_info & "?duration=" & (temp_show_length) & "' -o \"" & temp_save_path & "\"> /dev/null 2>&1 &")
 				do shell script "caffeinate -i curl -H 'show_id:" & show_id of item i of Show_info & "' -H 'show_end:" & temp_show_end & "' -H 'appname:" & name of me & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of Show_info & "?duration=" & (temp_show_length) & "' -o \"" & temp_save_path & "\"> /dev/null 2>&1 &"
 				set show_recording_path of item i of Show_info to temp_save_path
 				
 				--do shell script "caffeinate -i curl -H '" & show_id of item i of show_info & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of show_info & "?duration=" & (temp_show_length) & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of show_info) & show_title of item i of show_info & "_" & my short_date("record_now0", current date, true, true) & ".m2ts") & "> /dev/null 2>&1 &" 
-				my logger(true, "record_now(" & caller & ")", "INFO", "caffeinate -i curl -H 'show_id:" & show_id of item i of Show_info & "' -H 'show_end:" & temp_show_end & "' -H 'appname:" & name of me & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of Show_info & "?duration=" & (temp_show_length) & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of Show_info) & show_title of item i of Show_info & "_" & my short_date("record_now0", current date, true, true) & ".m2ts") & "> /dev/null 2>&1 &")
+				--caffeinate -i curl -H 'show_id:" & show_id of item i of Show_info & "' -H 'show_end:" & temp_show_end & "' -H 'appname:" & name of me & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of Show_info & "?duration=" & (temp_show_length) & "' -o \"" & temp_save_path & "\"> /dev/null 2>&1 &"
+				--my logger(true, "record_now(" & caller & ")", "INFO", "caffeinate -i curl -H 'show_id:" & show_id of item i of Show_info & "' -H 'show_end:" & temp_show_end & "' -H 'appname:" & name of me & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of Show_info & "?duration=" & (temp_show_length) & "' -o \"" & (temp_save_path & "\"> /dev/null 2>&1 &"))
 				my logger(true, "record_now(" & caller & ")", "INFO", "\"" & show_title of item i of Show_info & "\" started recording for " & my ms2time("record_now(" & caller & ")", temp_show_length, "s", 3))
-				(*
+				(* 
 				if (curl_http_return is less than 200) or curl_http_return is greater than or equal to 300 then
 				my logger(true, "record_now(" & caller & ")", "WARN", "Curl returned the following code, this is expected: " & curl_http_return)
-			end if 
+			end if  
 		*)
 			else
-				my logger(true, "record_now(" & caller & ")", "INFO", "Record function surpressed in DEV")
+				my logger(true, "record_now(" & caller & ")", "INFO", "Record function surpressed in DEV") 
 			end if
 		else
 			if Local_env does not contain "Editor" then
-				set temp_save_path to quoted form of (POSIX path of (show_temp_dir of item i of Show_info) & show_title of item i of Show_info & "_" & my short_date("record_now1", current date, true, true) & ".mkv")
-				do shell script "caffeinate -i curl -H 'show_id:" & show_id of item i of Show_info & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of Show_info & "?duration=" & (temp_show_length) & "&transcode=" & show_transcode of item i of Show_info & "' -o " & temp_save_path & "> /dev/null 2>&1 &"
+				set temp_save_path to (POSIX path of (show_temp_dir of item i of Show_info) & show_title of item i of Show_info & "_" & my short_date("record_now0", current date, true, true) & ".mkv")
+				my logger(true, "record_now(" & caller & ")", "INFO", "caffeinate -i curl -H 'show_id:" & show_id of item i of Show_info & "' -H 'show_end:" & temp_show_end & "' -H 'appname:" & name of me & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of Show_info & "?duration=" & (temp_show_length) & "&transcode=" & show_transcode of item i of Show_info & "' -o \"" & temp_save_path & "\"> /dev/null 2>&1 &")
+				do shell script "caffeinate -i curl -H 'show_id:" & show_id of item i of Show_info & "' -H 'show_end:" & temp_show_end & "' -H 'appname:" & name of me & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of Show_info & "?duration=" & (temp_show_length) & "&transcode=" & show_transcode of item i of Show_info & "' -o \"" & temp_save_path & "\"> /dev/null 2>&1 &"
+				
+				--do shell script "caffeinate -i curl -H 'show_id:" & show_id of item i of Show_info & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of Show_info & "?duration=" & (temp_show_length) & "&transcode=" & show_transcode of item i of Show_info & "' -o " & temp_save_path & "> /dev/null 2>&1 &"
 				set show_recording_path of item i of Show_info to temp_save_path
-				my logger(true, "record_now(" & caller & ")", "INFO", "caffeinate -i curl -H 'show_id:" & show_id of item i of Show_info & "' '" & BaseURL of item tuner_offset of HDHR_DEVICE_LIST & ":5004" & "/auto/v" & show_channel of item i of Show_info & "?duration=" & (temp_show_length) & "&transcode=" & show_transcode of item i of Show_info & "' -o " & quoted form of (POSIX path of (show_temp_dir of item i of Show_info) & show_title of item i of Show_info & "_" & my short_date("record_now1", current date, true, true) & ".mkv") & "> /dev/null 2>&1 &")
 				my logger(true, "record_now(" & caller & ")", "INFO", "\"" & show_title of item i of Show_info & "\" started recording for " & temp_show_length & " with " & show_transcode of item i of Show_info)
 			else
 				my logger(true, "record_now(" & caller & ")", "INFO", "Record function surpressed in DEV")
@@ -3255,7 +3257,7 @@ on date2touch(caller, datetime, filepath)
 	set temp_day to my padnum("date2touch(" & caller & ")", (day of datetime as text))
 	set temp_hour to my padnum("date2touch(" & caller & ")", (hours of datetime as text))
 	set temp_minute to my padnum("date2touch(" & caller & ")", (minutes of datetime as text))
-	set temp_message to "touch -t " & temp_year & temp_month & temp_day & temp_hour & temp_minute & " " & filepath
+	set temp_message to "touch -t " & temp_year & temp_month & temp_day & temp_hour & temp_minute & " \"" & filepath & "\""
 	my logger(true, "date2touch(" & caller & ")", "INFO", temp_message)
 	do shell script temp_message
 end date2touch
@@ -3517,71 +3519,6 @@ on ms2time(caller, totalMS, time_duration, level_precision)
 	end if
 end ms2time
 
-
-
-on timeslot_feed(caller, show_id)
-	--goal here is to take a showid, and mark it on the map
-	--return true means we were able to mark the time.
-	--return false means we were not able to assign the time.  --This should be logged as a WARN, and displayed in a notification
-	
-end timeslot_feed
-
-----------  NEW --------
-on timeslot_firstrun()
-	my timeslot_build(2)
-	repeat with i from 1 to 2
-		--		log "timeslot_firstrun: " & i
-		--		log (length of item i of Timeslot as text)
-	end repeat
-	--We need to feed a showID into something and mark the shows off that are already being tracked.	
-end timeslot_firstrun
-
-on timeslot_build(num_of_tuners)
-	try
-		set Timeslot to {}
-		set templist to {}
-		--we need one list item per minute of the week, which brings us to 10800 items
-		repeat num_of_tuners times
-			repeat 10080 times
-				set end of templist to false
-			end repeat
-			set end of Timeslot to templist
-			set templist to {}
-		end repeat
-		--		log "timeslot_build true"
-		return true
-	on error errnum
-		--		log "timeslot_build false"
-		return false
-	end try
-	(*
-	repeat with i from 1 to length of timeslot
-		choose from list item 1 of timeslot with title i
-	end repeat
-	*)
-	--return false means we errored
-	--return true means we built the list
-end timeslot_build
-
-on timeslot_range_clear(caller, start_minute, end_minute, ts_tuner)
-	if ts_tuner = "" then
-		repeat with i from 1 to length of Timeslot
-			my timeslot_range_clear("timeslot_range_clear" & i & "(" & caller & ")", start_minute, end_minute, i)
-		end repeat
-	end if
-	repeat with i from start_minute to end_minute
-		if item i of item ts_tuner of Timeslot = true then
-			--log "timeslot_range_clear, tuner " & ts_tuner & ": false"
-			return false
-		end if
-	end repeat
-	--log "timeslot_range_clear, tuner " & ts_tuner & ": true"
-	return true
-	
-	--return false means the range is not avilable
-	--return true means the range is avilable.
-end timeslot_range_clear
-
 on dayofweek(caller, the_day, next_or_last)
 	set valid_days to {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
 	if the_day is in valid_days then
@@ -3614,6 +3551,7 @@ on repeatProgress(loop_delay, loop_total)
 end repeatProgress
 
 on existing_shows(caller)
+	-- WHat does this do?
 	try
 		set showid2PID_result to do shell script "ps -Aa|grep appname|grep -v 'grep\\|caffeinate'"
 		my logger(true, "existing_shows(" & caller & ")", "DEBUG", "ps -Aa|grep appname|grep -v 'grep\\|caffeinate', msg: " & showid2PID_result)
