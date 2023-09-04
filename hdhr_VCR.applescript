@@ -647,13 +647,17 @@ on quit {}
 		my logger(true, "quit()", "INFO", "systemShutdown: " & systemShutdown)
 		my logger(true, "quit()", "INFO", "The following shows are marked as currently recording: " & my listtostring("quit()", hdhr_quit_record_titles, ","))
 		if systemShutdown is false then
-			set quit_response to button returned of (display dialog "Do you want to cancel these recordings already in progress?" & return & return & my listtostring("quit()", hdhr_quit_record_titles, return) buttons {"Go Back", "Yes", "No"} default button 3 with title my check_version_dialog(caller) giving up after Dialog_timeout with icon caution)
+			--	my logger(true, "quit()", "INFO", "1FALSE")
+			set quit_response to button returned of (display dialog "Do you want to cancel these recordings already in progress?" & return & return & my listtostring("quit()", hdhr_quit_record_titles, return) buttons {"Go Back", "Yes", "No"} default button 3 with title my check_version_dialog("quit()") giving up after Dialog_timeout with icon caution)
+			--	my logger(true, "quit()", "INFO", "2FALSE")
 			my logger(true, "quit()", "INFO", "quit() user choice for killing shows: " & quit_response)
 		else
+			--	my logger(true, "quit()", "INFO", "1TRUE")
 			my logger(true, "quit()", "INFO", "" & Shutdown_reason & " detected, killing all recordings, and saving config file")
 			set quit_response to "Yes"
 		end if
 	else
+		--	my logger(true, "quit()", "INFO", "3SAVE")
 		my save_data("quit(noshows)")
 		continue quit
 	end if
