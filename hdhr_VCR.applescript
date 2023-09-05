@@ -25,6 +25,14 @@ end tell
 --This would return the number of shows being recorded at the time 
 
 (*
+                       hdhr_VCR  Copyright (C) 2023 MikeW
+                       GNU GENERAL PUBLIC LICENSE
+                       Version 3, 29 June 2007 
+
+ Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
+ Everyone is permitted to copy and distribute verbatim copies
+ of this license document, but changing it is not allowed.
+
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
@@ -36,7 +44,28 @@ end tell
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with this program.  If not, see https://www.gnu.org/licenses/.
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    hdhr_VCR  Copyright (C) 2023 MikeW
+    This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
+    This is free software, and you are welcome to redistribute it
+    under certain conditions; type `show c' for details.
+
+The hypothetical commands `show w' and `show c' should show the appropriate
+parts of the General Public License.  Of course, your program's commands
+might be different; for a GUI interface, you would use an "about box".
+
+  You should also get your employer (if you work as a programmer) or school,
+if any, to sign a "copyright disclaimer" for the program, if necessary.
+For more information on this, and how to apply and follow the GNU GPL, see
+<https://www.gnu.org/licenses/>.
+
+  The GNU General Public License does not permit incorporating your program
+into proprietary programs.  If your program is a subroutine library, you
+may consider it more useful to permit linking proprietary applications with
+the library.  If this is what you want to do, use the GNU Lesser General
+Public License instead of this License.  But first, please read
+<https://www.gnu.org/licenses/why-not-lgpl.html>.
 	
 I hope this software can used as much as a teaching aid, as it can be for its primary function.
 If you would like to contact me with questions about copyright, please file an issue at the github page
@@ -806,7 +835,7 @@ on tuner_end(caller, hdhr_model)
 				end if
 			end repeat
 		end if
-		my logger(true, "tuner_end(" & caller & ")", "INFO", "Next Tuner Avilable in" & my ms2time("tuner_end(" & caller & ")", lowest_number, "s", 3))
+		my logger(true, "tuner_end(" & caller & ")", "INFO", "Next Tuner Avilable in " & my ms2time("tuner_end(" & caller & ")", lowest_number, "s", 3))
 		--removed 081423
 		--my logger(true, "tuner_end(" & caller & ")", "INFO", "Next tuner timeout for " & hdhr_model & " estimate (sec): " & lowest_number)
 		return lowest_number
@@ -1004,7 +1033,15 @@ on build_channel_list(caller, hdhr_device) -- We need to have the two values in 
 						set last item of channel_list_temp to last item of channel_list_temp & " " & Record_icon
 					end if
 				end try
-				
+				(*
+				try -- Try to show which shows are alerting on channel list.  FIX
+					--my logger(true, "build_channel_list0(" & caller & ")", "INFO", "IS_RECORDING1")
+					if my channel_record("build_channel_list(" & caller & ")", hdhr_device, GuideNumber of item i of temp) is true then
+						--my logger(true, "build_channel_list2(" & caller & ")", "INFO", GuideNumber of item i of temp & " marked on channel list as recording")
+						--set last item of channel_list_temp to last item of channel_list_temp & " " & Record_icon
+					end if
+				end try
+				*)
 				try
 					if VideoCodec of item i of temp is not "MPEG2" then
 						my logger(true, "build_channel_list_VIDEO_CODEC(" & caller & ")", "NEAT", (last item of channel_list_temp as text) & " is using " & VideoCodec of item i of temp)
@@ -1319,14 +1356,23 @@ on setup(caller)
 		display dialog "We need to allow notifications" & return & "Click " & quote & "Next" & quote & " to continue" buttons {"Next"} default button 1 with title my check_version_dialog(caller) giving up after Dialog_timeout
 		display notification "Yay!" with title name of me subtitle "Notifications Enabled!"
 		
-		set Notify_upnext to text returned of (display dialog "How often to show " & quote & "Up Next" & quote & " update notifications?" default answer Notify_upnext)
-		set Notify_recording to text returned of (display dialog "How often to show " & quote & "Recording" & quote & " update notifications?" default answer Notify_recording)
+		
+		set Notify_upnext to text returned of (display dialog "How often to show " & quote & "Up Next" & quote & " update notifications?" default answer Notify_upnext buttons {"Run", "Skip", "OK"} default button 3 cancel button 1 with title my check_version_dialog(caller) giving up after Dialog_timeout with icon note)
+		
+		set Notify_recording to text returned of (display dialog "How often to show " & quote & "Recording" & quote & " update notifications?" default answer Notify_recording buttons {"Run", "Skip", "OK"} default button 3 cancel button 1 with title my check_version_dialog(caller) giving up after Dialog_timeout with icon note)
+		
+		
 		set Hdhr_setup_ran to true
 		--			set hdhr_config to {notify_upnext:notify_upnext, notify_recording:notify_recording, hdhr_setup_folder:hdhr_setup_folder} 
-		set rerun_discovery to button returned of (display dialog "Rerun HDHRDeviceDiscovery?" buttons {"Cancel", "Yes"} default button 2 cancel button 1 with title my check_version_dialog(caller) giving up after Dialog_timeout)
-		if rerun_discovery is "Yes" then
-			my HDHRDeviceDiscovery("main_opt", "")
-		end if
+		
+		
+		set rerun_discovery to button returned of (display dialog "Rerun HDHRDeviceDiscovery?" buttons {"Cancel", "Yes"} default button 2 cancel button 1 with title my check_version_dialog(caller) giving up after Dialog_timeout with icon note)
+		
+		try
+			if rerun_discovery is "Yes" then
+				my HDHRDeviceDiscovery("main_opt", "")
+			end if
+		end try
 		--my update_show("main()", "", true)
 		
 	end if
@@ -2226,7 +2272,7 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 		--		--> {ModelNumber:"HDTC-2US", UpgradeAvailable:"20220203", BaseURL:"http://10.0.1.101:80", FirmwareVersion:"20220125", DeviceAuth:"pP60GFYQSja9tKyA4iwcpzcG", FirmwareName:"hdhomeruntc_atsc", FriendlyName:"HDHomeRun EXTEND", LineupURL:"http://10.0.1.101:80/lineup.json", TunerCount:2, DeviceID:"105404BE"}
 		
 		--set end of hdhr_device_discovery to {{ModelNumber:"HDTC-2US", UpgradeAvailable:"20210624", BaseURL:"http://10.0.1.101:80", FirmwareVersion:"20210210", DeviceAuth:"nrwqkmEpZNhIzf539VfjHyYP", FirmwareName:"hdhomeruntc_atsc", FriendlyName:"HDHomeRun EXTEND", LineupURL:"http://10.0.1.101:80/lineup.json", TunerCount:2, DeviceID:"XX5404BE"}}
-		my logger(true, "HDHRDeviceDiscovery(" & caller & ")", "INFO", "POST Discovery, length: " & length of hdhr_device_discovery)
+		my logger(true, "HDHRDeviceDiscovery(" & caller & ")", "INFO", "Post Discovery, Tuners found: " & length of hdhr_device_discovery)
 		set progress total steps to length of hdhr_device_discovery
 		repeat with i from 1 to length of hdhr_device_discovery
 			repeat 1 times
@@ -2458,7 +2504,7 @@ on getHDHR_Lineup(caller, hdhr_device)
 end getHDHR_Lineup
 
 on channel_guide(caller, hdhr_device, hdhr_channel, hdhr_time)
-	my logger(true, "channel_guide(" & caller & ")", "INFO", "hdhr_device: " & hdhr_device & ", hdhr_channel: " & hdhr_channel & ", hdhr_time: " & hdhr_time)
+	my logger(true, "channel_guide(" & caller & ")", "DEBUG", "hdhr_device: " & hdhr_device & ", hdhr_channel: " & hdhr_channel & ", hdhr_time: " & hdhr_time)
 	set Time_slide to 0
 	set tuner_offset to my HDHRDeviceSearch("channel_guide0(" & caller & ")", hdhr_device)
 	my logger(true, "channel_guide0(" & caller & ")", "DEBUG", "tuner_offset: " & tuner_offset)
@@ -2474,7 +2520,7 @@ on channel_guide(caller, hdhr_device, hdhr_channel, hdhr_time)
 		set hdhr_proposed_time to my datetime2epoch("channel_guide(" & caller & ")", (date (date string of ((current date) + Time_slide * days))) + hdhr_time * hours - (time to GMT)) as number
 		set hdhr_proposed_time to my getTfromN(hdhr_proposed_time)
 		--my logger(true, "channel_guide()", "INFO", "hdhr_proposed_time1: " & my epoch2show_time("channel_guide(" & caller & ")", my epoch2datetime("channel_guide0(" & caller & ")", hdhr_proposed_time)))
-		my logger(true, "channel_guide(" & caller & ")", "INFO", "hdhr_proposed_time2: " & my epoch2show_time("channel_guide(" & caller & ")", hdhr_proposed_time))
+		my logger(true, "channel_guide(" & caller & ")", "DEBUG", "hdhr_proposed_time2: " & my epoch2show_time("channel_guide(" & caller & ")", hdhr_proposed_time))
 		--log "hdhr_proposed_time" 
 		--log hdhr_proposed_time 
 		--log "---"
@@ -2558,10 +2604,10 @@ on update_show(caller, the_show_id, force_update)
 		set progress description to "Updating Show: " & show_title of item show_offset of Show_info
 		set progress total steps to 7
 		set time2show_next to (show_next of item show_offset of Show_info) - (current date)
-		--We should allow the time we can grab this to the end of the show. VVV
+		--We should allow the time we can grab this to the end of the show. 
 		set progress additional description to "Updating Show: " & show_title of item show_offset of Show_info
 		if time2show_next is less than or equal to 5 * hours and time2show_next is greater than or equal to -60 and show_active of item show_offset of Show_info is true or force_update is true then
-			my logger(true, "update_show(" & caller & ")", "INFO", "Updating \"" & show_title of item show_offset of Show_info & "\" " & the_show_id)
+			my logger(true, "update_show(" & caller & ")", "INFO", "Updating \"" & show_title of item show_offset of Show_info & "\" " & the_show_id & "...")
 			set hdhr_response_channel to {}
 			set hdhr_response_channel to my channel_guide("update_shows(" & caller & ")", hdhr_record of item show_offset of Show_info, show_channel of item show_offset of Show_info, show_time of item show_offset of Show_info)
 			
@@ -2584,31 +2630,31 @@ on update_show(caller, the_show_id, force_update)
 				try
 					set hdhr_response_channel_title to title of hdhr_response_channel
 				on error errmsg
-					my logger(true, "update_shows(" & caller & ")", "WARN", "Unable to set title of show name, ")
+					my logger(true, "update_shows(" & caller & ")", "DEBUG", "Unable to set title of show name, ")
 				end try
 				
 				try
 					set hdhr_response_channel_title to hdhr_response_channel_title & " " & EpisodeNumber of hdhr_response_channel
 				on error errmsg
-					my logger(true, "update_shows(" & caller & ")", "WARN", "Unable to set EpisodeNumber of " & quote & hdhr_response_channel_title & quote & ", errmsg: " & errmsg)
+					my logger(true, "update_shows(" & caller & ")", "DEBUG", "Unable to set EpisodeNumber of " & quote & hdhr_response_channel_title & quote & ", errmsg: " & errmsg)
 				end try
 				
 				try
 					set hdhr_response_channel_title to hdhr_response_channel_title & " " & EpisodeTitle of hdhr_response_channel
 				on error errmsg
-					my logger(true, "update_shows(" & caller & ")", "WARN", "Unable to set EpisodeTitle of " & quote & hdhr_response_channel_title & quote & ", errmsg: " & errmsg)
+					my logger(true, "update_shows(" & caller & ")", "DEBUG", "Unable to set EpisodeTitle of " & quote & hdhr_response_channel_title & quote & ", errmsg: " & errmsg)
 				end try
 				
 				try
 					set show_seriesid of item show_offset of Show_info to SeriesID of hdhr_response_channel
 				on error errmsg
-					my logger(true, "update_shows(" & caller & ")", "WARN", "Unable to set show_seriesid, errmsg: " & errmsg)
+					my logger(true, "update_shows(" & caller & ")", "DEBUG", "Unable to set show_seriesid, errmsg: " & errmsg)
 				end try
 				
 				try
 					set show_tags of item show_offset of Show_info to Filter of hdhr_response_channel
 				on error errmsg
-					my logger(true, "update_shows(" & caller & ")", "WARN", "Unable to set show_tags, errmsg: " & errmsg)
+					my logger(true, "update_shows(" & caller & ")", "DEBUG", "Unable to set show_tags, errmsg: " & errmsg)
 				end try
 				
 				try
