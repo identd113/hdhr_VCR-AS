@@ -136,11 +136,10 @@ The hdhr_guide and hdhr_lineup contain the entire json result of the lineup, and
 * If there are multiple HDHR device on the network, you will be asked which one you want to use when adding a show.
 * When adding a show, we will attempt to write a test file to that location (and remove it) right away, so we can get through any of the OS X disk access prompts. This file is written/removed every 5 minutes during a recording. This will update the file size, as seen in Finder.
 * We use notifications to alert the user to imminent events
-
-* 1 hour before the show, and then every 15 minutes
-* Starting a recording
-* Every 15 minutes during a recording
-* End of a recording
+* * 1 hour before the show, and then every 15 minutes
+* * Starting a recording
+* * Every 15 minutes during a recording
+* * End of a recording
 
 * If the system is restarting or shutting down, we will see that, and not prompt the user cancel the recordings, they will just be canceled.
 
