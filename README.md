@@ -5,20 +5,19 @@ An OSX faceless/background script that makes recording TV shows and Movies on HD
 ![Show List](show_list.png)
 
 #### Why?
-I wanted to allow a quick way to record a TV show, without needing to setup a large system like Plex or HDHomeRuns' own DVR software.
+I wanted a quick way to record a TV show, without setuping a large system like Plex or HDHomeRuns' own DVR software.
 I call it a VCR app, as while it does use guide data to pull name / season / episode number / episode name / show length, it does not present like a normal DVR. It is more of a Smart VCR
 
 #### Requirements
 1. OSX
 2. Due to poor planning, this will only work in the en_US region, sorry
-2. JSONHelper is required, available for free at 
-* https://apps.apple.com/us/app/json-helper-for-applescript/id453114608
+2. [JSONHelper](https://apps.apple.com/us/app/json-helper-for-applescript/id453114608) is required, available for free.
 3. A configured HDHomeRun device from https://www.silicondust.com
 4. hdhr_VCR will also need access to the following paths:
 
-~/Documents/hdhr_VCR.json
-~/Library/Caches/hdhr_VCR/
-~/Library/Logs/hdhr_VCR.log
+- ~/Documents/hdhr_VCR.json
+- ~/Library/Caches/hdhr_VCR/
+- ~/Library/Logs/hdhr_VCR.log
 
 #### Features
 * Auto discovery of all HDHomeRun devices on your network!
@@ -90,26 +89,28 @@ This allows you to set up a recording up to a week in advance.
 
 
 #### What is Run?
-"You told me you would tell me what "Run" is for?
+
+> "You told me you would tell me what "Run" is for?
 
 The button that shows "Run" in almost all dialogs, will drop you back into the idle() handler. This can be used to go back, or start over, for example if entering the incorrect information when adding a show.  This allows the script to run as needed. It is important to know that the idle() is NOT running when a dialog is open. If a dialog stays open forever, we will never be able to record, or update anything in the script. Because of this, dialogs have a timeout of 60 seconds, before auto closing. The choose from list dialog can NOT be dismissed automatically. Our use case is the show info list.
 
-"I did that, but nothing happens!"
+> "I did that, but nothing happens!"
 
 That is accurate. When the script is configured with a show, it is faceless, and you do not need to do anything, other than allow it to run.
 
-"I want to add or edit a show"
+> "I want to add or edit a show"
 
 If you click the icon in the Dock, you will be presented with the main window, so you can do such things.
 
-"How do I know something is happening?
+> "How do I know something is happening?
 
 We use notifications to alert the user to recordings being started, in progress, and completing. This may cause lots of notifications to occur, if a lot of shows are scheduled. If there is a better way to be able to tell the user something, let me know.
 
-"I need to quit the script, but I have a recording in progress"
+> "I need to quit the script, but I have a recording in progress"
 
 If you want to quit the script, the best way to do so is being in a "run" state (faceless) and then issuing a command q, or selecting "Quit" from the hdhr_VCR File menu.
-* If a show is currently recording, you will be prompted regarding if you want to cancel the recordings, before quitting. You can choose to go back to the main screem, quit, and cancel all recordings, or quit, but do not cancel the shows. Since the recording is done with "curl", hdhr_VCR does not need to be open once a recording has already started.
+* If a show is currently recording, you will be prompted regarding if you want to cancel the recordings, before quitting. You can choose to go back to the main screen, quit, and cancel all recordings, or quit, but do not cancel the shows. Since the recording is done with "curl", hdhr_VCR does not need to be open once a recording has already started.
+
 
 **In almost every case, you should choose "No". **
 
@@ -141,10 +142,11 @@ The hdhr_guide and hdhr_lineup contain the entire json result of the lineup, and
 * Every 15 minutes during a recording
 * End of a recording
 
+* If the system is restarting or shutting down, we will see that, and not prompt the user cancel the recordings, they will just be canceled.
+
 hdhr_VCR now has a logger, which by default is named hdhr_VCR.log, that gives us more information of what is happening, without flooding the notifications.
  
-I want to make these notifications better, but AppleScript has very limited ways to interact with the user. Notifications make sense to me, as the app is faceless/background app
 
 I hope this can be collaborative project, so other options that you use can be added.
 
-Hi Harrison!
+-MikeW
