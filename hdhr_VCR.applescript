@@ -10,7 +10,7 @@ Fix issue where selecting  multiple shows may cause an issue with is_sport popup
 
 Todo:
 sports recording past there normal time do not show in front screen, triggering "The number of available tuners on"  in extra time
-show information, last record path, update when we start recording.
+show information, last record path, update when we start recording. 
 NEED option to quit after recording is complete. 
 NEED Prompt user to update show with a valid tuner.
 --rewrite next_show to be more like recording_now  
@@ -199,12 +199,12 @@ on loadIcons(caller)
 end loadIcons
 
 on setup_script(caller)
-	--This handler setups up the script, any failure would result in the script not loading.
+	--This handler setups up the script, any failure would result in the script not loading. 
 	try
 		set Local_env to (name of current application)
 		set Lf to "
 "
-		set Version_local to "20230903"
+		set Version_local to "20230907"
 		set Config_version to 1
 		set temp_info to (system info)
 		set Locale to user locale of (temp_info)
@@ -349,6 +349,8 @@ on run {}
 			my main("run(debug_loop)", "run")
 		end if
 		
+		my build_channel_list("run(" & run_uniq & ")", "")
+		
 		## Make sure the log file doesnt get too big
 		if Local_env does not contain "Editor" then
 			my rotate_logs("run(" & run_uniq & ")", (Log_dir & Logfilename as text))
@@ -438,7 +440,7 @@ on idle
 			*)
 						
 						if show_active of item i of Show_info is true then
-							
+							--my encodeShowID("idle()", show_id of item i of Show_info)
 							if show_next of item i of Show_info is less than or equal to cd_object then
 								--if show_next of item i of show_info < cd_object then
 								--my logger(true, "idle()", "INFO", "0-0") 
@@ -906,7 +908,7 @@ on tuner_mismatch(caller, device_id)
 	else
 		my logger(true, "tuner_mismatch(" & caller & ")", "INFO", "Called: " & device_id)
 		set tuner_offset to my HDHRDeviceSearch("tuner_mismatch(" & caller & ")", device_id)
-		--fix tuner_statuis doesnt take "" as a argument
+		--fix tuner_status doesnt take "" as a argument
 		set tuner_status2_result to my tuner_status2("tuner_mismatch(" & caller & ")", device_id)
 		set temp_shows_recording to 0
 		repeat with i from 1 to length of Show_info
@@ -988,7 +990,6 @@ end check_version
 
 on check_version_dialog(caller)
 	--This handler compares the current version, and the current remote version, and sets a string to show the status
-	--fix add caller here
 	if Version_remote is greater than Version_local then
 		set temp to Version_local & " " & Update_icon & " " & Version_remote
 	end if
@@ -1026,7 +1027,7 @@ on build_channel_list(caller, hdhr_device) -- We need to have the two values in 
 					set end of channel_list_temp to GuideNumber of item i of temp & " " & GuideName of item i of temp
 				end try
 				
-				try -- Try to show which shows are recording on channel list.  FIX
+				try -- Try to show which shows are recording on channel list.
 					--my logger(true, "build_channel_list0(" & caller & ")", "INFO", "IS_RECORDING1")
 					if my channel_record("build_channel_list(" & caller & ")", hdhr_device, GuideNumber of item i of temp) is true then
 						my logger(true, "build_channel_list2(" & caller & ")", "INFO", GuideNumber of item i of temp & " marked on channel list as recording")
@@ -1154,19 +1155,6 @@ on nextday(caller, the_show_id)
 			end if
 		end if
 	end repeat
-	(*
-	my logger(true, "nextday(" & caller & ")", "WARN", "2nextup: " & (nextup as text))
-	 NEW FIX ADJUST for yewsterdays recording start
-set temp123 to (nextup - 1 * week)
-	my logger(true, "nextday(" & caller & ")", "WARN", "3nextup: " & (class of (nextup) as text))
-		try
-			my logger(true, "nextday(" & caller & ")", "WARN", "4nextup: " & temp123 as text) 
-		on error errmsg 
-			my logger(true, "nextday(" & caller & ")", "WARN", "4-1nextup:" & errmsg)
-		end try 
-	my logger(true, "nextday(" & caller & ")", "WARN", "5nextup: " & (nextup - 1 * week)) 
-		my logger(true, "nextday(" & caller & ")", "WARN", "5nextup: " & ((nextup - 1 * week) + ((show_length of item show_offset of Show_info) * minutes)))
-	*)
 	
 	try
 		set record_check_pre to ((nextup) - 1 * weeks)
@@ -1182,10 +1170,10 @@ set temp123 to (nextup - 1 * week)
 	
 	try
 		if nextup is missing value then
-			my logger(true, "nextday(" & caller & ")", "WARN", "0nextup is missing value")
+			my logger(true, "nextday(" & caller & ")", "WARN", "nextup0 is missing value")
 		end if
 	on error errmsg
-		my logger(true, "nextday(" & caller & ")", "WARN", "1errmsg: " & errmsg)
+		my logger(true, "nextday(" & caller & ")", "WARN", "errmsg1: " & errmsg)
 	end try
 	
 	if show_end of item show_offset of Show_info is not nextup + ((show_length of item show_offset of Show_info) * minutes) then
@@ -1214,7 +1202,13 @@ on validate_show_info(caller, show_to_check, should_edit)
 				if my HDHRDeviceSearch("validate_show_info(" & caller & ")", hdhr_record of item i of Show_info) is 0 then
 					set show_deactivate to (display dialog "The tuner, " & hdhr_record of item i of Show_info & " is not currently active, the show should be deactivated" & return & return & "Deactivated shows will be removed on the next save/load" buttons {Running_icon & " Run", "Deactivate", "Next"} cancel button 1 default button 2 with title my check_version_dialog(caller) with icon stop)
 				else
-					set show_deactivate to (display dialog "Would you like to deactivate: " & return & "\"" & show_title of item i of Show_info & "\"" & return & return & "Deactivated shows will be removed on the next save/load" buttons {Running_icon & "Run", "Deactivate", Edit_icon & " Edit.."} cancel button 1 default button 3 with title my check_version_dialog(caller) with icon my curl2icon("validate_show_info(" & caller & ")", show_logo_url of item i of Show_info))
+					try
+						set show_deactivate to (display dialog "Would you like to deactivate: " & return & "\"" & show_title of item i of Show_info & "\"" & return & return & "Deactivated shows will be removed on the next save/load" buttons {Running_icon & "Run", "Deactivate", Edit_icon & " Edit.."} cancel button 1 default button 3 with title my check_version_dialog(caller) with icon my curl2icon("validate_show_info(" & caller & ")", show_logo_url of item i of Show_info))
+					on error number -128
+						my logger(true, "validate_show_info(" & caller & ")", "WARN", "User clicked \"Run\"")
+						set show_deactivate to Running_icon & "Run"
+						return false
+					end try
 				end if
 				
 				if button returned of show_deactivate is "Deactivate" then
@@ -1331,7 +1325,6 @@ on validate_show_info(caller, show_to_check, should_edit)
 			
 			if my HDHRDeviceSearch("validate_show_info(hdhr)", hdhr_record of item i of Show_info) is 0 then
 				my logger(true, "validate_show_info(" & caller & ")", "WARN", "The show " & quote & show_title of item i of Show_info & quote & ", will not be recorded, as the tuner " & hdhr_record of item i of Show_info & ", is no longer detected")
-				--FIX We need to add a notification with this, as this is an important issue they should know about. 
 				display notification with title Stop_icon & " Recording Stopped!"
 				--display notification with title Stop_icon & " Recording Stopped! (" & hdhr_record of item show_offset of Show_info & ")" subtitle "" & quote & show_title of item show_offset of Show_info & quote & " at " & show_time of item show_offset of Show_info
 			end if
@@ -1446,15 +1439,6 @@ on main(caller, emulated_button_press)
 		--llist shows that should be recording
 		
 	end try
-	--	on error
-	--	set next_show_main to ""
-	--set next_show_main_time to "" 
-	--end try
-	--on error
-	--We likely do not have any shows.  
-	--fix
-	--set show_list_empty to true   
-	--end try 
 	if emulated_button_press is not in {"Add", "Shows"} then
 		my logger(true, "main(" & caller & ")", "INFO", "Emulated_button_press is " & emulated_button_press)
 		my logger(true, "main(" & caller & ")", "TRACE", "Tracking non open1")
@@ -1680,7 +1664,6 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 	--set reload_channel to ""
 	repeat until hdhrGRID_response is not true
 		--my logger(true, "add_show_info(" & caller & ")", "INFO", "show_channel_temp: " & reload_channel)
-		--fix We error here when refreshing shows.
 		if Back_channel is missing value then
 			set default_selection to item 1 of channel_mapping of item tuner_offset of HDHR_DEVICE_LIST
 		else
@@ -1689,15 +1672,6 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 		my logger(true, "add_show_info(" & caller & ")", "INFO", "default_selection: " & default_selection)
 		--if reload_channel is "" then
 		set hdhrGRID_list_response to (choose from list channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with prompt "What channel does this show air?" & return & return & tuner_status_icon with title my check_version_dialog(caller) OK button name "Next.." cancel button name Running_icon & " Run" default items default_selection without empty selection allowed)
-		
-		--else
-		--	set show_channel_temp to reload_channel   
-		--end if
-		--FIX 
-		--display dialog hdhrGRID_list_response
-		--FIX offset of hdhrGRID_list_response in channel mapping 
-		--set temp_channel_offset to my list_position("add_show_info("&caller&")", show_channel of item i of show_info, channel_mapping of item tuner_offset of HDHR_DEVICE_LIST, false)
-		--fix get default item to 1 or to the last item selected.
 		if hdhrGRID_list_response is not false then
 			set show_channel_temp to word 1 of item 1 of hdhrGRID_list_response
 			set end of temp_show_progress to "Channel: " & show_channel_temp & " (" & my channel2name("add_show_info(" & caller & ")", show_channel_temp, hdhr_device) & ")"
@@ -1947,7 +1921,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				set Time_slide to 0
 				
 				if temp_show_air_date is missing value then
-					--FIX error "Can't get StartTime of \"\"." number -1728 from StartTime of "" -manually adding a show past grid
+					--FIX error "Can't get StartTime of \"\"." number -1728 from StartTime of "" -manually adding a show past grid --maybe fixed?
 					try
 						if (weekday of my epoch2datetime("hdhrGRID(" & caller & ")", (my getTfromN(StartTime of item i3 of hdhrGRID_response)))) as text is not (weekday of (current date) as text) then
 							set Time_slide to 1
@@ -2119,7 +2093,6 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				--set progress additional description to "Show: " & quote & show_title of last item of Show_info & quote & " at " & show_time of last item of Show_info
 				my temp_auto_delay("add_show_info(" & caller & ")", 1)
 				my repeatProgress(0.25, 4)
-				--FIX set loop time to run faster
 			end repeat
 		end repeat
 	else
@@ -3037,7 +3010,7 @@ on next_shows(caller)
 			set end of error_show_list to Warning_icon & " " & show_title of item i of Show_info & " on channel " & show_channel of item i of Show_info
 		end if
 	end repeat
-	--FIX, this is not returning teh correct information.  soonest show is supposed to be seconds until the next tuner is open, but returns something else.
+	--FIX, this is not returning the correct information.  soonest show is supposed to be seconds until the next tuner is open, but returns something else.
 	my logger(true, "next_shows(" & caller & ")", "INFO", "Soonest: " & soonest_show & ": 9999999")
 	if soonest_show is less than 9999999 then
 		set next_shows_final to {}
@@ -3126,7 +3099,12 @@ on clean_icons()
 end clean_icons
 
 on curl2icon(caller, thelink)
-	set savename to last item of my stringtolist("curl2icon(" & caller & ")", thelink, "/")
+	try
+		set savename to last item of my stringtolist("curl2icon(" & caller & ")", thelink, "/")
+	on error errmsg
+		return caution
+		my logger(true, "curl2icon(" & caller & ")", "WARN", "Unable to image, providing default image")
+	end try
 	try
 		set temp_path to POSIX path of (path to home folder) & "Library/Caches/hdhr_VCR/" & savename as text
 		if my checkfileexists("curl2icon(" & caller & ")", temp_path) is true then
@@ -3510,7 +3488,7 @@ on list_position(caller, this_item, this_list, is_strict)
 		repeat with i from 1 to length of this_list
 			if is_strict is false then
 				if (item i of this_list as text) contains (this_item as text) then
-					--display dialog "list_post2: ~" & i 
+					--display dialog "list_post2: ~" & i  
 					return i
 				end if
 			else
@@ -3692,7 +3670,6 @@ on repeatProgress(loop_delay, loop_total)
 end repeatProgress
 
 on existing_shows(caller)
-	-- WHat does this do?  -- FIX We need to make sure this does not error if we get results fromt he grep, but have no associated show.  This may need to occur on any handler that uses grep in this way.
 	try
 		set showid2PID_result to do shell script "ps -Aa|grep appname|grep -v 'grep\\|caffeinate'"
 		my logger(true, "existing_shows(" & caller & ")", "TRACE", "ps -Aa|grep appname|grep -v 'grep\\|caffeinate', msg: " & showid2PID_result)
@@ -3851,7 +3828,29 @@ on isSystemShutdown(caller)
 	return false
 end isSystemShutdown
 
-
+on encodeShowID(caller, show_id)
+	--We want to be able to decode the show_id, and make a show with it.
+	set show_offset to my HDHRShowSearch(show_id)
+	--	show_is_series
+	-- show_time
+	-- show_channel
+	-- show_air_date
+	-- show_is_series
+	-- show_transcode
+	-- hdhr_record
+	-- show_length
+	--We need the following items to get a show saved: channel, show_time, days recording, series or single, transcode, show length, hdhr_record
+	try
+		set temp_showid to (show_time of item show_offset of Show_info & "|" & show_channel of item show_offset of Show_info & "|" & my listtostring("encodeShowID(" & caller & ")", show_air_date of item show_offset of Show_info, ",") & "|" & show_is_series of item show_offset of Show_info & "|" & show_transcode of item show_offset of Show_info & "|" & hdhr_record of item show_offset of Show_info & "|" & show_length of item show_offset of Show_info) as text
+		--	my logger(true, "encodeShowID(" & caller & ")", "INFO", temp_showid)
+		set temp_showid_encode to (do shell script "echo -n '" & temp_showid & "' | base64")
+		my logger(true, "encodeShowID_temp_showid_encode(" & caller & ")", "INFO", temp_showid_encode)
+		set temp_showid_decode to (do shell script "echo -n '" & temp_showid_encode & "' | base64 -D")
+		my logger(true, "encodeShowID_temp_showid_decode(" & caller & ")", "INFO", temp_showid_decode as text)
+	on error errmsg
+		my logger(true, "encodeShowID(" & caller & ")", "ERROR", "errmsg, " & errmsg)
+	end try
+end encodeShowID
 
 -- show_info model: (*show_title:Happy_Holidays_America, show_time:16, show_length:60, show_air_date:Sunday, show_transcode:missing value, show_temp_dir:alias Backups:, show_dir:alias Backups:, show_channel:5.1, show_active:true, show_id:221fbe1126389e6af35f405aa681cf19, show_recording:false, show_last:date Sunday, December 13, 2020 at 4:04:54 PM, show_next:date Sunday, December 13, 2020 at 4:00:00 PM, show_end:date Sunday, December 13, 2020 at 5:00:00 PM, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:XX105404BE,show_is_series:false*
 
