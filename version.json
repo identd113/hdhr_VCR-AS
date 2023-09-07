@@ -2,6 +2,10 @@
 	"versions": 
 [
 {
+"hdhr_version":"20230907",
+"changelog":"Adds lots of feature, see link for list of changes,https://raw.githubusercontent.com/identd113/hdhr_VCR-AS/20230907_Release/changes.md"
+},
+{
 "hdhr_version":"20230318",
 "changelog":"Stable release with lots of features!  See commit of this file, to see list of changes."
 },
