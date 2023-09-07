@@ -2,7 +2,7 @@
 A pretty darn good VCR "plus" script that works on all HDHomeRun devices, and is free to use!
 An OSX faceless/background script that makes recording TV shows and Movies on HDHomeRun very easy.
 
-# Latest Release: https://raw.githubusercontent.com/identd113/hdhr_VCR-AS/20230907_Release/hdhr_VCR.applescript
+### Latest Release: https://raw.githubusercontent.com/identd113/hdhr_VCR-AS/20230907_Release/hdhr_VCR.applescript
  
 ![Show List](show_list.png)
 
