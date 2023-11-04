@@ -433,7 +433,6 @@ on idle
 							if (show_end of item i of Show_info) is less than or equal to (cd) then
 								set show_recording of item i of Show_info to false
 								set show_last of item i of Show_info to show_end of item i of Show_info
-								--set show_next of item i of Show_info to my nextday(show_id of item i of Show_info)
 								-- We dont always get a result.  I was going to use this to determine if the show is a repeat.
 								set temp_guide_data to my channel_guide("idle(23 recording_ended)", hdhr_record of item i of Show_info, show_channel of item i of Show_info, show_time of item i of Show_info)
 								-- FIX The show may not be done recording, so this may not be sticky.  If we could verify that the PID is gone, then we can attempt to update the file.
@@ -1266,7 +1265,7 @@ on main(caller, emulated_button_press)
 				my logger(true, "main(" & caller & ")", "TRACE", "Tracking non open3")
 				set title_response to (display dialog "Would you like to add a show?" & return & return & "Tuner(s): " & return & my listtostring("main(" & caller & ")", my tuner_overview("main(" & caller & ")"), return) & return & return & my recording_now("main(" & caller & ")") & return & error_shows & return & return & Up_icon & " Next Show: " & next_show_main_time & " (" & my ms2time("main(next_show_countdown)", (next_show_main_time_real) - (current date), "s", 2) & ")" & return & next_show_main buttons {Tv_icon & " Shows..", Plus_icon & " Add..", Running_icon & " Run"} with title my check_version_dialog("main(" & caller & ")") giving up after (Dialog_timeout * 0.5) with icon my curl2icon("main(" & caller & ")", "https://raw.githubusercontent.com/identd113/hdhr_VCR-AS/master/app.jpg") default button 2)
 				my logger(true, "main(" & caller & ")", "INFO", "SHOW LIST")
-			end if
+			end if 
 		on error errmsg
 			my logger(true, "main(" & caller & ")", "TRACE", "Tracking non open03, errmsg: " & errmsg)
 		end try
@@ -2600,7 +2599,7 @@ end showPathVerify
 on checkfileexists(caller, filepath)
 	try
 		my logger(true, "checkfileexists(" & caller & ")", "DEBUG", filepath as text)
-		--if class of filepath is not «class furl» then
+		--if class of filepath is not √áclass furl√à then
 		if class of filepath is not alias then
 			my logger(true, "checkfileexists(" & caller & ")", "INFO", "filepath class is " & class of filepath)
 			set filepath to POSIX file filepath
