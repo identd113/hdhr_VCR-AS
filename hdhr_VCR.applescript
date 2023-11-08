@@ -55,7 +55,7 @@ global Back_channel
 global Config_version
 global Debugger_apps
 global Local_ip
-
+global Is_Dupe
 --Icons
 global Warning_icon
 global Play_icon
@@ -144,7 +144,7 @@ on setup_script(caller)
 		set Local_env to (name of current application)
 		set Lf to "
 "
-		set Version_local to "20231106"
+		set Version_local to "20231108" 
 		set Config_version to 1
 		set temp_info to (system info)
 		set Local_ip to IPv4 address of temp_info
@@ -186,6 +186,7 @@ on setup_globals(caller)
 		set Back_channel to missing value
 		set Missing_tuner_retry_count to 0
 		set Shutdown_reason to "No shutdown attempted"
+		set Is_Dupe to false
 	on error errmsg
 		return false
 	end try
@@ -203,7 +204,7 @@ on setup_logging(caller)
 			set Logger_levels to {"INFO", "WARN", "ERROR", "NEAT", "FATAL"}
 		end if
 		set Loglines_written to 0
-		set Loglines_max to 1000 + ((length of Show_info) * 100)
+		set Loglines_max to 2000 + ((length of Show_info) * 100)
 	on error errmsg
 		return false
 	end try
@@ -614,8 +615,6 @@ on hdhrGRID(caller, hdhr_device, hdhr_channel)
 		my logger(true, "hdhrGRID(" & caller & ")", "ERROR", "Unable to get a length of hdhrGRID_temp")
 	end try
 	repeat with i from 1 to length of Guide of hdhrGRID_temp
-		set show_status to ""
-		set temp_recording to "     "
 		try
 			set temp_title to (title of item i of Guide of hdhrGRID_temp & " " & quote & EpisodeTitle of item i of Guide of hdhrGRID_temp) & quote
 		on error
@@ -624,15 +623,18 @@ on hdhrGRID(caller, hdhr_device, hdhr_channel)
 		--Grab the start and end date, so we can pass use this to determine if the show is recording.
 		set temp_start to my epoch2datetime("hdhrGRID_start(" & caller & ")", my getTfromN(StartTime of item i of Guide of hdhrGRID_temp))
 		set temp_end to my epoch2datetime("hdhrGRID_end (" & caller & ")", my getTfromN(EndTime of item i of Guide of hdhrGRID_temp))
-		set show_status to my channel_record("hdhrGRID(" & caller & ")", hdhr_device, hdhr_channel, temp_start, temp_end)
-		if show_status is true then
-			set temp_recording to Record_icon
-		end if
+		--my logger(true, "hdhrGRID(" & caller & ")", "ERROR", class of (temp_start))
+		set show_status to " ? "
+		set show_status to my show_record("hdhrGRID(" & caller & ")", hdhr_device, hdhr_channel, temp_start, temp_end) & " "
 		
-		set end of hdhrGRID_sort to temp_recording & (word 2 of my short_date("hdhrGRID1(" & caller & ")", my epoch2datetime("hdhrGRID(" & caller & ")", my getTfromN(StartTime of item i of Guide of hdhrGRID_temp)), false, false) & "-" & word 2 of my short_date("hdhrGRID(" & caller & ")", my epoch2datetime("hdhr_grid(" & caller & ")", my getTfromN(EndTime of item i of Guide of hdhrGRID_temp)), false, false) & " " & temp_title)
+		set end of hdhrGRID_sort to show_status & (word 2 of my short_date("hdhrGRID1(" & caller & ")", my epoch2datetime("hdhrGRID(" & caller & ")", my getTfromN(StartTime of item i of Guide of hdhrGRID_temp)), false, false) & "-" & word 2 of my short_date("hdhrGRID(" & caller & ")", my epoch2datetime("hdhr_grid(" & caller & ")", my getTfromN(EndTime of item i of Guide of hdhrGRID_temp)), false, false) & " " & temp_title)
 	end repeat
 	set hdhrGRID_selected to choose from list hdhrGRID_sort with prompt ("Channel " & hdhr_channel & " (" & GuideName of hdhrGRID_temp & ")" & return & "Current Time: " & word 2 of my short_date("hdhrGRID(" & caller & ")", (current date), false, false)) cancel button name "Manual Add" OK button name "Next.." with title my check_version_dialog(caller) default items item 1 of hdhrGRID_sort with multiple selections allowed
-	
+	if hdhrGRID_selected contains Up_icon or hdhrGRID_selected contains Record_icon then
+		set Is_Dupe to true
+	else
+		set Is_Dupe to false
+	end if
 	try
 		if Back_icon & " Back" is in hdhrGRID_selected then
 			my logger(true, "hdhrGRID(" & caller & ")", "INFO", "Back to channel list " & hdhr_channel)
@@ -790,14 +792,12 @@ on tuner_mismatch(caller, device_id)
 				set temp_shows_recording to temp_shows_recording + 1
 			end if
 		end repeat
-		--	if temp_shows_recording is not tuneractive of tuner_status2_result then
 		--		my logger(true, "tuner_mismatch(" & caller & ")", "WARN", "The number of available tuners on " & device_id & " is not consistent with our current state.  This may occur if a tuner is used outside of this application.  This is just a warning, and we will work as expected")
 		if temp_shows_recording is greater than tuneractive of tuner_status2_result then
 			my logger(true, "tuner_mismatch(" & caller & ")", "WARN", "We are marked as having more shows recording then tuners in use")
 		else if temp_shows_recording is less than tuneractive of tuner_status2_result then
 			set tuner_inuse_return to my tuner_inuse("tuner_mismatch(" & caller & ")", device_id)
-			--my logger(true, "tuner_mismatch(" & caller & ")", "WARN", tuner_inuse_return)
-			my logger(true, "tuner_mismatch(" & caller & ")", "WARN", "There are more tuners in use then we are using, list of IPs: " & my listtostring("tuner_mismatch(" & caller & ")", tuner_inuse_return, ", "))
+			my logger(true, "tuner_mismatch(" & caller & ")", "WARN", "There are more tuners in use then we are using, list of other IPs: " & my listtostring("tuner_mismatch(" & caller & ")", tuner_inuse_return, ", "))
 		else if temp_shows_recording is tuneractive of tuner_status2_result then
 			my logger(true, "tuner_mismatch(" & caller & ")", "TRACE", "We match")
 		else
@@ -807,40 +807,64 @@ on tuner_mismatch(caller, device_id)
 	end if
 end tuner_mismatch
 
-on channel_record(caller, hdhr_tuner, channelcheck, start_time, end_time)
-	--return true if the channel is recording on the given tuner, otherwise return false,  This could be expanded to allow no channel passed, but would return active channels on said tuner.
-	my logger(true, "channel_record(" & caller & ")", "TRACE", (hdhr_tuner & " | " & channelcheck))
-	set cd to current date
-	--try
-	set return_result to false
+on channel_record(caller, hdhr_tuner, channelcheck)
 	repeat with i from 1 to length of Show_info
-		if hdhr_tuner is hdhr_record of item i of Show_info then
+		if hdhr_tuner is hdhr_record of item i of Show_info and show_active of item i of Show_info is true then
 			if channelcheck is show_channel of item i of Show_info then
 				if show_recording of item i of Show_info is true then
-					if start_time is "" then
-						set return_result to true
-						exit repeat
-					else
-						try
-							if cd is greater than or equal to start_time and cd is less than or equal to end_time then
-								my logger(true, "channel_record(" & caller & ")", "INFO", "Recording?: " & show_title of item i of Show_info)
-								set return_result to true
-								exit repeat
-							end if
-						on error errmsg
-							my logger(true, "channel_record(" & caller & ")", "WARN", "errmsg: " & errmsg)
-						end try
-					end if
+					my logger(true, "show_record(" & caller & ")", "TRACE", channelcheck & " marked as recording in channel list")
+					return true
 				end if
 			end if
 		end if
 	end repeat
-	return return_result
+end channel_record
+
+on show_record(caller, hdhr_tuner, channelcheck, start_time, end_time)
+	--return true if the channel is recording on the given tuner, otherwise return false,  This could be expanded to allow no channel passed, but would return active channels on said tuner.
+	my logger(true, "show_record(" & caller & ")", "TRACE", (hdhr_tuner & " | " & channelcheck))
+	set cd to current date
+	--try
+	repeat with i from 1 to length of Show_info
+		if hdhr_tuner is hdhr_record of item i of Show_info and show_active of item i of Show_info is true then
+			if channelcheck is show_channel of item i of Show_info then
+				my logger(true, "show_record(" & caller & ")", "DEBUG", "show_start: " & class of (show_next of item i of Show_info) & ", start_time: " & class of (start_time))
+				if show_recording of item i of Show_info is true then
+					if cd is greater than or equal to start_time and cd is less than or equal to end_time then
+						my logger(true, "show_record(" & caller & ")", "INFO", "Marked as recording: " & show_title of item i of Show_info)
+						return Record_icon
+					end if
+				else
+					--if show is not recording
+					try
+						--my logger(true, "show_record(" & caller & ")", "INFO", "Not Recording: " & show_title of item i of Show_info & ", show_start: " & show_next of item i of Show_info & ", passed_start: " & start_time)
+						set show_next_low to ((show_next of item i of Show_info) - 2 * minutes)
+						set show_next_high to ((show_next of item i of Show_info) + 2 * minutes)
+						--my logger(true, "show_record(" & caller & ")", "INFO", "Check Recording: " & show_title of item i of Show_info & ", show_next_low: " & class of (show_next_low) & ", show_next_high: " & class of (show_next_high) & ", start_time: " & class of (start_time))
+						--my logger(true, "show_record(" & caller & ")", "INFO", "Check Recording: show_next_low: " & show_next_low & ", show_next_high: " & show_next_high & ", start_time: " & start_time)
+						if start_time is greater than or equal to show_next_low then
+							--my logger(true, "show_record(" & caller & ")", "INFO", "1")
+							if start_time is less than or equal to show_next_high then
+								--if show_next of item i of Show_info is start_time then
+								my logger(true, "show_record(" & caller & ")", "INFO", "Recordings match: " & show_title of item i of Show_info & ", channel: " & channelcheck)
+								return Up_icon
+							end if
+						else
+							--my logger(true, "show_record(" & caller & ")", "INFO", "2")
+						end if
+					on error errmsg
+						my logger(true, "show_record(" & caller & ")", "ERROR", "Oops, " & errmsg)
+					end try
+				end if
+			end if
+		end if
+	end repeat
+	return "     "
 	--on error errmsg 
 	--	my logger(true, "channel_record(" & caller & ")", "ERROR", "errmsg: " & errmsg)  
 	--end try
 	
-end channel_record
+end show_record
 
 on show_info_dump(caller, show_id_lookup, userdisplay)
 	--  (*show_title:Happy_Holidays_America, show_time:16, show_length:60, show_air_date:Sunday, show_transcode:missing value, show_temp_dir:alias Backups:, show_dir:alias Backups:, show_channel:5.1, show_active:true, show_id:221fbe1126389e6af35f405aa681cf19, #show_recording:false, show_last:date Sunday, December 13, 2020 at 4:04:54 PM, show_next:date Sunday, December 13, 2020 at 4:00:00 PM, show_end:date Sunday, December 13, 2020 at 5:00:00 PM, notify_upnext_time:missing value, #notify_recording_time:missing value, hdhr_record:XX105404BE,show_is_series:false*
@@ -915,13 +939,14 @@ on build_channel_list(caller, hdhr_device) -- We need to have the two values in 
 					set end of channel_list_temp to GuideNumber of item i of temp & " " & GuideName of item i of temp
 				end try
 				
-				try -- Try to show which shows are recording on channel list.
+				try -- Try to show which channels are recording on channel list.
 					--my logger(true, "build_channel_list0(" & caller & ")", "INFO", "IS_RECORDING1")
-					if my channel_record("build_channel_list(" & caller & ")", hdhr_device, GuideNumber of item i of temp, "", "") is true then
+					if my channel_record("build_channel_list(" & caller & ")", hdhr_device, GuideNumber of item i of temp) is true then
 						my logger(true, "build_channel_list2(" & caller & ")", "INFO", GuideNumber of item i of temp & " marked on channel list as recording")
 						set last item of channel_list_temp to last item of channel_list_temp & " " & Record_icon
 					end if
 				end try
+				
 				try
 					if VideoCodec of item i of temp is not "MPEG2" then
 						my logger(true, "build_channel_list_VIDEO_CODEC(" & caller & ")", "NEAT", (last item of channel_list_temp as text) & " is using " & VideoCodec of item i of temp)
@@ -1522,6 +1547,8 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 			end if
 		else
 			my logger(true, "add_show_info(" & caller & ")", "INFO", "User clicked " & quote & "Run" & quote)
+			
+			-- Fix, why so complicted?
 			try
 				error number -128
 			on error errmsg
@@ -1576,6 +1603,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 					else if button returned of show_title_temp contains "Single" then
 						set show_is_series of temp_show_info to false
 					else
+						my logger(true, "add_show_info(" & caller & ")", "INFO", "User clicked " & quote & "Run" & quote)
 						return
 					end if
 					set end of temp_show_progress to "Series: " & show_is_series of temp_show_info
@@ -1612,143 +1640,147 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				else
 					
 					--We were able to pull guide data auto title
-					try
-						
-						--set hdhr_response_channel_title to my assemble_show_title("add_show_info(" & caller & ")", title of item i3 of hdhrGRID_response, EpisodeTitle of item i3 of hdhrGRID_response, EpisodeNumber of item i3 of hdhrGRID_response)
+					if Is_Dupe is false then
 						try
-							set hdhr_response_channel_title to title of item i3 of hdhrGRID_response
+							
+							--set hdhr_response_channel_title to my assemble_show_title("add_show_info(" & caller & ")", title of item i3 of hdhrGRID_response, EpisodeTitle of item i3 of hdhrGRID_response, EpisodeNumber of item i3 of hdhrGRID_response)
+							try
+								set hdhr_response_channel_title to title of item i3 of hdhrGRID_response
+							end try
+							
+							try
+								set hdhr_response_channel_title to hdhr_response_channel_title & " " & EpisodeNumber of item i3 of hdhrGRID_response
+							end try
+							
+							try
+								set hdhr_response_channel_title to hdhr_response_channel_title & " " & EpisodeTitle of item i3 of hdhrGRID_response
+							end try
+						on error errmsg
+							my logger(true, "add_show_info(" & caller & ")", "WARN", "(Auto) Unable to set full show name, " & errmsg)
 						end try
 						
 						try
-							set hdhr_response_channel_title to hdhr_response_channel_title & " " & EpisodeNumber of item i3 of hdhrGRID_response
+							set default_record_day to (weekday of my epoch2datetime("hdhrGRID3(" & caller & ")", (my getTfromN(StartTime of item i3 of hdhrGRID_response)))) as text
+						on error errmsg
+							my logger(true, "add_show_info(" & caller & ")", "WARN", "default_record_day failed, errmsg: " & errmsg)
+							set default_record_day to weekday of (current date) as text
+						end try
+						
+						set show_title of temp_show_info to hdhr_response_channel_title
+						set end of temp_show_progress to "Title: " & hdhr_response_channel_title
+						set progress additional description to my listtostring("add_show(" & caller & ")", temp_show_progress, return)
+						set progress completed steps to 1
+						my logger(true, "add_show_info(" & caller & ")", "INFO", "(Auto) show name: " & show_title of temp_show_info)
+						
+						--auto length 
+						try
+							set show_length of temp_show_info to ((EndTime of item i3 of hdhrGRID_response) - (StartTime of item i3 of hdhrGRID_response)) div 60
+							my logger(true, "add_show_info(" & caller & ")", "INFO", "(Auto) show_length of temp_show_info: " & show_length of temp_show_info)
+						on error errmsg
+							my logger(true, "add_show_info(" & caller & ")", "WARN", "(Auto) show length defaulted to 30 minutes, errmsg: " & errmsg)
+							set show_length of temp_show_info to 30
+						end try
+						set end of temp_show_progress to "Length: " & show_length of temp_show_info
+						set progress additional description to my listtostring("add_show()", temp_show_progress, return)
+						set progress completed steps to 2
+						my logger(true, "add_show_info(" & caller & ")", "INFO", "(Auto) show length: " & show_length of temp_show_info)
+						
+						--auto show_time 
+						set show_time of temp_show_info to my epoch2show_time("hdhrGRID4(" & caller & ")", my getTfromN(StartTime of item i3 of hdhrGRID_response))
+						set show_time_orig of temp_show_info to show_time of temp_show_info
+						my logger(true, "add_show_info(" & caller & ")", "INFO", "(Auto) show time: " & (show_time of temp_show_info as text))
+						set end of temp_show_progress to "Air time: " & show_time of temp_show_info
+						set progress additional description to my listtostring("add_show(" & caller & ")", temp_show_progress, return)
+						set progress completed steps to 3
+						try
+							set synopsis_temp to Synopsis of item i3 of hdhrGRID_response
+						on error errmsg
+							my logger(true, "add_show_info(" & caller & ")", "WARN", "Unable to pull Synopsis")
+							set synopsis_temp to "No Synopsis"
 						end try
 						
 						try
-							set hdhr_response_channel_title to hdhr_response_channel_title & " " & EpisodeTitle of item i3 of hdhrGRID_response
+							set show_logo_url of temp_show_info to (ImageURL of item i3 of hdhrGRID_response as text)
+						on error errmsg
+							my logger(true, "add_show_info(" & caller & ")", "WARN", "Unable to pull ImageURL")
+							set show_logo_url of temp_show_info to ""
 						end try
-					on error errmsg
-						my logger(true, "add_show_info(" & caller & ")", "WARN", "(Auto) Unable to set full show name, " & errmsg)
-					end try
-					
-					try
-						set default_record_day to (weekday of my epoch2datetime("hdhrGRID3(" & caller & ")", (my getTfromN(StartTime of item i3 of hdhrGRID_response)))) as text
-					on error errmsg
-						my logger(true, "add_show_info(" & caller & ")", "WARN", "default_record_day failed, errmsg: " & errmsg)
-						set default_record_day to weekday of (current date) as text
-					end try
-					
-					set show_title of temp_show_info to hdhr_response_channel_title
-					set end of temp_show_progress to "Title: " & hdhr_response_channel_title
-					set progress additional description to my listtostring("add_show(" & caller & ")", temp_show_progress, return)
-					set progress completed steps to 1
-					my logger(true, "add_show_info(" & caller & ")", "INFO", "(Auto) show name: " & show_title of temp_show_info)
-					
-					--auto length 
-					try
-						set show_length of temp_show_info to ((EndTime of item i3 of hdhrGRID_response) - (StartTime of item i3 of hdhrGRID_response)) div 60
-						my logger(true, "add_show_info(" & caller & ")", "INFO", "(Auto) show_length of temp_show_info: " & show_length of temp_show_info)
-					on error errmsg
-						my logger(true, "add_show_info(" & caller & ")", "WARN", "(Auto) show length defaulted to 30 minutes, errmsg: " & errmsg)
-						set show_length of temp_show_info to 30
-					end try
-					set end of temp_show_progress to "Length: " & show_length of temp_show_info
-					set progress additional description to my listtostring("add_show()", temp_show_progress, return)
-					set progress completed steps to 2
-					my logger(true, "add_show_info(" & caller & ")", "INFO", "(Auto) show length: " & show_length of temp_show_info)
-					
-					--auto show_time 
-					set show_time of temp_show_info to my epoch2show_time("hdhrGRID4(" & caller & ")", my getTfromN(StartTime of item i3 of hdhrGRID_response))
-					set show_time_orig of temp_show_info to show_time of temp_show_info
-					my logger(true, "add_show_info(" & caller & ")", "INFO", "(Auto) show time: " & (show_time of temp_show_info as text))
-					set end of temp_show_progress to "Air time: " & show_time of temp_show_info
-					set progress additional description to my listtostring("add_show(" & caller & ")", temp_show_progress, return)
-					set progress completed steps to 3
-					try
-						set synopsis_temp to Synopsis of item i3 of hdhrGRID_response
-					on error errmsg
-						my logger(true, "add_show_info(" & caller & ")", "WARN", "Unable to pull Synopsis")
-						set synopsis_temp to "No Synopsis"
-					end try
-					
-					try
-						set show_logo_url of temp_show_info to (ImageURL of item i3 of hdhrGRID_response as text)
-					on error errmsg
-						my logger(true, "add_show_info(" & caller & ")", "WARN", "Unable to pull ImageURL")
-						set show_logo_url of temp_show_info to ""
-					end try
-					
-					--hdhr_device, hdhr_channel 
-					
-					try
-						set show_url of temp_show_info to my record_url("add_show_info(" & caller & ")", show_channel_temp, hdhr_device)
-						my logger(true, "add_show_info_show_url(" & caller & ")", "INFO", "Added show_url: " & show_url of temp_show_info)
-					on error errmsg
-						my logger(true, "add_show_info_show_url(" & caller & ")", "WARN", "Unable to pull show_url, errmsg: " & errmsg)
-						set show_url of temp_show_info to ""
-					end try
-					
-					try
-						set seriesid_temp to SeriesID of item i3 of hdhrGRID_response
-						set show_seriesid of temp_show_info to SeriesID of item i3 of hdhrGRID_response
-						my logger(true, "add_show_info(" & caller & ")", "INFO", "Set Series ID: " & SeriesID of item i3 of hdhrGRID_response)
-					on error errmsg
-						my logger(true, "add_show_info(" & caller & ")", "WARN", "Unable to pull Series ID: " & errmsg)
-						set seriesid_temp to "No SeriesID provided"
-					end try
-					
-					try
-						set temp_icon to my curl2icon("add_show_info(" & caller & ")", ImageURL of item i3 of hdhrGRID_response)
-					on error errmsg
-						my logger(true, "add_show_info(" & caller & ")", "WARN", "Unable to pull ImageURL: " & errmsg)
-						set temp_icon to ""
-					end try
-					
-					try
-						set show_tags of temp_show_info to Filter of item i3 of hdhrGRID_response
-					on error
-						set show_tags of temp_show_info to {"None"}
-					end try
-					
-					--					set show_tags_text of temp_show_info to my listtostring("add_show_info(" & caller & ")", show_tags of temp_show_info , ", ")
-					
-					try
-						set tags_text to my listtostring("add_show_info(" & caller & ")", show_tags of temp_show_info, ", ")
-					on error errmsg
-						set tags_text to "ERROR"
-						my logger(true, "add_show_info1(" & caller & ")", "ERROR", errmsg)
-					end try
-					
-					set temp_default_button to 3
-					if temp_is_series is true then
-						set temp_default_button to 2
-					end if
-					
-					try
-						set show_originalairdate to OriginalAirdate of item i3 of hdhrGRID_response
-						set show_originalairdate_real to my short_date("add_show_info(" & caller & ")", my epoch2datetime("add_show_info1(" & caller & ")", show_originalairdate), false, false)
-					on error errmsg
-						set show_originalairdate_real to "Unknown"
-					end try
-					
-					try
-						-- We need to note if the show start time was yesterday, and adjust as needed.
 						
-						set temp_show_info_series to (display dialog "Is this a single or a series recording? " & return & return & "Title: " & show_title of temp_show_info & return & "Type: " & tags_text & return & "SeriesID: " & seriesid_temp & return & return & "Synopsis: " & synopsis_temp & return & return & "Start: " & time string of my time_set("add_show_info(" & caller & ")", current date, show_time of temp_show_info) & return & "Length: " & my ms2time("add_show_info2", ((show_length of temp_show_info) * 60), "s", 2) & return & "OriginalAirdate: " & show_originalairdate_real buttons {Running_icon & " Run", Series_icon & " Series", Single_icon & " Single"} default button temp_default_button cancel button 1 with title my check_version_dialog(caller) giving up after Dialog_timeout with icon temp_icon)
+						--hdhr_device, hdhr_channel 
 						
-						if button returned of temp_show_info_series contains "Series" then
-							set show_is_series of temp_show_info to true
-						else if button returned of temp_show_info_series contains "Single" then
-							set show_is_series of temp_show_info to false
+						try
+							set show_url of temp_show_info to my record_url("add_show_info(" & caller & ")", show_channel_temp, hdhr_device)
+							my logger(true, "add_show_info_show_url(" & caller & ")", "INFO", "Added show_url: " & show_url of temp_show_info)
+						on error errmsg
+							my logger(true, "add_show_info_show_url(" & caller & ")", "WARN", "Unable to pull show_url, errmsg: " & errmsg)
+							set show_url of temp_show_info to ""
+						end try
+						
+						try
+							set seriesid_temp to SeriesID of item i3 of hdhrGRID_response
+							set show_seriesid of temp_show_info to SeriesID of item i3 of hdhrGRID_response
+							my logger(true, "add_show_info(" & caller & ")", "INFO", "Set Series ID: " & SeriesID of item i3 of hdhrGRID_response)
+						on error errmsg
+							my logger(true, "add_show_info(" & caller & ")", "WARN", "Unable to pull Series ID: " & errmsg)
+							set seriesid_temp to "No SeriesID provided"
+						end try
+						
+						try
+							set temp_icon to my curl2icon("add_show_info(" & caller & ")", ImageURL of item i3 of hdhrGRID_response)
+						on error errmsg
+							my logger(true, "add_show_info(" & caller & ")", "WARN", "Unable to pull ImageURL: " & errmsg)
+							set temp_icon to ""
+						end try
+						
+						try
+							set show_tags of temp_show_info to Filter of item i3 of hdhrGRID_response
+						on error
+							set show_tags of temp_show_info to {"None"}
+						end try
+						
+						--					set show_tags_text of temp_show_info to my listtostring("add_show_info(" & caller & ")", show_tags of temp_show_info , ", ")
+						
+						try
+							set tags_text to my listtostring("add_show_info(" & caller & ")", show_tags of temp_show_info, ", ")
+						on error errmsg
+							set tags_text to "ERROR"
+							my logger(true, "add_show_info1(" & caller & ")", "ERROR", errmsg)
+						end try
+						
+						set temp_default_button to 3
+						if temp_is_series is true then
+							set temp_default_button to 2
 						end if
 						
-						set end of temp_show_progress to "Series: " & show_is_series of temp_show_info
-						set progress additional description to my listtostring("add_show(" & caller & ")", temp_show_progress, return)
-						set progress completed steps to 4
-						my logger(true, "add_show_info(" & caller & ")", "INFO", "(Auto) show_is_series: " & show_is_series of temp_show_info)
-					on error errmsg
-						my logger(true, "add_show_info(" & caller & ")", "WARN", "(Auto) " & show_title of temp_show_info & " NOT added, errmsg: " & errmsg)
-						exit repeat
-					end try
+						try
+							set show_originalairdate to OriginalAirdate of item i3 of hdhrGRID_response
+							set show_originalairdate_real to my short_date("add_show_info(" & caller & ")", my epoch2datetime("add_show_info1(" & caller & ")", show_originalairdate), false, false)
+						on error errmsg
+							set show_originalairdate_real to "Unknown"
+						end try
+						
+						try
+							-- We need to note if the show start time was yesterday, and adjust as needed.
+							
+							set temp_show_info_series to (display dialog "Is this a single or a series recording? " & return & return & "Title: " & show_title of temp_show_info & return & "Type: " & tags_text & return & "SeriesID: " & seriesid_temp & return & return & "Synopsis: " & synopsis_temp & return & return & "Start: " & time string of my time_set("add_show_info(" & caller & ")", current date, show_time of temp_show_info) & return & "Length: " & my ms2time("add_show_info2", ((show_length of temp_show_info) * 60), "s", 2) & return & "OriginalAirdate: " & show_originalairdate_real buttons {Running_icon & " Run", Series_icon & " Series", Single_icon & " Single"} default button temp_default_button cancel button 1 with title my check_version_dialog(caller) giving up after Dialog_timeout with icon temp_icon)
+							
+							if button returned of temp_show_info_series contains "Series" then
+								set show_is_series of temp_show_info to true
+							else if button returned of temp_show_info_series contains "Single" then
+								set show_is_series of temp_show_info to false
+							end if
+							
+							set end of temp_show_progress to "Series: " & show_is_series of temp_show_info
+							set progress additional description to my listtostring("add_show(" & caller & ")", temp_show_progress, return)
+							set progress completed steps to 4
+							my logger(true, "add_show_info(" & caller & ")", "INFO", "(Auto) show_is_series: " & show_is_series of temp_show_info)
+						on error errmsg
+							my logger(true, "add_show_info(" & caller & ")", "WARN", "(Auto) " & show_title of temp_show_info & " NOT added, errmsg: " & errmsg)
+							exit repeat
+						end try
+					else
+						--dupe show 
+					end if
 				end if
 				
 				--We are now outside of the maunual/automatic loop.  Thee question below pertain to all shows when being added.
@@ -2944,10 +2976,10 @@ on epoch2datetime(caller, epochseconds)
 		set unix_time to epochseconds
 	end try
 	set epoch_time to my epoch()
-	--epoch_time is now current unix epoch time as a date object
+	--epoch_time is now current unix epoch time as a date object 
 	my logger(true, "epoch2datetime(" & caller & ")", "TRACE", epochseconds)
 	set epochOFFSET to (epoch_time + (unix_time as number) + (time to GMT))
-	my logger(true, "epoch2datetime(" & caller & ")", "TRACE", epochOFFSET)
+	my logger(true, "epoch2datetime(" & caller & ")", "TRACE", class of (epochOFFSET))
 	return epochOFFSET
 end epoch2datetime
 
