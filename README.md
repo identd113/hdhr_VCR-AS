@@ -7,7 +7,7 @@ An OSX faceless/background script that makes recording TV shows and Movies on HD
 ![Show List](show_list.png)
 
 #### Why?
-I wanted a quick way to record a TV show, without setuping a large system like Plex or HDHomeRuns' own DVR software.
+I wanted a quick way to record a TV show, without setting up a large system, like Plex or HDHomeRuns' own DVR software.
 I call it a VCR app, as while it does use guide data to pull name / season / episode number / episode name / show length, it does not present like a normal DVR. It is more of a Smart VCR
 
 #### Requirements
