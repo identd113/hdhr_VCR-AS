@@ -1,21 +1,3 @@
-
-(*
-Log when we dont run hdhr update at 02 and 32
-Add indication if show_list data has been updated, or if its the old show information
---Added ability to fix invalid show directory on launch --Bad fix, make 1 fix, and apply to all, if the path is the same as the bad one. 
-Fix issue where selecting  multiple shows may cause an issue with is_sport popup  
-NEED Prompt user to update show with a valid tuner.
---rewrite next_show to be more like recording_now  
-{hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:"http://10.0.1.101/discover.json", lineup_url:"http://10.0.1.101/lineup.json", device_id:"XX105404BE", does_transcode:0, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:missing value}
-show_info model: show_title:Happy_Holidays_America, show_time:16, show_length:60, show_air_date:Sunday, show_transcode:missing value, show_temp_dir:alias Backups:, show_dir:alias Backups:, show_channel:5.1, show_active:true, show_id:221fbe1126389e6af35f405aa681cf19, show_recording:false, show_last:date Sunday, December 13, 2020 at 4:04:54 PM, show_next:date Sunday, December 13, 2020 at 4:00:00 PM, show_end:date Sunday, December 13, 2020 at 5:00:00 PM, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:XX105404BE,show_is_series:fal
-set progress description to "Loading ..."
-set progress additional description to  
-set progress completed steps to 0
-set progress total steps to 1  
-{ModelNumber:"HDTC-2US", UpgradeAvailable:"20220203", BaseURL:"http://10.0.1.101:80", FirmwareVersion:"20220125", DeviceAuth:"pP60GFYQSja9tKyA4iwcpzcG", FirmwareName:"hdhomeruntc_atsc", FriendlyName:"HDHomeRun EXTEND", LineupURL:"http://10.0.1.101:80/lineup.json", TunerCount:2, DeviceID:"105404BE"}
-set end of hdhr_device_discovery to {{ModelNumber:"HDTC-2US", UpgradeAvailable:"20210624", BaseURL:"http://1 0.0.1.101:80", FirmwareVersion:"20210210", DeviceAuth:"nrwqkmEpZNhIzf539VfjHyYP", FirmwareName:"hdhomeruntc_atsc", FriendlyName:"HDHomeRun EXTEND", LineupURL:"http://10.0.1.101:80/lineup.json", TunerCount:2, DeviceID:"XX5404BE"}}	
-*)
-
 global Local_env
 global Show_info
 global Locale
@@ -57,6 +39,7 @@ global Tv_icon
 global Plus_icon
 global Single_icon
 global Series_icon
+global Series1_icon
 global Inactive_icon
 global Edit_icon
 global Soon_icon
@@ -106,6 +89,7 @@ on loadIcons(caller)
 		set Plus_icon to character id 10133
 		set Single_icon to character id {49, 65039, 8419}
 		set Series_icon to character id 128257
+		set Series1_icon to character id 128258
 		set Inactive_icon to character id 9940
 		set Edit_icon to character id {9999, 65039}
 		set Soon_icon to character id 128284
@@ -134,10 +118,10 @@ end loadIcons
 
 on setup_script(caller)
 	try
-		set Local_env to (name of current application) 
+		set Local_env to (name of current application)
 		set Lf to "
 "
-		set Version_local to "20231208"
+		set Version_local to "20231216"
 		set Config_version to 1
 		set temp_info to (system info)
 		set Local_ip to IPv4 address of temp_info
@@ -538,6 +522,7 @@ end reopen
 ## Runs when the user attempts to quit the script.  
 
 on quit {}
+	activate me
 	my logger(true, "quit()", "INFO", "quit() called.  We have written " & Loglines_written & " lines")
 	--add check to see if we are recording.  
 	set hdhr_quit_record to false
@@ -729,19 +714,24 @@ on tuner_inuse(caller, device_id)
 			set hdhr_discover_temp to my hdhr_api("tuner_inuse(" & caller & ")", statusURL of item tuner_offset of HDHR_DEVICE_LIST)
 		end timeout
 		repeat with i from 1 to length of hdhr_discover_temp
-			try
-				if TargetIP of item i of hdhr_discover_temp is not Local_ip then
-					set end of local_ip_list to TargetIP of item i of hdhr_discover_temp
+			repeat 1 times
+				if length of item i of hdhr_discover_temp is greater than 1 then
+					exit repeat
 				end if
 				try
-					my logger(true, "tuner_inuse(" & caller & ")", "INFO", "VctNumber: " & VctNumber of item i of hdhr_discover_temp & ", VctName: " & VctName of item i of hdhr_discover_temp & ", Frequency: " & ((Frequency of item i of hdhr_discover_temp as number) / 1000000) & " Mhz" & ", SignalStrengthPercent: " & SignalStrengthPercent of item i of hdhr_discover_temp & ", SignalQualityPercent: " & SignalQualityPercent of item i of hdhr_discover_temp & ", SymbolQualityPercent: " & SymbolQualityPercent of item i of hdhr_discover_temp)
+					if TargetIP of item i of hdhr_discover_temp is not Local_ip then
+						set end of local_ip_list to TargetIP of item i of hdhr_discover_temp
+					end if
+					try
+						my logger(true, "tuner_inuse(" & caller & ")", "INFO", "VctNumber: " & VctNumber of item i of hdhr_discover_temp & ", VctName: " & VctName of item i of hdhr_discover_temp & ", Frequency: " & ((Frequency of item i of hdhr_discover_temp as number) / 1000000) & " Mhz" & ", SignalStrengthPercent: " & SignalStrengthPercent of item i of hdhr_discover_temp & ", SignalQualityPercent: " & SignalQualityPercent of item i of hdhr_discover_temp & ", SymbolQualityPercent: " & SymbolQualityPercent of item i of hdhr_discover_temp)
+					on error errmsg
+						my logger(true, "tuner_inuse(" & caller & ")", "WARN", errmsg)
+					end try
 				on error errmsg
-					my logger(true, "tuner_inuse(" & caller & ")", "WARN", errmsg)
+					my logger(true, "tuner_inuse(" & caller & ")", "WARN", "errmsg: " & errmsg)
+					--	log errmsg
 				end try
-			on error errmsg
-				my logger(true, "tuner_inuse(" & caller & ")", "WARN", "errmsg: " & errmsg)
-				--	log errmsg
-			end try
+			end repeat
 		end repeat
 	on error errmsg
 		my logger(true, "tuner_inuse(" & caller & ")", "WARN", "Timeout, errmsg: " & errmsg)
@@ -1394,7 +1384,11 @@ on main(caller, emulated_button_press)
 			set temp_show_line to " " & (show_title of item i of Show_info & " on " & show_channel of item i of Show_info & " at " & show_time of item i of Show_info & " for " & show_length of item i of Show_info & " minutes on " & my listtostring("main", show_air_date of item i of Show_info, ", "))
 			
 			if show_is_series of item i of Show_info is true then
-				set temp_show_line to Series_icon & temp_show_line
+				if length of show_air_date of item i of Show_info is 1 then
+					set temp_show_line to Series1_icon & temp_show_line
+				else
+					set temp_show_line to Series_icon & temp_show_line
+				end if
 			else
 				set temp_show_line to Single_icon & temp_show_line
 			end if
@@ -2745,7 +2739,11 @@ on recordingnow_main(caller)
 					set recording_end to my ms2time("recording_now(" & caller & ")", (show_end of item i of Show_info) - (cd), "s", 3)
 				end if
 				if show_is_series of item i of Show_info is true then
-					set end of recording_now_final to (Series_icon & " " & show_title of item i of Show_info & " on " & show_channel of item i of Show_info & " (" & recording_end & " left)")
+					if length of show_air_date of item i of Show_info is 1 then
+						set end of recording_now_final to (Series1_icon & " " & show_title of item i of Show_info & " on " & show_channel of item i of Show_info & " (" & recording_end & " left)")
+					else
+						set end of recording_now_final to (Series_icon & " " & show_title of item i of Show_info & " on " & show_channel of item i of Show_info & " (" & recording_end & " left)")
+					end if
 				else
 					set end of recording_now_final to (Single_icon & " " & show_title of item i of Show_info & " on " & show_channel of item i of Show_info & " (" & recording_end & " left)")
 				end if
@@ -2764,6 +2762,7 @@ on recordingnow_main(caller)
 end recordingnow_main
 
 on next_shows(caller)
+	--FIX add support for series1_icon here...
 	my logger(true, "next_shows(" & caller & ")", "INFO", "Called")
 	copy (current date) to cd
 	set error_show_list to {}
@@ -2796,7 +2795,11 @@ on next_shows(caller)
 				
 				my short_date("next_shows(" & caller & ")", show_end of item i of Show_info, false, false)
 				if show_is_series of item i2 of Show_info is true then
-					set end of next_shows_final to (Series_icon & " " & show_title of item i2 of Show_info & " on channel " & show_channel of item i2 of Show_info & " until " & temp_show_end)
+					if length of show_air_date of item i2 of Show_info is 1 then
+						set end of next_shows_final to (Series1_icon & " " & show_title of item i2 of Show_info & " on channel " & show_channel of item i2 of Show_info & " until " & temp_show_end)
+					else
+						set end of next_shows_final to (Series_icon & " " & show_title of item i2 of Show_info & " on channel " & show_channel of item i2 of Show_info & " until " & temp_show_end)
+					end if
 				else
 					set end of next_shows_final to (Single_icon & " " & show_title of item i2 of Show_info & " on channel " & show_channel of item i2 of Show_info & " until " & temp_show_end)
 				end if
@@ -3481,35 +3484,3 @@ on seriesScan(caller, hdhr_device, configSeriesID)
 		my logger(true, "seriesScan(" & caller & ")", "ERROR", "err, " & errmsg)
 	end try
 end seriesScan
-on dayofweek(caller, the_day, next_or_last)
-	--not in use
-	set valid_days to {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
-	if the_day is in valid_days then
-		set cd to current date
-		if next_or_last is "next" then
-			set tempcd to 7
-			set whichby to 1
-		end if
-		if next_or_last is "last" then
-			set tempcd to -7
-			set whichby to -1
-		end if
-		repeat with i from 0 to tempcd by whichby
-			set temp_time to ((cd) + (i * days))
-			if (weekday of temp_time) as text is the_day and temp_time is not (current date) then
-				return date (date string of temp_time)
-			end if
-		end repeat
-	else
-		return false
-	end if
-end dayofweek
-on show_notify(caller, show_id)
-	set show_offset to my HDHRShowSearch(show_id)
-	set show_duration to show_length of item show_offset of Show_info
-	if show_duration is less than or equal to 30 then
-		set show_notify of item show_offset of Show_info to (current date) + (show_duration div 2)
-	else
-		set show_notify of item show_offset of Show_info to (current date) + (show_duration div 4)
-	end if
-end show_notify
