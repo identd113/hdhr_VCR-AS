@@ -15,7 +15,8 @@ I call it a VCR app, as while it does use guide data to pull name / season / epi
 2. Due to poor planning, this will only work in the en_US region, sorry
 2. [JSONHelper](https://apps.apple.com/us/app/json-helper-for-applescript/id453114608) is required, available for free.
 3. A configured HDHomeRun device from https://www.silicondust.com
-4. hdhr_VCR will also need access to the following paths:
+4. The hdhomerun device should have a static IP on the network, as we record the IP address of the tuner when we add a show.
+5. hdhr_VCR will also need access to the following paths:
 
 - ~/Documents/hdhr_VCR.json
 - ~/Library/Caches/hdhr_VCR/
