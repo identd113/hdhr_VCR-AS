@@ -9,8 +9,8 @@ end cm
 
 on load_hdhrVCR_vars()
 	set handlername to "load_hdhrVCR_vars_lib"
-	-- We need to recieve states from the hdhr_vcr here
-	set vers_lib to "20240920"
+	-- We need to receive states from the hdhr_vcr here
+	set vers_lib to "20250407"
 	return vers_lib
 end load_hdhrVCR_vars
 
@@ -18,8 +18,8 @@ on checkDiskSpace(caller, the_path)
 	set handlername to "checkDiskSpace_lib"
 	try
 		set checkDiskSpace_return to do shell script "df -k '" & the_path & "'"
-		set checkDiskSpace_temp1 to item 2 of stringlistflip(my cm(handlername, caller), checkDiskSpace_return, return, "list")
-		set checkDiskSpace_temp2 to emptylist(stringlistflip(my cm(handlername, caller), checkDiskSpace_temp1, space, "list"))
+		set checkDiskSpace_temp1 to item 2 of my stringlistflip(my cm(handlername, caller), checkDiskSpace_return, return, "list")
+		set checkDiskSpace_temp2 to my emptylist(stringlistflip(my cm(handlername, caller), checkDiskSpace_temp1, space, "list"))
 		return {the_path, first word of item 5 of checkDiskSpace_temp2 as number, first word of item 4 of checkDiskSpace_temp2 as number}
 	on error errmsg
 		return {the_path, 0, errmsg}
@@ -63,10 +63,14 @@ on stringlistflip(caller, thearg, delim, returned)
 	end try
 end stringlistflip
 
-on epoch()
+on epoch(cd)
 	set handlername to "epoch_lib"
 	try
-		set epoch_time to current date
+		if cd is in {"", {}} then
+			set epoch_time to current date
+		else
+			set epoch_time to cd
+		end if
 		set day of epoch_time to 1
 		set hours of epoch_time to 0
 		set minutes of epoch_time to 0
@@ -99,7 +103,7 @@ on replace_chars(thestring, target, replacement)
 	end try
 end replace_chars
 
-on fixDate(caller, theDate)
+on fixDate(caller, theDate) --We may be able to remove this, since updating stringToUtf8
 	set handlername to "fixDate_lib"
 	try
 		set thedate_text to (theDate as string)
@@ -113,13 +117,15 @@ end fixDate
 
 on stringToUtf8(caller, thestring)
 	set handlername to "stringToUtf8_lib"
+	set non_utf8 to {"á", "é", "í", "ó", "ú", "Á", "É", "Í", "Ó", "Ú", "à", "è", "ì", "ò", "ù", "À", "È", "Ì", "Ò", "Ù", "â", "ê", "î", "ô", "û", "Â", "Ê", "Î", "Ô", "Û", "ä", "ë", "ï", "ö", "ü", "Ä", "Ë", "Ï", "Ö", "Ü", "ã", "ñ", "õ", "Ã", "Ñ", "Õ", "å", "Å", "ç", "Ç", "ø", "Ø", character id 8239, ":"}
+	set fixed_utf8 to {"a", "e", "i", "o", "u", "A", "E", "I", "O", "U", "a", "e", "i", "o", "u", "A", "E", "I", "O", "U", "a", "e", "i", "o", "u", "A", "E", "I", "O", "U", "a", "e", "i", "o", "u", "A", "E", "I", "O", "U", "a", "n", "o", "A", "N", "O", "a", "A", "c", "C", "o", "O", " ", ""}
+	set fixed_string to thestring
 	try
-		set non_utf8 to {"á", "é", "í", "ó", "ú", "Á", "É", "Í", "Ó", "Ú", "à", "è", "ì", "ò", "ù", "À", "È", "Ì", "Ò", "Ù", "â", "ê", "î", "ô", "û", "Â", "Ê", "Î", "Ô", "Û", "ä", "ë", "ï", "ö", "ü", "Ä", "Ë", "Ï", "Ö", "Ü", "ã", "ñ", "õ", "Ã", "Ñ", "Õ", "å", "Å", "ç", "Ç", "ø", "Ø"}
-		set fixed_utf8 to {"a", "e", "i", "o", "u", "A", "E", "I", "O", "U", "a", "e", "i", "o", "u", "A", "E", "I", "O", "U", "a", "e", "i", "o", "u", "A", "E", "I", "O", "U", "a", "e", "i", "o", "u", "A", "E", "I", "O", "U", "a", "n", "o", "A", "N", "O", "a", "A", "c", "C", "o", "O"}
-		set fixed_string to thestring
-		repeat with i from 1 to length of non_utf8
-			set fixed_string to my replace_chars(fixed_string, item i of non_utf8, item i of fixed_utf8)
-		end repeat
+		if my itemsInString(caller, non_utf8, thestring) is true then
+			repeat with i from 1 to length of non_utf8
+				set fixed_string to my replace_chars(fixed_string, item i of non_utf8, item i of fixed_utf8)
+			end repeat
+		end if
 		if thestring is not fixed_string then
 			logger(true, handlername, caller, "INFO", quote & thestring & quote & " stripped characters") of ParentScript
 		end if
@@ -438,7 +444,7 @@ on epoch2datetime(caller, epochseconds)
 		on error
 			set unix_time to epochseconds
 		end try
-		set epoch_time to my epoch()
+		set epoch_time to my epoch("")
 		--epoch_time is now current unix epoch time as a date object 
 		logger(true, handlername, caller, "TRACE", epochseconds) of ParentScript
 		set epochOFFSET to (epoch_time + (unix_time as number) + (time to GMT))
@@ -461,3 +467,197 @@ on epoch2show_time(caller, epoch)
 		return (show_time_temp_hours)
 	end if
 end epoch2show_time
+
+on tuner_dump(caller)
+	set handlername to "tuner_dump_lib"
+	set HDHR_DEVICE_LIST to HDHR_DEVICE_LIST of ParentScript
+	try
+		repeat with i from 1 to length of HDHR_DEVICE_LIST
+			set tuner_dump_per_item to {}
+			try
+				set end of tuner_dump_per_item to ("BaseURL: " & (BaseURL of item i of HDHR_DEVICE_LIST))
+				set end of tuner_dump_per_item to ("hdhr_lineup_update: " & (hdhr_lineup_update of item i of HDHR_DEVICE_LIST) as text)
+				set end of tuner_dump_per_item to ("hdhr_guide_update: " & (hdhr_guide_update of item i of HDHR_DEVICE_LIST) as text)
+				set end of tuner_dump_per_item to ("discover_url: " & (discover_url of item i of HDHR_DEVICE_LIST))
+				set end of tuner_dump_per_item to ("lineup_url: " & (lineup_url of item i of HDHR_DEVICE_LIST))
+				set end of tuner_dump_per_item to ("device_id: " & (device_id of item i of HDHR_DEVICE_LIST))
+				set end of tuner_dump_per_item to ("does_transcode: " & (does_transcode of item i of HDHR_DEVICE_LIST))
+				try
+					set end of tuner_dump_per_item to ("hdhr_lineup_length: " & (length of hdhr_lineup of item i of HDHR_DEVICE_LIST))
+				on error errmsg
+					logger(true, handlername, caller, "WARN", "Unable to determine length of hdhr_lineup") of ParentScript
+				end try
+				set end of tuner_dump_per_item to ("is_active: " & (is_active of item i of HDHR_DEVICE_LIST))
+				set end of tuner_dump_per_item to ("is_active_reason: " & (is_active_reason of item i of HDHR_DEVICE_LIST))
+				set end of tuner_dump_per_item to ("statusURL: " & (statusURL of item i of HDHR_DEVICE_LIST))
+				set end of tuner_dump_per_item to ("channel_mapping: " & (channel_mapping of item i of HDHR_DEVICE_LIST))
+				set end of tuner_dump_per_item to ("hdhr_model: " & (hdhr_model of item i of HDHR_DEVICE_LIST))
+				set temp to my stringlistflip("tuner_dump(" & caller & ")", tuner_dump_per_item, ", ", "string")
+				logger(true, handlername, caller, "INFO", temp) of ParentScript
+			on error errmsg
+				logger(true, handlername, caller, "WARN", errmsg) of ParentScript
+			end try
+		end repeat
+	on error errmsg
+		return {handlername, errmsg}
+	end try
+end tuner_dump
+
+on encode_strikethrough(caller, thedata, decimel_char)
+	set handlername to "encode_strikethrough_lib"
+	set combiningModifiers to {longStrokeOverlay:822, overline:773, lowLine:818, ringAbove:778, acuteAccent:769, diaeresis:776, tilde:771, xAbove:829, tildeOverlay:820, slashOverlay:824}
+	set encoded_line to {}
+	repeat with i from 1 to length of thedata
+		set end of encoded_line to (item i of thedata & character id decimel_char)
+	end repeat
+	return {thedata, encoded_line as text}
+end encode_strikethrough
+
+on HDHRShowSearch(the_show_id)
+	set handlername to "HDHRShowSearch_lib"
+	try
+		set show_info to show_info of ParentScript
+		if length of show_info is greater than 0 then
+			repeat with i from 1 to length of show_info
+				if show_id of item i of show_info is the_show_id then
+					return i
+				end if
+			end repeat
+		end if
+		return 0
+	on error errmsg
+		return {handlername, errmsg}
+	end try
+end HDHRShowSearch
+
+on itemsInString(caller, listofitems, thestring)
+	set handlername to "itemsInString_lib"
+	try
+		set oldelim to AppleScript's text item delimiters
+		set AppleScript's text item delimiters to listofitems
+		set dlist to (every text item of thestring)
+		set AppleScript's text item delimiters to oldelim
+		if length of dlist is greater than 1 then
+			return true
+		else
+			return false
+		end if
+	on error
+		set AppleScript's text item delimiters to oldelim
+	end try
+end itemsInString
+
+on check_after_midnight(caller)
+	set handlername to "check_after_midnight_lib"
+	set temp_time to day of (current date)
+	try
+		if Check_after_midnight_time is not temp_time then
+			set Check_after_midnight_time to temp_time
+			return true
+		end if
+	on error errmsg
+		set Check_after_midnight_time to temp_time
+	end try
+	return false
+end check_after_midnight
+
+on isModifierKeyPressed(caller, checkKey, desc)
+	set handlername to "isModifierKeyPressed_lib"
+	set modiferKeysDOWN to {command_down:false, option_down:false, control_down:false, shift_down:false, caps_down:false, numlock_down:false, function_down:false, help_down:false}
+	try
+		logger(true, handlername, caller, "INFO", "isModifierKeyPressed: " & checkKey & ", reason: " & desc) of ParentScript
+	on error errmsg
+		logger(true, handlername, caller, "WARN", "isModifierKeyPressed check failed: " & errmsg) of ParentScript
+	end try
+	if checkKey is in {"", "option", "alt"} then
+		--if checkKey is "" or checkKey is  "option" or checkKey  is  "alt" then
+		if (do shell script "osascript -l JavaScript -e \"ObjC.import('Cocoa'); ($.NSEvent.modifierFlags & $.NSEventModifierFlagOption)\"") is greater than 1 then
+			set option_down of modiferKeysDOWN to true
+		end if
+	end if
+	if checkKey is in {"", "command"} then
+		if (do shell script "osascript -l JavaScript -e \"ObjC.import('Cocoa'); ($.NSEvent.modifierFlags & $.NSEventModifierFlagCommand)\"") is greater than 1 then
+			set command_down of modiferKeysDOWN to true
+		end if
+	end if
+	if checkKey is in {"", "shift"} then
+		if (do shell script "osascript -l JavaScript -e \"ObjC.import('Cocoa'); ($.NSEvent.modifierFlags & $.NSEventModifierFlagShift)\"") is greater than 1 then
+			set shift_down of modiferKeysDOWN to true
+		end if
+	end if
+	if checkKey is in {"", "control", "ctrl"} then
+		if (do shell script "osascript -l JavaScript -e \"ObjC.import('Cocoa'); ($.NSEvent.modifierFlags & $.NSEventModifierFlagControl)\"") is greater than 1 then
+			set control_down of modiferKeysDOWN to true
+		end if
+	end if
+	if checkKey is in {"", "caps", "capslock"} then
+		if (do shell script "osascript -l JavaScript -e \"ObjC.import('Cocoa'); ($.NSEvent.modifierFlags & $.NSEventModifierFlagCapsLock)\"") is greater than 1 then
+			set caps_down of modiferKeysDOWN to true
+		end if
+	end if
+	if checkKey is in {"", "numlock"} then
+		if (do shell script "osascript -l JavaScript -e \"ObjC.import('Cocoa'); ($.NSEvent.modifierFlags & $.NSEventModifierFlagNumericPad)\"") is greater than 1 then
+			set numlock_down of modiferKeysDOWN to true
+		end if
+	end if
+	--Set if any key in the numeric keypad is pressed. The numeric keypad is generally on the right side of the keyboard. This is also set if any of the arrow keys are pressed
+	if checkKey is in {"", "function", "func", "fn"} then
+		if (do shell script "osascript -l JavaScript -e \"ObjC.import('Cocoa'); ($.NSEvent.modifierFlags & $.NSEventModifierFlagFunction)\"") is greater than 1 then
+			set function_down of modiferKeysDOWN to true
+		end if
+	end if
+	if checkKey is in {"", "help", "?"} then
+		if (do shell script "osascript -l JavaScript -e \"ObjC.import('Cocoa'); ($.NSEvent.modifierFlags & $.NSEventModifierFlagHelp)\"") is greater than 1 then
+			set help_down of modiferKeysDOWN to true
+		end if
+	end if
+	try
+		set temp to modiferKeysDOWN as text
+	on error errmsg
+		logger(true, handlername, caller, "DEBUG", item 2 of my stringlistflip("isModifierKeyPressed(" & caller & ")", errmsg, {"{", "}"}, "list")) of ParentScript
+	end try
+	return modiferKeysDOWN
+end isModifierKeyPressed
+
+on quoteme(thestring)
+	set handlername to "quoteme_lib"
+	set temp to (quote & thestring & quote) as text
+end quoteme
+
+on date2touch(caller, datetime, filepath)
+	set handlername to "date2touch_lib"
+	set temp_year to year of datetime
+	set temp_month to my padnum(my cm(handlername, caller), ((month of datetime) * 1) as text, false)
+	set temp_day to my padnum(my cm(handlername, caller), (day of datetime as text), false)
+	set temp_hour to my padnum(my cm(handlername, caller), (hours of datetime as text), false)
+	set temp_minute to my padnum(my cm(handlername, caller), (minutes of datetime as text), false)
+	try
+		set temp_message to "touch -t " & temp_year & temp_month & temp_day & temp_hour & temp_minute & " " & quote & filepath & quote
+		logger(true, handlername, caller, "INFO", temp_message) of ParentScript
+	on error errmsg
+		logger(true, handlername, caller, "WARN", filepath & ", unable to touch") of ParentScript
+		set temp_message to missing value
+	end try
+	if temp_message is not missing value then
+		try
+			do shell script temp_message
+		on error errmsg
+			logger(true, handlername, caller, "WARN", errmsg) of ParentScript
+		end try
+	end if
+end date2touch
+
+on time_set(caller, adate_object, time_shift)
+	## It returns the resulting date/time object. This is a convenient way to say, “I want this date, at that time of day.”
+	set handlername to "time_set"
+	if class of adate_object is not date then
+		logger(true, handlername, caller, "ERROR", (adate_object as text) & " is not a date object!") of ParentScript
+	end if
+	set dateobject to adate_object
+	--set to midnight
+	set hours of dateobject to 0
+	set minutes of dateobject to 0
+	set seconds of dateobject to 0
+	set dateobject to dateobject + (time_shift * hours)
+	return dateobject
+end time_set
