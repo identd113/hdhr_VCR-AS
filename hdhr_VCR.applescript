@@ -4,9 +4,9 @@ global Show_info
 global Locale
 global Hostname
 global HDHR_DEVICE_LIST
-global Idle_timer --This is the idle loop delay
-global Idle_timer_default --This is our default idle time
-global Idle_timer_dateobj -- When we are adjusting the queue, this is the timestamp of when to fall back to default idle loop time
+global Idle_timer
+global Idle_timer_default
+global Idle_timer_dateobj
 global Version_local
 global Version_remote
 global Version_url
@@ -90,7 +90,7 @@ on setup_script(caller)
 		set Local_env to (name of current application)
 		set Lf to "
 "
-		set Version_local to "20250512"
+		set Version_local to "20250516"
 		set Config_version to 1
 		set temp_info to (system info)
 		set Local_ip to IPv4 address of temp_info
@@ -239,7 +239,6 @@ on run {}
 	my logger(true, handlername, caller, "INFO", "End of run() handler")
 end run
 
-## This script will loop through this every 12 seconds, or whatever the return value is (Idle_timer), in second is at the bottom of this handler.
 on idle
 	set handlername to "idle"
 	copy (round (random number from 1000 to 9999)) to caller
@@ -467,8 +466,7 @@ on idle
 	on error errmsg
 		my logger(true, handlername, caller, "ERROR", errmsg)
 	end try
-	--FIX added check for is recording.
-	if my check_after_midnight(cm) is true then
+	if check_after_midnight(cm) of LibScript is true then
 		repeat with i from 1 to length of Show_info
 			set show_recorded_today of item i of Show_info to false
 		end repeat
@@ -482,7 +480,6 @@ on idle
 		seriesScanRefresh(cm, "") of LibScript
 		my idle_change(cm, 1, 3)
 		set RefreshderiesiD to false
-		
 	end if
 	if First_open is true then --and Idle_count_delay = 0 then
 		my logger(true, handlername, caller, "INFO", "Now running intial main() at end of idle loop")
@@ -980,13 +977,6 @@ on check_version_dialog(caller)
 	end if
 	return temp
 end check_version_dialog
-
-on show_icons(caller, hdhr_device, thechan) -- not used
-	set handlername to "show_icons"
-	repeat with i from 1 to length of Show_info
-		my get_show_state(my cm(handlername, caller), hdhr_device, thechan, start_time, end_time)
-	end repeat
-end show_icons
 
 on build_channel_list(caller, hdhr_device, cd)
 	set handlername to "build_channel_list"
@@ -2188,7 +2178,7 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 		if length of HDHR_DEVICE_LIST is greater than 0 then
 			repeat with i2 from 1 to length of HDHR_DEVICE_LIST
 				my HDHRDeviceDiscovery(my cm(handlername, caller), device_id of item i2 of HDHR_DEVICE_LIST)
-				delay 0.1
+				--delay 0.1
 			end repeat
 			my logger(true, handlername, caller, "INFO", "Completed Guide and Lineup Updates")
 			
@@ -2310,7 +2300,7 @@ on getHDHR_Lineup(caller, hdhr_device)
 		set hdhr_lineup_update of item tuner_offset of HDHR_DEVICE_LIST to current date
 		my logger(true, handlername, caller, "INFO", "Updated Lineup for " & hdhr_device)
 		set progress completed steps to 1
-		delay 0.1
+		--delay 0.1
 	else
 		my logger(true, handlername, caller, "ERROR", "Unable to update lineup for " & hdhr_device)
 	end if
@@ -2895,7 +2885,7 @@ on next_shows(caller)
 			if show_use_seriesid_all of item i of Show_info is true then
 				set temp_channel to ""
 			else
-				set temp_channel to show_channel of item i of Show_info
+				set temp_channel to (show_channel of item i of Show_info) as text
 			end if
 			-- my seriesScanNext(my cm(handlername, caller & "NEXT"), show_seriesid of item i of Show_info, hdhr_record of item i of Show_info, temp_channel, show_id of item i of Show_info, 1)
 			-- my seriesScanNext(my cm(handlername, caller & "+1"), show_seriesid of item i of Show_info, hdhr_record of item i of Show_info, temp_channel, show_id of item i of Show_info, 2)
@@ -3214,7 +3204,7 @@ on existing_shows(caller)
 	end if
 end existing_shows
 
-on check_after_midnight(caller)
+on check_after_midnight2(caller)
 	set handlername to "check_after_midnight"
 	set temp_time to day of (current date)
 	try
@@ -3226,7 +3216,7 @@ on check_after_midnight(caller)
 		set Check_after_midnight_time to temp_time
 	end try
 	return false
-end check_after_midnight
+end check_after_midnight2
 
 on cm(handlername, caller)
 	return {handlername & "(" & caller & ")"} as text
@@ -3240,7 +3230,7 @@ on seriesScan(caller, seriesID, hdhr_device, thechan, show_id)
 	set tuner_offset to my HDHRDeviceSearch(my cm(handlername, caller), hdhr_device)
 	set hdhr_guide to hdhr_guide of item tuner_offset of HDHR_DEVICE_LIST
 	repeat with i from 1 to length of hdhr_guide
-		set temp_channel to GuideNumber of item i of hdhr_guide
+		set temp_channel to (GuideNumber of item i of hdhr_guide) as text
 		set guide_temp to Guide of item i of hdhr_guide
 		repeat with i2 from 1 to length of guide_temp
 			if seriesID of item i2 of guide_temp is seriesID then
@@ -3315,7 +3305,7 @@ on seriesScanNext(caller, seriesID, hdhr_device, thechan, show_id, theoffset)
 			end repeat
 			--	choose from list newest_show_epoch_offset
 			if item theoffset of newest_show_epoch_offset is not 0 then
-				set show_offset to my HDHRShowSearch(my cm(handlername, caller), show_id of seriesScanTemp)
+				--	set show_offset to my HDHRShowSearch(my cm(handlername, caller), show_id of seriesScanTemp)
 				my logger(true, handlername, caller, "INFO", "Returned latest airing for " & show_title of item show_offset of Show_info)
 				--				log "atesta"
 				--				log my cm(handlername, caller)
@@ -3399,30 +3389,10 @@ on seriesScanUpdate(caller, show_id)
 				my logger(true, handlername, caller, "DEBUG", "There are no upcoming shows for " & show_id)
 				--set show_time of item show_offset of Show_info to ((show_time of item show_offset of Show_info) + 2 * hours)
 				set show_next of item show_offset of Show_info to ((show_next of item show_offset of Show_info) + 4 * hours)
-				
 			end if
 		end if
 	end if
 end seriesScanUpdate
-
-on enums2icons(caller, enumarray)
-	set handlername to "statusEnums"
-	set iconFinal to {}
-	set iconLength to length of IconList
-	if class of enumarray is list then
-		repeat with i from 1 to length of enumarray
-			set currentEnum to item i of enumarray
-			if currentEnum is less than or equal to iconLength and currentEnum is greater than 0 then
-				set end of iconFinal to item (item i of enumarray) of IconList
-			else
-				set end of iconFinal to "?"
-			end if
-		end repeat
-	else
-		return {}
-	end if
-	return iconFinal
-end enums2icons
 
 on idle_change(caller, loop_delay, loop_delay_sec)
 	set handlername to "idle_change"

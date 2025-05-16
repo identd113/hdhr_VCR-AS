@@ -10,7 +10,7 @@ end cm
 on load_hdhrVCR_vars()
 	set handlername to "load_hdhrVCR_vars_lib"
 	-- We need to receive states from the hdhr_vcr here
-	set vers_lib to "20250515"
+	set vers_lib to "20250516"
 	return vers_lib
 end load_hdhrVCR_vars
 
@@ -36,9 +36,6 @@ on emptylist(caller, klist)
 				set end of nlist to (item i of klist)
 			end if
 		end repeat
-		if dataLength is not length of nlist then
-			logger(true, handlername, caller, "INFO", "Items removed from list") of ParentScript
-		end if
 		return nlist
 	on error errmsg
 		return {handlername, errmsg}
@@ -557,6 +554,7 @@ on check_after_midnight(caller)
 	set handlername to "check_after_midnight_lib"
 	set temp_time to day of (current date)
 	try
+		set Check_after_midnight_time to Check_after_midnight_time of ParentScript
 		if Check_after_midnight_time is not temp_time then
 			set Check_after_midnight_time to temp_time
 			return true
@@ -934,7 +932,7 @@ end recordSee
 on show_name_fix(caller, show_id, show_object)
 	set handlername to "show_name_fix_lib"
 	set temp_name to {}
-	logger(true, handlername, caller, "INFO", "showid: " & show_id & ", show_object: " & (my recordSee(my cm(handlername, caller), show_object))) of ParentScript
+	logger(true, handlername, caller, "DEBUG", "showid: " & show_id & ", show_object: " & (my recordSee(my cm(handlername, caller), show_object))) of ParentScript
 	set show_offset to my HDHRShowSearch(my cm(handlername, caller), show_id)
 	set channel_record to show_object
 	if show_object is not {} then
@@ -1077,3 +1075,29 @@ on showSeek(caller, start_time, end_time, chan, hdhr_device)
 		return false
 	end try
 end showSeek
+
+on enums2icons(caller, enumarray)
+	set handlername to "statusEnums"
+	set iconFinal to {}
+	set iconLength to length of IconList
+	if class of enumarray is list then
+		repeat with i from 1 to length of enumarray
+			set currentEnum to item i of enumarray
+			if currentEnum is less than or equal to iconLength and currentEnum is greater than 0 then
+				set end of iconFinal to item (item i of enumarray) of IconList
+			else
+				set end of iconFinal to "?"
+			end if
+		end repeat
+	else
+		return {}
+	end if
+	return iconFinal
+end enums2icons
+
+on show_icons(caller, hdhr_device, thechan) -- not used
+	set handlername to "show_icons"
+	repeat with i from 1 to length of Show_info
+		my get_show_state(my cm(handlername, caller), hdhr_device, thechan, start_time, end_time)
+	end repeat
+end show_icons
