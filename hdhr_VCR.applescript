@@ -46,7 +46,8 @@ global Log_ignored
 global Errloc
 global Max_disk_percentage
 global Full_week_days
-global RefreshderiesiD
+--global RefreshderiesiD
+global RefreshderiesiD_list
 
 ## Since we use JSON helper to do some of the work, we should declare it, so we dont end up having to use tell blocks everywhere.  If we declare 1 thing, we have to declare everything we are using.
 use AppleScript version "2.4"
@@ -115,7 +116,8 @@ on setup_globals(caller)
 	set handlername to "setup_globals"
 	try
 		set Full_week_days to {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
-		set RefreshderiesiD to true
+		--set RefreshderiesiD to true
+		set RefreshderiesiD_list to {}
 		set Fail_count to 3
 		set HDHR_DEVICE_LIST to {}
 		set Show_info to {}
@@ -226,6 +228,7 @@ on run {}
 		update_record_urls(my cm(handlername, caller), "") of LibScript
 		my idle_change(my cm(handlername, caller), 1, 4)
 		my logger(true, handlername, caller, "INFO", "Initial main() skipped, will run at the end of idle")
+		seriesScanRefresh(my cm(handlername, caller), "") of LibScript
 		if First_open is false then
 			my main(my cm(handlername, caller), "run")
 		end if
@@ -307,7 +310,8 @@ on idle
 											set show_next of item i of Show_info to my nextday(cm, show_id of item i of Show_info)
 											set show_fail_count of item i of Show_info to 0
 											set show_fail_reason of item i of Show_info to ""
-											--set RefreshderiesiD to true
+											seriesScanAdd(cm, show_id of item i of Show_info) of LibScript
+											
 											--my seriesScanUpdate(cm, show_id of item i of Show_info, true)
 											my logger(true, handlername, caller, "WARN", show_title of item i of Show_info & " is a series, but passed, next " & my short_date(cm, show_next of item i of Show_info, false, false))
 											exit repeat
@@ -426,7 +430,8 @@ on idle
 									else
 										--set RefreshderiesiD to true
 										--	my seriesScanUpdate(cm, show_id of item i of Show_info, true)
-										--my seriesScanRefresh(cm, "")
+										--my seriesScanRefresh(cm, show_id of item i of Show_info)
+										seriesScanAdd(cm, show_id of item i of Show_info) of LibScript
 									end if
 								else
 									if show_is_sport of item i of Show_info is false then
@@ -476,11 +481,10 @@ on idle
 		set progress completed steps to 2
 		delay 0.5
 	end if
-	if RefreshderiesiD is true then
-		seriesScanRefresh(cm, "") of LibScript
-		my idle_change(cm, 1, 3)
-		set RefreshderiesiD to false
+	if length of RefreshderiesiD_list is not 0 then
+		seriesScanRun(cm, true) of LibScript
 	end if
+	
 	if First_open is true then --and Idle_count_delay = 0 then
 		my logger(true, handlername, caller, "INFO", "Now running intial main() at end of idle loop")
 		my main(cm, "run")
@@ -1345,15 +1349,6 @@ on setup(caller)
 					my logger(true, handlername, caller, "ERROR", errmsg)
 				end try
 				
-				set save_config to button returned of (display dialog "Save hdhr config file?" buttons {"Skip", "Yes"} default button 2 with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout with icon note)
-				try
-					if save_config is "Yes" then
-						my save_data(my cm(handlername, caller))
-					else
-						my logger(true, handlername, caller, "WARN", "hdhr config NOT saved")
-					end if
-				end try
-				
 				set reload_script to button returned of (display dialog "Reload hdhr library?" buttons {"Skip", "Yes"} default button 2 with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout with icon note)
 				try
 					if reload_script is "Yes" then
@@ -1395,6 +1390,17 @@ on setup(caller)
 		on error errmsg
 			my logger(true, handlername, caller, "WARN", "User cancelled")
 		end try
+		
+		
+		set save_config to button returned of (display dialog "Save hdhr config file?" buttons {"Skip", "Yes"} default button 2 with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout with icon note)
+		try
+			if save_config is "Yes" then
+				my save_data(my cm(handlername, caller))
+			else
+				my logger(true, handlername, caller, "WARN", "hdhr config NOT saved")
+			end if
+		end try
+		
 	end repeat
 end setup
 
@@ -1564,7 +1570,7 @@ on main(caller, emulated_button_press)
 			if temp_show_list is not false then
 				repeat with i3 from 1 to length of temp_show_list
 					set temp_show_list_offset to (my list_position(cm, (item i3 of temp_show_list as text), show_list, true))
-					my logger(true, handlername, caller, "INFO", "Pre validate for " & show_title of item temp_show_list_offset of Show_info)
+					my logger(true, handlername, caller, "INFO", "Pre-validate for " & show_title of item temp_show_list_offset of Show_info)
 					
 					my validate_show_info(cm, show_id of item temp_show_list_offset of Show_info, true)
 					if show_active of item (temp_show_list_offset) of Show_info is true then
@@ -2043,9 +2049,10 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				set show_next of last item of Show_info to my nextday(cm, show_id of temp_show_info)
 				my validate_show_info(cm, show_id of last item of Show_info, false)
 				my update_show(cm, show_id of last item of Show_info, false)
-				if show_use_seriesid of last item of Show_info is true then
-					seriesScanRefresh(cm, show_id of last item of Show_info) of LibScript
-				end if
+				--	if show_use_seriesid of last item of Show_info is true then
+				--	seriesScanRefresh(cm, show_id of last item of Show_info) of LibScript
+				--	end if
+				seriesScanAdd(cm, show_id of last item of Show_info)
 				my save_data(cm)
 				display notification with title Add_icon of Icon_record & " Show Added! (" & hdhr_device & ")" subtitle "" & quote & show_title of last item of Show_info & quote & " at " & show_time of last item of Show_info
 				set progress description to "This show has been added!"
@@ -2112,6 +2119,8 @@ on record_start(caller, the_show_id, opt_show_length, force_update)
 	else
 		if show_fail_count of item i of Show_info is Fail_count then
 			my logger(true, handlername, caller, "ERROR", "The show " & quote & show_title of item i of Show_info & quote & " has failed to record multiple times, so we fail here")
+			set show_fail_count of item i of Show_info to (show_fail_count of item i of Show_info) + 1
+			set show_fail_reason of item i of Show_info to quote & "Failed for unknown reason" & quote
 		end if
 	end if
 	if item 2 of my showid2PID(my cm(handlername, caller), show_id of item i of Show_info, false, true) is {} and show_fail_count of item i of Show_info is less than Fail_count then
@@ -2267,7 +2276,7 @@ on getHDHR_Guide(caller, hdhr_device)
 			end try
 			
 			if hdhr_update is not false then
-				display notification hdhr_model of item tuner_offset of HDHR_DEVICE_LIST & " is ready to update" subtitle "Firmware Update Available"
+				display notification hdhr_model of item tuner_offset of HDHR_DEVICE_LIST & " is ready to update" subtitle quote & hdhr_update & quote & " Firmware Update Available"
 			end if
 			set hdhr_guide_data to my hdhr_api(my cm(handlername, caller), "https://ipv4-api.hdhomerun.com/api/guide.php?DeviceAuth=" & device_auth)
 			set hdhr_guide of item tuner_offset of HDHR_DEVICE_LIST to hdhr_guide_data
@@ -3299,18 +3308,12 @@ on seriesScanNext(caller, seriesID, hdhr_device, thechan, show_id, theoffset)
 				else
 					set end of newest_show_epoch to StartTime_epoch
 					set end of newest_show_epoch_offset to i
-					--	my logger(true, handlername, caller, "INFO", "OffsetOLD: " & theoffset & " Denied Start Time: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), StartTime_epoch), false, false))
-					
 				end if
 			end repeat
 			--	choose from list newest_show_epoch_offset
 			if item theoffset of newest_show_epoch_offset is not 0 then
 				--	set show_offset to my HDHRShowSearch(my cm(handlername, caller), show_id of seriesScanTemp)
 				my logger(true, handlername, caller, "INFO", "Returned latest airing for " & show_title of item show_offset of Show_info)
-				--				log "atesta"
-				--				log my cm(handlername, caller)
-				--				log item (item theoffset of newest_show_epoch_offset) of show_match_list of seriesScanTemp
-				--my logger(true, handlername, caller, "INFO", item (item theoffset of newest_show_epoch_offset) of show_match_list of seriesScanTemp & " on channel " & item (item theoffset of newest_show_epoch_offset) of show_channel_list of seriesScanTemp)
 				set temp to {item (item theoffset of newest_show_epoch_offset) of show_match_list of seriesScanTemp, item (item theoffset of newest_show_epoch_offset) of show_channel_list of seriesScanTemp, show_id of seriesScanTemp}
 				return temp
 			else
@@ -3386,10 +3389,12 @@ on seriesScanUpdate(caller, show_id)
 					end if
 				end if
 			else
-				my logger(true, handlername, caller, "DEBUG", "There are no upcoming shows for " & show_id)
+				my logger(true, handlername, caller, "INFO", "There are no upcoming shows for " & show_title of item show_offset of Show_info)
 				--set show_time of item show_offset of Show_info to ((show_time of item show_offset of Show_info) + 2 * hours)
 				set show_next of item show_offset of Show_info to ((show_next of item show_offset of Show_info) + 4 * hours)
 			end if
+		else
+			my logger(true, handlername, caller, "DEBUG", "The show, " & show_title of item show_offset of Show_info & " is not tracked by SeriesID")
 		end if
 	end if
 end seriesScanUpdate

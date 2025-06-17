@@ -10,7 +10,7 @@ end cm
 on load_hdhrVCR_vars()
 	set handlername to "load_hdhrVCR_vars_lib"
 	-- We need to receive states from the hdhr_vcr here
-	set vers_lib to "20250516"
+	set vers_lib to "20250616"
 	return vers_lib
 end load_hdhrVCR_vars
 
@@ -857,8 +857,8 @@ on seriesScanRefresh(caller, show_id)
 	set Show_info to Show_info of ParentScript
 	if show_id is "" then
 		repeat with i from 1 to length of Show_info
-			if show_use_seriesid of item i of Show_info is true and show_recording of item i of Show_info is false then
-				seriesScanUpdate(my cm(handlername, caller), show_id of item i of Show_info, true) of ParentScript
+			if show_use_seriesid of item i of Show_info is true and show_recording of item i of Show_info is false and show_active of item i of Show_info is true then
+				seriesScanUpdate(my cm(handlername, caller), show_id of item i of Show_info) of ParentScript
 			end if
 		end repeat
 		return true
@@ -866,6 +866,55 @@ on seriesScanRefresh(caller, show_id)
 		seriesScanUpdate(my cm(handlername, caller), show_id) of ParentScript
 	end if
 end seriesScanRefresh
+
+on seriesScanAdd(caller, show_id)
+	set handlername to "seriesScanAdd"
+	set RefreshderiesiD_list to RefreshderiesiD_list of ParentScript
+	
+	logger(true, handlername, caller, "DEBUG", "Attempting to add show_id: " & show_id) of ParentScript
+	
+	if show_id is not in RefreshderiesiD_list then
+		if show_id is not missing value then
+			set end of RefreshderiesiD_list to show_id
+			logger(true, handlername, caller, "INFO", "Added " & show_id & " to SerieScan list") of ParentScript
+		else
+			logger(true, handlername, caller, "WARN", "show_id is missing value, skipping add") of ParentScript
+		end if
+	else
+		logger(true, handlername, caller, "WARN", show_id & " already on refresh list") of ParentScript
+	end if
+	
+	set RefreshderiesiD_list of ParentScript to RefreshderiesiD_list
+	logger(true, handlername, caller, "DEBUG", "Updated RefreshderiesiD_list length: " & (length of RefreshderiesiD_list)) of ParentScript
+end seriesScanAdd
+
+on seriesScanRun(caller, execute)
+	set handlername to "seriesScanRun"
+	set RefreshderiesiD_list to RefreshderiesiD_list of ParentScript
+	set Show_info to Show_info of ParentScript
+	
+	logger(true, handlername, caller, "DEBUG", "Execute flag is: " & execute) of ParentScript
+	logger(true, handlername, caller, "DEBUG", "RefreshderiesiD_list count: " & (length of RefreshderiesiD_list)) of ParentScript
+	
+	if execute is true then
+		repeat with i from 1 to length of RefreshderiesiD_list
+			set show_id to item i of RefreshderiesiD_list
+			logger(true, handlername, caller, "DEBUG", "Processing show_id[" & i & "]: " & show_id) of ParentScript
+			
+			set show_offset to my HDHRShowSearch(my cm(handlername, caller), show_id)
+			
+			if show_is_series of item show_offset of Show_info is true then
+				logger(true, handlername, caller, "INFO", "Found series at offset " & show_offset & ", updating show_id: " & show_id) of ParentScript
+				seriesScanUpdate(my cm(handlername, caller), show_id) of ParentScript
+			else
+				logger(true, handlername, caller, "DEBUG", "show_id: " & show_id & " is not a series, skipping update") of ParentScript
+			end if
+		end repeat
+		
+		set RefreshderiesiD_list of ParentScript to {}
+		logger(true, handlername, caller, "DEBUG", "Cleared RefreshderiesiD_list") of ParentScript
+	end if
+end seriesScanRun
 
 on seriesStatusIcons(caller, show_id)
 	set handlername to "seriesStatus_Lib"
@@ -958,6 +1007,29 @@ on show_name_fix(caller, show_id, show_object)
 	end if
 end show_name_fix
 
+on convertByteSize(caller, byteSize, KBSize, decPlaces)
+	--my convertByteSize(todoBytes of item i of GUID_backupUsage, 1000, 2)
+	set handlername to "convertByteSize_lib"
+	if (KBSize is missing value) then set KBSize to 1000 + 24 * (((system attribute "sysv") < 4192) as integer)
+	
+	if (byteSize is 1) then
+		set conversion to "1 byte" as Unicode text
+	else if (byteSize < KBSize) then
+		set conversion to (byteSize as Unicode text) & " bytes"
+	else
+		set conversion to "Oooh lots!" -- Default in case yottabytes isn't enough!
+		set suffixes to {" KB", " MB", " GB", " TB", " PB", " EB", " ZB", " YB"}
+		set dpShift to ((10 ^ 0.5) ^ 2) * (10 ^ (decPlaces - 1)) -- (10 ^ decPlaces) convolutedly to try to shake out any floating-point errors.
+		repeat with p from 1 to (count suffixes)
+			if (byteSize < (KBSize ^ (p + 1))) then
+				tell ((byteSize / (KBSize ^ p)) * dpShift) to set conversion to (((it div 0.5 - it div 1) / dpShift) as Unicode text) & item p of suffixes
+				exit repeat
+			end if
+		end repeat
+	end if
+	return conversion
+end convertByteSize
+
 ----NOT IN USE------
 
 on get_show_state2(caller, hdhr_tuner, channelcheck, start_time, end_time) --not in use
@@ -980,7 +1052,7 @@ on get_show_state2(caller, hdhr_tuner, channelcheck, start_time, end_time) --not
 				end if
 			else
 				try
-					if my aroundDate(my cm(handlername, caller), start_time, show_next of item i of Show_info, 120) of LibScript is true then
+					if my aroundDate(my cm(handlername, caller), start_time, show_next of item i of Show_info, 120) of ParentScript is true then
 						my logger(true, handlername & i, caller, "INFO", "Marked as upnext:    " & show_title of item i of Show_info & ", channel " & channelcheck)
 						my logger(true, handlername & i, caller, "DEBUG", "UPNEXT show_record_id: " & show_record_id & ", offset " & i)
 						if show_active of item i of Show_info is true then
@@ -1101,3 +1173,26 @@ on show_icons(caller, hdhr_device, thechan) -- not used
 		my get_show_state(my cm(handlername, caller), hdhr_device, thechan, start_time, end_time)
 	end repeat
 end show_icons
+
+on seriesScanList(caller, show_id, updateRecord)
+	set handlername to "seriesScanList_lib"
+	set RefreshderiesiD_list to RefreshderiesiD_list of ParentScript
+	set Show_info to Show_info of ParentScript
+	if show_id is not in RefreshderiesiD_list then
+		if show_id is not missing value then
+			set end of RefreshderiesiD_list to show_id
+			logger(true, handlername, caller, "INFO", "Added " & show_id & " to SerieScan list") of ParentScript
+		end if
+		if updateRecord is true then
+			repeat with i from 1 to length of RefreshderiesiD_list
+				set show_offset to my HDHRShowSearch(my cm(handlername, caller), item i of RefreshderiesiD_list)
+				if show_is_series of item show_offset of Show_info is true then
+					seriesScanUpdate(my cm(handlername, caller), item i of RefreshderiesiD_list) of ParentScript
+				end if
+			end repeat
+			set RefreshderiesiD_list to {}
+		end if
+	else
+		logger(true, handlername, caller, "WARN", show_id & " already on refresh list") of ParentScript
+	end if
+end seriesScanList
