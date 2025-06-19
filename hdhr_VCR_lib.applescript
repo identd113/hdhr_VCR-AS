@@ -853,6 +853,7 @@ on add_record_url(caller, the_channel, the_device)
 end add_record_url
 
 on seriesScanRefresh(caller, show_id)
+	--This should use the add/run combo
 	set handlername to "seriesScanRefresh_lib"
 	set Show_info to Show_info of ParentScript
 	if show_id is "" then
@@ -868,46 +869,67 @@ on seriesScanRefresh(caller, show_id)
 end seriesScanRefresh
 
 on seriesScanAdd(caller, show_id)
-	set handlername to "seriesScanAdd"
+	set handlername to "seriesScanAdd_lib"
 	set RefreshderiesiD_list to RefreshderiesiD_list of ParentScript
-	
-	logger(true, handlername, caller, "DEBUG", "Attempting to add show_id: " & show_id) of ParentScript
-	
-	if show_id is not in RefreshderiesiD_list then
-		if show_id is not missing value then
-			set end of RefreshderiesiD_list to show_id
-			logger(true, handlername, caller, "INFO", "Added " & show_id & " to SerieScan list") of ParentScript
+	set Show_info to Show_info of ParentScript
+	try
+		if show_id = "" then
+			logger(true, handlername, caller, "INFO", "Scanning Show List...") of ParentScript
+			--We need to loop shows, and filter out shows that use seriesid
+			repeat with i from 1 to length of Show_info
+				if show_use_seriesid of item i of Show_info is true then
+					seriesScanAdd(my cm(handlername & "int", caller), show_id of item i of Show_info)
+				end if
+			end repeat
 		else
-			logger(true, handlername, caller, "WARN", "show_id is missing value, skipping add") of ParentScript
+			set show_offset to my HDHRShowSearch(my cm(handlername, caller), show_id)
+			logger(true, handlername, caller, "DEBUG", "Attempting to add show_id: " & show_id) of ParentScript
+			if show_offset is not 0 then
+				if show_use_seriesid of item show_offset of Show_info is true then
+					if show_id is not in RefreshderiesiD_list then
+						set end of RefreshderiesiD_list to show_id
+						logger(true, handlername, caller, "INFO", "Added " & show_id & " to SerieScan list") of ParentScript
+					else
+						logger(true, handlername, caller, "WARN", show_id & " already on refresh list") of ParentScript
+					end if
+				else
+					logger(true, handlername, caller, "WARN", show_id & " does not use SeriesID for tracking") of ParentScript
+				end if
+			else
+				logger(true, handlername, caller, "WARN", show_id & " is no longer a valid show id") of ParentScript
+			end if
 		end if
-	else
-		logger(true, handlername, caller, "WARN", show_id & " already on refresh list") of ParentScript
-	end if
-	
-	set RefreshderiesiD_list of ParentScript to RefreshderiesiD_list
-	logger(true, handlername, caller, "DEBUG", "Updated RefreshderiesiD_list length: " & (length of RefreshderiesiD_list)) of ParentScript
+		
+		set RefreshderiesiD_list of ParentScript to RefreshderiesiD_list
+		logger(true, handlername, caller, "DEBUG", "Updated RefreshderiesiD_list length: " & (length of RefreshderiesiD_list)) of ParentScript
+	on error errmsg
+		logger(true, handlername, caller, "ERROR", errmsg) of ParentScript
+	end try
 end seriesScanAdd
 
 on seriesScanRun(caller, execute)
-	set handlername to "seriesScanRun"
+	set handlername to "seriesScanRun_lib"
 	set RefreshderiesiD_list to RefreshderiesiD_list of ParentScript
 	set Show_info to Show_info of ParentScript
 	
 	logger(true, handlername, caller, "DEBUG", "Execute flag is: " & execute) of ParentScript
-	logger(true, handlername, caller, "DEBUG", "RefreshderiesiD_list count: " & (length of RefreshderiesiD_list)) of ParentScript
+	logger(true, handlername, caller, "INFO", "RefreshderiesiD_list count: " & (length of RefreshderiesiD_list)) of ParentScript
 	
 	if execute is true then
 		repeat with i from 1 to length of RefreshderiesiD_list
 			set show_id to item i of RefreshderiesiD_list
-			logger(true, handlername, caller, "DEBUG", "Processing show_id[" & i & "]: " & show_id) of ParentScript
-			
+			logger(true, handlername, caller, "INFO", "Processing show_id[" & i & "]: " & show_id) of ParentScript
 			set show_offset to my HDHRShowSearch(my cm(handlername, caller), show_id)
-			
-			if show_is_series of item show_offset of Show_info is true then
-				logger(true, handlername, caller, "INFO", "Found series at offset " & show_offset & ", updating show_id: " & show_id) of ParentScript
-				seriesScanUpdate(my cm(handlername, caller), show_id) of ParentScript
+			if show_offset is 0 then
+				logger(true, handlername, caller, "WARN", "Unable to locate show, " & errmsg) of ParentScript
+				--return false
 			else
-				logger(true, handlername, caller, "DEBUG", "show_id: " & show_id & " is not a series, skipping update") of ParentScript
+				if show_use_seriesid of item show_offset of Show_info is true then
+					logger(true, handlername, caller, "INFO", "Found series at offset " & show_offset & ", updating show_id: " & show_id) of ParentScript
+					seriesScanUpdate(my cm(handlername, caller), show_id) of ParentScript
+				else
+					logger(true, handlername, caller, "WARN", "show_id: " & show_id & " is not a show_use_seriesid series, skipping update") of ParentScript
+				end if
 			end if
 		end repeat
 		
@@ -1181,7 +1203,7 @@ on seriesScanList(caller, show_id, updateRecord)
 	if show_id is not in RefreshderiesiD_list then
 		if show_id is not missing value then
 			set end of RefreshderiesiD_list to show_id
-			logger(true, handlername, caller, "INFO", "Added " & show_id & " to SerieScan list") of ParentScript
+			logger(true, handlername, caller, "INFO", "Added " & show_id & " to SeriesScan list") of ParentScript
 		end if
 		if updateRecord is true then
 			repeat with i from 1 to length of RefreshderiesiD_list

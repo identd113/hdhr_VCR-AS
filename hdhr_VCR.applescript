@@ -31,7 +31,6 @@ global Fail_count
 global Icon_record
 global IconList
 global Shutdown_reason
-global Lf
 global Logger_levels
 global Logger_levels_all
 global Loglines_written
@@ -46,7 +45,6 @@ global Log_ignored
 global Errloc
 global Max_disk_percentage
 global Full_week_days
---global RefreshderiesiD
 global RefreshderiesiD_list
 
 ## Since we use JSON helper to do some of the work, we should declare it, so we dont end up having to use tell blocks everywhere.  If we declare 1 thing, we have to declare everything we are using.
@@ -89,8 +87,6 @@ on setup_script(caller)
 	set handlername to "setup_script"
 	try
 		set Local_env to (name of current application)
-		set Lf to "
-"
 		set Version_local to "20250516"
 		set Config_version to 1
 		set temp_info to (system info)
@@ -116,7 +112,6 @@ on setup_globals(caller)
 	set handlername to "setup_globals"
 	try
 		set Full_week_days to {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
-		--set RefreshderiesiD to true
 		set RefreshderiesiD_list to {}
 		set Fail_count to 3
 		set HDHR_DEVICE_LIST to {}
@@ -173,15 +168,15 @@ on run {}
 	set Errloc to ""
 	set startup_success to false
 	set progress description to "Loading hdhr_VCR_lib..."
-	if my setup_lib(my cm(handlername, caller)) is true then
+	if my setup_lib(cmi) is true then
 		set progress description to "Setting up script..."
-		if my setup_script(my cm(handlername, caller)) is true then
+		if my setup_script(cmi) is true then
 			set progress description to "Setting up globals..."
-			if my setup_globals(my cm(handlername, caller)) is true then
+			if my setup_globals(cmi) is true then
 				set progress description to "Setting up logging..."
-				if my setup_logging(my cm(handlername, caller)) is true then
+				if my setup_logging(cmi) is true then
 					set progress description to "Setting up icons..."
-					if my setup_icons(my cm(handlername, caller)) is true then
+					if my setup_icons(cmi) is true then
 						set startup_success to true
 						set progress description to "Loading " & name of me & " " & Version_local
 					else
@@ -212,31 +207,32 @@ on run {}
 	if startup_success is true then
 		my logger(true, handlername, caller, "INFO", "***** Starting " & name of me & " " & Version_local & " *****")
 		## Lets check for a new version! This will trigger OSX to prompt for confirmation to talk to JSONHelper, the library we use for JSON related matters.
-		my check_version(my cm(handlername, caller))
+		my check_version(cmi)
 		if Online_detected is true then
-			my HDHRDeviceDiscovery(my cm(handlername, caller), "")
+			my HDHRDeviceDiscovery(cmi, "")
 		else
 			my logger(true, handlername, caller, "ERROR", "online_detected is " & Online_detected)
 		end if
-		my logger(true, handlername, caller, "INFO", "AreWeOnline: " & my AreWeOnline(my cm(handlername, caller)))
+		my logger(true, handlername, caller, "INFO", "AreWeOnline: " & my AreWeOnline(cmi))
 		--Prompts for permission for removable media
-		my showPathVerify(my cm(handlername, caller), "")
+		my showPathVerify(cmi, "")
 		--my show_info_dump(my cm(handlername, caller), "", false)
-		my existing_shows(my cm(handlername, caller))
+		my existing_shows(cmi)
 		set First_open to true
 		--my build_channel_list(my cm(handlername, caller), "", cd)
-		update_record_urls(my cm(handlername, caller), "") of LibScript
-		my idle_change(my cm(handlername, caller), 1, 4)
+		update_record_urls(cmi, "") of LibScript
+		my idle_change(cmi, 1, 4)
 		my logger(true, handlername, caller, "INFO", "Initial main() skipped, will run at the end of idle")
-		seriesScanRefresh(my cm(handlername, caller), "") of LibScript
+		seriesScanAdd(cmi, "") of LibScript
+		--seriesScanRefresh(cm, "") of LibScript
 		if First_open is false then
-			my main(my cm(handlername, caller), "run")
+			my main(cmi, "run")
 		end if
 		if Local_env is in Debugger_apps then
-			my main(my cm(handlername, caller), "run")
+			my main(cmi, "run")
 		end if
 		if Local_env is not in Debugger_apps then
-			rotate_logs(my cm(handlername, caller), (Log_dir & Logfilename as text)) of LibScript
+			rotate_logs(cmi, (Log_dir & Logfilename as text)) of LibScript
 		end if
 	end if
 	my logger(true, handlername, caller, "INFO", "End of run() handler")
@@ -268,7 +264,7 @@ on idle
 								with timeout of 15 seconds
 									my HDHRDeviceDiscovery(cm, device_id of item i2 of HDHR_DEVICE_LIST)
 								end timeout
-								set RefreshderiesiD to true
+								seriesScanAdd(cm, "") of LibScript
 								my save_data(cm)
 							on error errmsg
 								my logger(true, handlername, caller, "ERROR", "Unable to update HDHRDeviceDiscovery, errmsg " & errmsg)
@@ -428,9 +424,8 @@ on idle
 										my logger(true, handlername, caller, "INFO", "Recording Complete for " & quote & (show_title of item i of Show_info & quote & " on " & show_channel of item i of Show_info))
 										display notification "Next Showing: " & my short_date(cm, show_next of item i of Show_info, false, false) with title Stop_icon of Icon_record & " Recording Complete" subtitle (quote & show_title of item i of Show_info & quote & " on " & show_channel of item i of Show_info & " (" & my channel2name(cm, show_channel of item i of Show_info as text, hdhr_record of item i of Show_info) & ")")
 									else
-										--set RefreshderiesiD to true
-										--	my seriesScanUpdate(cm, show_id of item i of Show_info, true)
-										--my seriesScanRefresh(cm, show_id of item i of Show_info)
+										set show_fail_count of item i of Show_info to 0
+										set show_fail_reason of item i of Show_info to ""
 										seriesScanAdd(cm, show_id of item i of Show_info) of LibScript
 									end if
 								else
@@ -597,7 +592,6 @@ on hdhrGRID(caller, hdhr_device, hdhr_channel)
 	set hdhrGRID_selected to choose from list hdhrGRID_sort with prompt ("Channel " & hdhr_channel & " (" & GuideName of hdhrGRID_temp & ")" & return & "Current Time: " & word 2 of my short_date(my cm(handlername, caller), (current date), false, false)) cancel button name "Manual Add" OK button name "Next.." with title my check_version_dialog(caller) default items item 1 of hdhrGRID_sort with multiple selections allowed
 	
 	--Fix we may need to check for a false return here?
-	--NEW 03112025
 	if hdhrGRID_selected is false then
 		my logger(true, handlername, caller, "INFO", "User exited")
 		return {""}
@@ -1020,26 +1014,6 @@ on build_channel_list(caller, hdhr_device, cd)
 					set last item of channel_list_temp to last item of channel_list_temp & " " & is_channel_record_return
 				end try
 				
-				-- Film_icon of Icon_record & " Up Next < 1h" & "  " & Up_icon of Icon_record & " Up Next < 4h" & "  " & Up2_icon of Icon_record & " Up Next > 4h"
-				#				try
-				#					if my is_channel_record("build_channel_list(" & caller & ")", hdhr_device, GuideNumber of item i of temp) is true then
-				#						my logger(true, handlername, caller, "INFO", GuideNumber of item i of temp & " marked on channel list as recording")
-				#						set last item of channel_list_temp to last item of channel_list_temp & " " & Record_icon of Icon_record
-				#					end if
-				#				end try
-				(*	
-				try
-					if VideoCodec of item i of temp is not "MPEG2" then
-						my logger(true, handlername & "_VIDEO_CODEC", caller, "NEAT", (last item of channel_list_temp as text) & " is using " & VideoCodec of item i of temp)
-					end if
-				end try
-				
-				try
-					if AudioCodec of item i of temp is not "AC3" then
-						my logger(true, handlername & "_AUDIO_CODEC", caller, "NEAT", (last item of channel_list_temp as text) & " is using " & AudioCodec of item i of temp)
-					end if
-				end try
-				*)
 			end repeat
 			set channel_mapping of item tuner_offset of HDHR_DEVICE_LIST to channel_list_temp
 			my logger(true, handlername, caller, "INFO", "Updated channel list for " & hdhr_device & ", " & length of channel_list_temp & " found")
@@ -1097,16 +1071,6 @@ on nextday(caller, the_show_id)
 		end if
 	end repeat
 	
-	(*
-		--This is just logging, to catch {}. we will move on.
-	try
-		if nextup is in {missing value, {}} then
-			my logger(true, handlername, caller, "WARN", "nextup0 is missing value")
-		end if
-	on error errmsg
-		my logger(true, handlername, caller, "WARN", "errmsg1: " & errmsg)
-	end try
-*)
 	
 	--Goal here is to set show_next 
 	try
@@ -1340,15 +1304,6 @@ on setup(caller)
 	repeat 1 times
 		try
 			if button returned of hdhr_setup_response is "Defaults" then
-				set rerun_discovery to button returned of (display dialog "Rerun HDHRDeviceDiscovery?" buttons {"Skip", "Yes"} default button 2 with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout with icon note)
-				try
-					if rerun_discovery is "Yes" then
-						my HDHRDeviceDiscovery(my cm(handlername, caller), "")
-					end if
-				on error errmsg
-					my logger(true, handlername, caller, "ERROR", errmsg)
-				end try
-				
 				set reload_script to button returned of (display dialog "Reload hdhr library?" buttons {"Skip", "Yes"} default button 2 with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout with icon note)
 				try
 					if reload_script is "Yes" then
@@ -1362,6 +1317,17 @@ on setup(caller)
 						
 					end if
 				end try
+				
+				set rerun_discovery to button returned of (display dialog "Rerun HDHRDeviceDiscovery?" buttons {"Skip", "Yes"} default button 2 with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout with icon note)
+				try
+					if rerun_discovery is "Yes" then
+						my HDHRDeviceDiscovery(my cm(handlername, caller), "")
+						seriesScanAdd(my cm(handlername, caller), "") of LibScript
+					end if
+				on error errmsg
+					my logger(true, handlername, caller, "ERROR", errmsg)
+				end try
+				
 				
 				set Temp_dir to alias "Volumes:"
 				repeat until Temp_dir is not alias "Volumes:"
@@ -1753,25 +1719,6 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 					set progress completed steps to 4
 					my logger(true, handlername, caller, "INFO", "(Manual) show length: " & show_length of temp_show_info)
 				else
-					
-					--We were able to pull guide data auto title
-					(*
-					try
-						try
-							set hdhr_response_channel_title to title of item i3 of hdhrGRID_response
-						end try
-						
-						try
-							set hdhr_response_channel_title to hdhr_response_channel_title & " " & EpisodeNumber of item i3 of hdhrGRID_response
-						end try
-						
-						try
-							set hdhr_response_channel_title to hdhr_response_channel_title & " " & EpisodeTitle of item i3 of hdhrGRID_response
-						end try
-					on error errmsg
-						my logger(true, handlername, caller, "WARN", "(Auto) Unable to set full show name, " & errmsg)
-					end try
-					*)
 					
 					set hdhr_response_channel_title to fixall of my show_name_fix(my cm(handlername, caller), "", item i3 of hdhrGRID_response)
 					try
@@ -2490,7 +2437,7 @@ on update_show(caller, the_show_id, force_update)
 				set progress completed steps to 8
 			else
 				set progress completed steps to 7
-				seriesScanRefresh(my cm(handlername, caller), show_id of item show_offset of Show_info) of LibScript
+				seriesScanAdd(my cm(handlername, caller), show_id of item show_offset of Show_info) of LibScript
 				set progress completed steps to 8
 			end if
 		else
@@ -2896,8 +2843,6 @@ on next_shows(caller)
 			else
 				set temp_channel to (show_channel of item i of Show_info) as text
 			end if
-			-- my seriesScanNext(my cm(handlername, caller & "NEXT"), show_seriesid of item i of Show_info, hdhr_record of item i of Show_info, temp_channel, show_id of item i of Show_info, 1)
-			-- my seriesScanNext(my cm(handlername, caller & "+1"), show_seriesid of item i of Show_info, hdhr_record of item i of Show_info, temp_channel, show_id of item i of Show_info, 2)
 		on error errmsg
 			my logger(true, handlername, caller, "ERROR", errmsg)
 		end try
@@ -3166,9 +3111,11 @@ on logger(logtofile, the_handler, caller, loglevel, message)
 			end try
 		end if
 		try
+			set lf to "
+"
 			repeat with i from 1 to length of queued_log_lines
 				set ref_num to get eof of logfile
-				write (item i of queued_log_lines & Lf) as text to logfile starting at (ref_num + 1)
+				write (item i of queued_log_lines & lf) as text to logfile starting at (ref_num + 1)
 				set Loglines_written to Loglines_written + 1
 			end repeat
 			close access logfile
