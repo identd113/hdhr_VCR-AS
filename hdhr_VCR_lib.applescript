@@ -121,7 +121,7 @@ end fixDate
 
 on stringToUtf8(caller, thestring)
 	set handlername to "stringToUtf8_lib"
-	set non_utf8 to {"á", "é", "í", "ó", "ú", "Á", "É", "Í", "Ó", "Ú", "à", "è", "ì", "ò", "ù", "À", "È", "Ì", "Ò", "Ù", "â", "ê", "î", "ô", "û", "Â", "Ê", "Î", "Ô", "Û", "ä", "ë", "ï", "ö", "ü", "Ä", "Ë", "Ï", "Ö", "Ü", "ã", "ñ", "õ", "Ã", "Ñ", "Õ", "å", "Å", "ç", "Ç", "ø", "Ø", character id 8239, ":"}
+	set non_utf8 to {"‚Ä°", "≈Ω", "‚Äô", "‚Äî", "≈ì", "√ß", "∆í", "√™", "√Æ", "√≤", "ÀÜ", "¬è", "‚Äú", "Àú", "¬ù", "√ã", "√©", "√≠", "√±", "√¥", "‚Ä∞", "¬ê", "‚Äù", "‚Ñ¢", "≈æ", "√•", "√¶", "√´", "√Ø", "√≥", "≈†", "‚Äò", "‚Ä¢", "≈°", "≈∏", "‚Ç¨", "√®", "√¨", "‚Ä¶", "‚Ä†", "‚Äπ", "‚Äì", "‚Ä∫", "√å", "‚Äû", "√ç", "≈í", "¬Å", "¬ç", "‚Äö", "¬ø", "¬Ø", character id 8239, ":"}
 	set fixed_utf8 to {"a", "e", "i", "o", "u", "A", "E", "I", "O", "U", "a", "e", "i", "o", "u", "A", "E", "I", "O", "U", "a", "e", "i", "o", "u", "A", "E", "I", "O", "U", "a", "e", "i", "o", "u", "A", "E", "I", "O", "U", "a", "n", "o", "A", "N", "O", "a", "A", "c", "C", "o", "O", " ", ""}
 	set fixed_string to thestring
 	try
@@ -657,7 +657,7 @@ on date2touch(caller, datetime, filepath)
 end date2touch
 
 on time_set(caller, adate_object, time_shift)
-	## It returns the resulting date/time object. This is a convenient way to say, “I want this date, at that time of day.”
+	## It returns the resulting date/time object. This is a convenient way to say, √íI want this date, at that time of day.√ì
 	set handlername to "time_set"
 	if class of adate_object is not date then
 		logger(true, handlername, caller, "ERROR", (adate_object as text) & " is not a date object!") of ParentScript
@@ -909,7 +909,12 @@ on seriesScanRun(caller, execute)
 			logger(true, handlername, caller, "DEBUG", "Processing show_id[" & i & "]: " & show_id) of ParentScript
 			set show_offset to my HDHRShowSearch(my cm(handlername, caller), show_id)
 			if show_offset is 0 then
-				logger(true, handlername, caller, "WARN", "Unable to locate show, " & errmsg) of ParentScript
+				if show_id is missing value or show_id is "" then
+					set show_identifier to "<unknown show>"
+				else
+					set show_identifier to show_id as text
+				end if
+				logger(true, handlername, caller, "WARN", "Unable to locate show, show_id: " & show_identifier) of ParentScript
 				--return false
 			else
 				if show_use_seriesid of item show_offset of Show_info is true then
@@ -984,7 +989,7 @@ on recordSee(caller, the_record)
 	try
 		set the_record to the_record as text
 	on error errmsg
-		set parsed_errmsg to item 2 of my stringlistflip(handlername, errmsg, {"Can’t make ", " into"}, "list")
+		set parsed_errmsg to item 2 of my stringlistflip(handlername, errmsg, {"Can√ït make ", " into"}, "list")
 		return parsed_errmsg
 	end try
 end recordSee
