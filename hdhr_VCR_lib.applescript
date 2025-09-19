@@ -3,6 +3,10 @@
 global hdhrVCR_loaded
 property ParentScript : missing value
 
+on run {}
+	open ParentScript
+end run
+
 on cm(handlername, caller)
 	return {handlername & "(" & caller & ")"} as text
 end cm
@@ -852,22 +856,6 @@ on add_record_url(caller, the_channel, the_device)
 	--return false
 end add_record_url
 
-on seriesScanRefresh(caller, show_id)
-	--This should use the add/run combo
-	set handlername to "seriesScanRefresh_lib"
-	set Show_info to Show_info of ParentScript
-	if show_id is "" then
-		repeat with i from 1 to length of Show_info
-			if show_use_seriesid of item i of Show_info is true and show_recording of item i of Show_info is false and show_active of item i of Show_info is true then
-				seriesScanUpdate(my cm(handlername, caller), show_id of item i of Show_info) of ParentScript
-			end if
-		end repeat
-		return true
-	else
-		seriesScanUpdate(my cm(handlername, caller), show_id) of ParentScript
-	end if
-end seriesScanRefresh
-
 on seriesScanAdd(caller, show_id)
 	set handlername to "seriesScanAdd_lib"
 	set RefreshderiesiD_list to RefreshderiesiD_list of ParentScript
@@ -888,7 +876,7 @@ on seriesScanAdd(caller, show_id)
 				if show_use_seriesid of item show_offset of Show_info is true then
 					if show_id is not in RefreshderiesiD_list then
 						set end of RefreshderiesiD_list to show_id
-						logger(true, handlername, caller, "INFO", "Added " & show_id & " to SerieScan list") of ParentScript
+						logger(true, handlername, caller, "INFO", "Added " & show_id & " to seriesScan list") of ParentScript
 					else
 						logger(true, handlername, caller, "WARN", show_id & " already on refresh list") of ParentScript
 					end if
@@ -913,26 +901,26 @@ on seriesScanRun(caller, execute)
 	set Show_info to Show_info of ParentScript
 	
 	logger(true, handlername, caller, "DEBUG", "Execute flag is: " & execute) of ParentScript
-	logger(true, handlername, caller, "INFO", "RefreshderiesiD_list count: " & (length of RefreshderiesiD_list)) of ParentScript
+	logger(true, handlername, caller, "DEBUG", "RefreshderiesiD_list count: " & (length of RefreshderiesiD_list)) of ParentScript
 	
 	if execute is true then
 		repeat with i from 1 to length of RefreshderiesiD_list
 			set show_id to item i of RefreshderiesiD_list
-			logger(true, handlername, caller, "INFO", "Processing show_id[" & i & "]: " & show_id) of ParentScript
+			logger(true, handlername, caller, "DEBUG", "Processing show_id[" & i & "]: " & show_id) of ParentScript
 			set show_offset to my HDHRShowSearch(my cm(handlername, caller), show_id)
 			if show_offset is 0 then
 				logger(true, handlername, caller, "WARN", "Unable to locate show, " & errmsg) of ParentScript
 				--return false
 			else
 				if show_use_seriesid of item show_offset of Show_info is true then
-					logger(true, handlername, caller, "INFO", "Found series at offset " & show_offset & ", updating show_id: " & show_id) of ParentScript
+					logger(true, handlername, caller, "TRACE", "Found series at offset " & show_offset & ", updating show_id: " & show_id) of ParentScript
 					seriesScanUpdate(my cm(handlername, caller), show_id) of ParentScript
 				else
 					logger(true, handlername, caller, "WARN", "show_id: " & show_id & " is not a show_use_seriesid series, skipping update") of ParentScript
 				end if
 			end if
 		end repeat
-		
+		idle_change(my cm(handlername, caller), 1, 2) of ParentScript
 		set RefreshderiesiD_list of ParentScript to {}
 		logger(true, handlername, caller, "DEBUG", "Cleared RefreshderiesiD_list") of ParentScript
 	end if
@@ -996,9 +984,19 @@ on recordSee(caller, the_record)
 	try
 		set the_record to the_record as text
 	on error errmsg
-		return errmsg
+		set parsed_errmsg to item 2 of my stringlistflip(handlername, errmsg, {"Can’t make ", " into"}, "list")
+		return parsed_errmsg
 	end try
 end recordSee
+
+on recordSee2(caller, the_record)
+	set handlername to "recordSee_lib"
+	try
+		set the_record to the_record as text
+	on error errmsg
+		return errmsg
+	end try
+end recordSee2
 
 on show_name_fix(caller, show_id, show_object)
 	set handlername to "show_name_fix_lib"
@@ -1053,7 +1051,7 @@ on convertByteSize(caller, byteSize, KBSize, decPlaces)
 end convertByteSize
 
 ----NOT IN USE------
-
+(*
 on get_show_state2(caller, hdhr_tuner, channelcheck, start_time, end_time) --not in use
 	set handlername to "get_show_state_lib"
 	--my logger(true, handlername, caller, "INFO", my stringlistflip(my cm(handlername, caller), my showSeek(my cm(handlername, caller), "", "", channelcheck, hdhr_tuner), ", ", "string"))
@@ -1218,3 +1216,20 @@ on seriesScanList(caller, show_id, updateRecord)
 		logger(true, handlername, caller, "WARN", show_id & " already on refresh list") of ParentScript
 	end if
 end seriesScanList
+
+on seriesScanRefresh(caller, show_id)
+	--This should use the add/run combo
+	set handlername to "seriesScanRefresh_lib"
+	set Show_info to Show_info of ParentScript
+	if show_id is "" then
+		repeat with i from 1 to length of Show_info
+			if show_use_seriesid of item i of Show_info is true and show_recording of item i of Show_info is false and show_active of item i of Show_info is true then
+				seriesScanUpdate(my cm(handlername, caller), show_id of item i of Show_info) of ParentScript
+			end if
+		end repeat
+		return true
+	else
+		seriesScanUpdate(my cm(handlername, caller), show_id) of ParentScript
+	end if
+end seriesScanRefresh
+*)

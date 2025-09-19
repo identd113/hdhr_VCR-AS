@@ -224,7 +224,6 @@ on run {}
 		my idle_change(cmi, 1, 4)
 		my logger(true, handlername, caller, "INFO", "Initial main() skipped, will run at the end of idle")
 		seriesScanAdd(cmi, "") of LibScript
-		--seriesScanRefresh(cm, "") of LibScript
 		if First_open is false then
 			my main(cmi, "run")
 		end if
@@ -384,6 +383,7 @@ on idle
 						if show_recording of item i of Show_info is true then
 							my logger(true, handlername, caller, "TRACE", "Show end for " & show_title of item i of Show_info & " is " & show_end of item i of Show_info)
 							if (show_end of item i of Show_info) is less than or equal to cd then
+								my logger(true, handlername, caller, "WARN", show_title of item i of Show_info & " is " & show_end of item i of Show_info & ", and is past due")
 								set show_recording of item i of Show_info to false
 								set show_last of item i of Show_info to show_end of item i of Show_info
 								set temp_guide_data to my channel_guide(cm, hdhr_record of item i of Show_info, show_channel of item i of Show_info, show_time of item i of Show_info)
@@ -625,6 +625,8 @@ on hdhrGRID(caller, hdhr_device, hdhr_channel)
 				else
 					exit repeat
 				end if
+			else
+				my logger(true, handlername, caller, "WARN", "No Show match")
 			end if
 		end repeat
 	end repeat
@@ -875,7 +877,6 @@ end is_channel_record
 
 on get_show_state(caller, hdhr_tuner, channelcheck, start_time, end_time)
 	set handlername to "get_show_state"
-	--my logger(true, handlername, caller, "INFO", my stringlistflip(my cm(handlername, caller), my showSeek(my cm(handlername, caller), "", "", channelcheck, hdhr_tuner), ", ", "string"))
 	--We need to only return the 1 result
 	my logger(true, handlername, caller, "DEBUG", (hdhr_tuner & " | " & channelcheck))
 	copy (current date) to cd
@@ -958,6 +959,7 @@ on kill_jsonhelper(caller)
 	set handlername to "kill_jsonhelper"
 	my logger(true, handlername, caller, "ERROR", "Attempting to restart JSONHelper")
 	tell application "JSON Helper" to quit
+	my logger(true, handlername, caller, "INFO", "JSONHelper was killed")
 	delay 3
 end kill_jsonhelper
 
@@ -1137,9 +1139,10 @@ on validate_show_info(caller, show_to_check, should_edit)
 				on error number -128
 					my logger(true, handlername, caller, "WARN", "User clicked " & quote & "Run" & quote)
 					set show_deactivate to Running_icon of Icon_record & "Run"
+					--fix We need to ensure this works for the Show List, and for the guide list
 					return false
 				end try
-				my logger(true, handlername, caller, "TRACE", "Status of show_deactivate: " & button returned of show_deactivate)
+				--	my logger(true, handlername, caller, "TRACE", "Status of show_deactivate: " & button returned of show_deactivate)
 				if button returned of show_deactivate is "Deactivate" then
 					set show_active of item i of Show_info to false
 					set show_recording of item i of Show_info to false
@@ -1996,10 +1999,9 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				set show_next of last item of Show_info to my nextday(cm, show_id of temp_show_info)
 				my validate_show_info(cm, show_id of last item of Show_info, false)
 				my update_show(cm, show_id of last item of Show_info, false)
-				--	if show_use_seriesid of last item of Show_info is true then
-				--	seriesScanRefresh(cm, show_id of last item of Show_info) of LibScript
+				--	if show_use_seriesid of last item of Show_info is true then 
 				--	end if
-				seriesScanAdd(cm, show_id of last item of Show_info)
+				seriesScanAdd(cm, show_id of last item of Show_info) of LibScript
 				my save_data(cm)
 				display notification with title Add_icon of Icon_record & " Show Added! (" & hdhr_device & ")" subtitle "" & quote & show_title of last item of Show_info & quote & " at " & show_time of last item of Show_info
 				set progress description to "This show has been added!"
@@ -2697,6 +2699,31 @@ on showPathVerify(caller, show_id)
 	end if
 end showPathVerify
 
+on checkfileexists2(caller, filepath)
+	set handlername to "checkfileexists"
+	--try
+	my logger(true, handlername, caller, "DEBUG", filepath as text)
+	
+	-- Defensive POSIX conversion
+	if class of filepath is not alias then
+		try
+			set filepath to POSIX file (filepath as text)
+			my logger(true, handlername, caller, "DEBUG", "Converted to POSIX file")
+		on error err2
+			my logger(true, handlername, caller, "ERROR", "Failed to convert filepath: " & err2)
+			return false
+		end try
+	end if
+	
+	tell application "System Events" to return (exists disk item filepath)
+	
+	--on error errmsg
+	--	my logger(true, handlername, caller, "ERROR", "System Events reported: " & errmsg)
+	--	return false
+	--end try
+end checkfileexists2
+
+
 on checkfileexists(caller, filepath)
 	set handlername to "checkfileexists"
 	try
@@ -2894,13 +2921,60 @@ end next_shows
 
 on curl2icon(caller, thelink)
 	set handlername to "curl2icon"
-	if thelink is in {"", {}} then
+	-- Return default if link is missing or empty
+	if thelink is missing value or thelink is in {"", {}} then
+		return caution
+	end if
+	-- Derive filename from URL
+	try
+		set savename to last item of my stringlistflip(my cm(handlername, caller), thelink, "/", "list")
+	on error errmsg
+		my logger(true, handlername, caller, "WARN", "Unable to pull image, providing default image")
+		my logger(true, handlername, caller, "WARN", "err: " & errmsg)
+		return caution
+	end try
+	set temp_path to POSIX path of (path to home folder) & "Library/Caches/hdhr_VCR/" & savename as text
+	-- If cached, update timestamp
+	if my checkfileexists(my cm(handlername, caller), temp_path) then
+		my logger(true, handlername, caller, "DEBUG", "File exists: " & savename)
+		try
+			do shell script "touch " & quoted form of temp_path
+		on error errmsg
+			my logger(true, handlername, caller, "WARN", "Unable to update date modified of " & savename)
+			my logger(true, handlername, caller, "WARN", "err: " & errmsg)
+		end try
+	else
+		-- Download with HTTP error checking
+		try
+			do shell script "curl --fail --connect-timeout 10 --silent -H 'appname:" & name of me & "' " & quoted form of thelink & " -o " & quoted form of temp_path
+		on error errmsg
+			my logger(true, handlername, caller, "ERROR", "curl failed for " & quoted form of thelink)
+			my logger(true, handlername, caller, "ERROR", "err: " & errmsg)
+			return caution
+		end try
+		-- Verify it's an image
+		set temp_path_type to do shell script "file -Ib " & quoted form of temp_path
+		if temp_path_type does not contain "image" then
+			my logger(true, handlername, caller, "WARN", "Icon is not an image (" & temp_path_type & "), defaulting to alert icon")
+			do shell script "rm " & quoted form of temp_path
+			return caution
+		end if
+		my logger(true, handlername, caller, "INFO", "Created new icon: " & quoted form of temp_path & ", type: " & temp_path_type)
+	end if
+	-- Return alias to the image file
+	return POSIX file temp_path
+end curl2icon
+
+on curl2icon2(caller, thelink)
+	set handlername to "curl2icon"
+	if thelink is in {"", {}, missing value} then
 		return caution
 	end if
 	try
 		set savename to last item of my stringlistflip(my cm(handlername, caller), thelink, "/", "list")
 	on error errmsg
 		my logger(true, handlername, caller, "WARN", "Unable to pull image, providing default image")
+		my logger(true, handlername, caller, "WARN", "err, " & errmsg)
 		return caution
 	end try
 	try
@@ -2911,6 +2985,7 @@ on curl2icon(caller, thelink)
 				do shell script "touch " & temp_path
 			on error errmsg
 				my logger(true, handlername, caller, "WARN", "Unable to update date modified of " & savename)
+				my logger(true, handlername, caller, "WARN", "err, " & errmsg)
 			end try
 		else
 			do shell script "curl --connect-timeout 10 --silent -H 'appname:" & name of me & "' '" & thelink & "' -o '" & temp_path & "'"
@@ -2925,9 +3000,10 @@ on curl2icon(caller, thelink)
 		return POSIX file temp_path
 	on error errmsg
 		my logger(true, handlername, caller, "ERROR", "curl --connect-timeout 10 --silent -H 'appname:" & name of me & "' '" & thelink & "' -o '" & temp_path & "'")
+		my logger(true, handlername, caller, "ERROR", "err, " & errmsg)
 		return caution
 	end try
-end curl2icon
+end curl2icon2
 
 on showid2PID(caller, show_id, kill_pid, logging)
 	set handlername to "showid2PID"
@@ -3209,8 +3285,8 @@ on seriesScan(caller, seriesID, hdhr_device, thechan, show_id)
 		else
 			--	my logger(true, handlername, caller, "INFO", "Total of " & show_match_list_length & " shows found, on channel " & thechan)
 		end if
-		my logger(true, handlername, caller, "INFO", "Episode(s) Matched: " & show_match_list_length)
-		my logger(true, handlername, caller, "INFO", "Channel(s) Matched: " & my stringlistflip(my cm(handlername, caller), show_channel_list, ", ", "string"))
+		my logger(true, handlername, caller, "DEBUG", "Episode(s) Matched: " & show_match_list_length)
+		my logger(true, handlername, caller, "DEBUG", "Channel(s) Matched: " & my stringlistflip(my cm(handlername, caller), show_channel_list, ", ", "string"))
 		my logger(true, handlername, caller, "DEBUG", "HDHR Device: " & hdhr_device)
 		my logger(true, handlername, caller, "DEBUG", "ShowID: " & show_id)
 		set temp to {show_match_list:show_match_list, show_channel_list:show_channel_list, hdhr_device:hdhr_device, show_id:show_id}
@@ -3227,9 +3303,9 @@ on seriesScanNext(caller, seriesID, hdhr_device, thechan, show_id, theoffset)
 	--	my logger(true, handlername, caller, "DEBUG", "hdhr_device: " & hdhr_device)
 	set show_offset to my HDHRShowSearch(my cm(handlername, caller), show_id)
 	if thechan is not in {""} then
-		--		my logger(true, handlername, caller, "DEBUG", "thechan: " & thechan)
+		my logger(true, handlername, caller, "TRACE", "thechan: " & thechan)
 	else
-		--		my logger(true, handlername, caller, "DEBUG", "thechan: All")
+		my logger(true, handlername, caller, "TRACE", "thechan: All")
 	end if
 	set newest_show_epoch to {"9999999999"}
 	set newest_show_epoch_offset to {0}
@@ -3260,7 +3336,7 @@ on seriesScanNext(caller, seriesID, hdhr_device, thechan, show_id, theoffset)
 			--	choose from list newest_show_epoch_offset
 			if item theoffset of newest_show_epoch_offset is not 0 then
 				--	set show_offset to my HDHRShowSearch(my cm(handlername, caller), show_id of seriesScanTemp)
-				my logger(true, handlername, caller, "INFO", "Returned latest airing for " & show_title of item show_offset of Show_info)
+				my logger(true, handlername, caller, "TRACE", "Returned latest airing for " & show_title of item show_offset of Show_info)
 				set temp to {item (item theoffset of newest_show_epoch_offset) of show_match_list of seriesScanTemp, item (item theoffset of newest_show_epoch_offset) of show_channel_list of seriesScanTemp, show_id of seriesScanTemp}
 				return temp
 			else
@@ -3328,6 +3404,7 @@ on seriesScanUpdate(caller, show_id)
 							set show_url of item show_offset of Show_info to my add_record_url(my cm(handlername, caller), show_channel of item show_offset of Show_info, hdhr_record of item show_offset of Show_info)
 							--my update_show(my cm(handlername, caller), new_showid, false)
 							my logger(true, handlername, caller, "INFO", "The show, " & show_title of item show_offset of Show_info & ", was updated")
+							--	my idle_change(my cm(handlername, caller), 1, 2)
 						else
 							--	my logger(true, handlername, caller, "INFO", "This show is a dupe")
 						end if
