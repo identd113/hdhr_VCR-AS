@@ -1233,3 +1233,6 @@ on seriesScanRefresh(caller, show_id)
 	end if
 end seriesScanRefresh
 *)
+
+on testhandler()
+end testhandler
