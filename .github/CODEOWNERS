@@ -1,0 +1,8 @@
+# This file defines code owners for review automation.
+# See https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Allow direct changelog edits to be auto-approved by designated reviewers.
+CHANGELOG.md @identd113
+
+# Default catch-all: request review from the primary maintainer.
+* @identd113
