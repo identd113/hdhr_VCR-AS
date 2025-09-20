@@ -1,50 +1,48 @@
 {
-	"versions": 
-[
-{
-"hdhr_version":"20230907",
-"changelog":"Adds lots of feature, see link for list of changes,https://raw.githubusercontent.com/identd113/hdhr_VCR-AS/20230907_Release/changes.md"
-},
-{
-"hdhr_version":"20230318",
-"changelog":"Stable release with lots of features!  See commit of this file, to see list of changes."
-},
-{
-"hdhr_version":"20230223",
-"changelog":"Release! Fixed error when missing the cache folder, Replaced obsolete python2 requirement, display is logs if a channel does not contains MPEG or AC3 for codec types. General code cleanup"
-},
-{
-"hdhr_version":"20211222",
-"changelog":"Stuff changed, and I am too lazy to document them all.  We can detect if a recording has a PID, and restart the recording as needed."
-},
-{
-"hdhr_version":"20210905",
-"changelog":"We now use JSON to save the config.  We will attempt to convert your old config file.  We can now edit, and add multiple shows.  Main screen now shows the next upcoming shows, and what is currently recording. When adding a show, we now show the shows thumbnail image. We now roll logs as needed.  More progress bars!"
-},
-{
-"hdhr_version":"20210805",
-"changelog":"You can now select multiple shows on the same channel.  You can optionally choose to apply the same settings to all shows,  which allows you to add them quickly.New: Main screen shows you the next shows to be recorded.The current recorded shows will show up as a notification. New: We now show the show graphic when adding shows."
-},
-{
-"hdhr_version":"20210721",
-"changelog":"Added The main screen will now show you the next shows that are going to record.  This saves a click into Shows."
-},
-{
-"hdhr_version":"20210716",
-"changelog":"Big Update.  Lots of stability changes, and some updated verbiage and icons.  More information at https://github.com/identd113/hdhr_VCR-AS/commit/1e65c927dc7b46a34db980c6ba2d05f7e9317e8a#diff-5af381b49e80c9f4c6828989c3cc939db4ccd1e8d39ed0142b4f10b9ab1d674b"
-},
-{
-"hdhr_version":"20210301",
-"changelog":"Big update.  Added a logger, so we can more closely see what is happening, and makes it easier to track down bugs.  There is more to do, but satisfied this is working well for now.  Numerous bug fixes, including update_show from running on days the recording is not set to record."
-},
-{
-"hdhr_version":"20210209",
-"changelog":"Cleaned up some handlers, and testing version message in logs."
-},
-{
-"hdhr_version":"20210208",
-"changelog":"Added: hdhr_VCR.log in Documents folder to allow us to keep a running tab if what is happening."
-}
-
-]
+    "versions": [
+        {
+            "hdhr_version": "20230907",
+            "changelog": "Adds lots of feature, see link for list of changes: https://raw.githubusercontent.com/identd113/hdhr_VCR-AS/20230907_Release/changes.md"
+        },
+        {
+            "hdhr_version": "20230318",
+            "changelog": "Stable release with lots of features!  See commit of this file, to see list of changes."
+        },
+        {
+            "hdhr_version": "20230223",
+            "changelog": "Release! Fixed error when missing the cache folder, Replaced obsolete python2 requirement, display is logs if a channel does not contains MPEG or AC3 for codec types. General code cleanup"
+        },
+        {
+            "hdhr_version": "20211222",
+            "changelog": "Stuff changed, and I am too lazy to document them all.  We can detect if a recording has a PID, and restart the recording as needed."
+        },
+        {
+            "hdhr_version": "20210905",
+            "changelog": "We now use JSON to save the config.  We will attempt to convert your old config file.  We can now edit, and add multiple shows.  Main screen now shows the next upcoming shows, and what is currently recording. When adding a show, we now show the shows thumbnail image. We now roll logs as needed.  More progress bars!"
+        },
+        {
+            "hdhr_version": "20210805",
+            "changelog": "You can now select multiple shows on the same channel.  You can optionally choose to apply the same settings to all shows,  which allows you to add them quickly.New: Main screen shows you the next shows to be recorded.The current recorded shows will show up as a notification. New: We now show the show graphic when adding shows."
+        },
+        {
+            "hdhr_version": "20210721",
+            "changelog": "Added The main screen will now show you the next shows that are going to record.  This saves a click into Shows."
+        },
+        {
+            "hdhr_version": "20210716",
+            "changelog": "Big Update.  Lots of stability changes, and some updated verbiage and icons.  More information at https://github.com/identd113/hdhr_VCR-AS/commit/1e65c927dc7b46a34db980c6ba2d05f7e9317e8a#diff-5af381b49e80c9f4c6828989c3cc939db4ccd1e8d39ed0142b4f10b9ab1d674b"
+        },
+        {
+            "hdhr_version": "20210301",
+            "changelog": "Big update.  Added a logger, so we can more closely see what is happening, and makes it easier to track down bugs.  There is more to do, but satisfied this is working well for now.  Numerous bug fixes, including update_show from running on days the recording is not set to record."
+        },
+        {
+            "hdhr_version": "20210209",
+            "changelog": "Cleaned up some handlers, and testing version message in logs."
+        },
+        {
+            "hdhr_version": "20210208",
+            "changelog": "Added: hdhr_VCR.log in Documents folder to allow us to keep a running tab if what is happening."
+        }
+    ]
 }
