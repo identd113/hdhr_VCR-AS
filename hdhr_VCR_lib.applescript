@@ -909,7 +909,7 @@ on seriesScanRun(caller, execute)
 			logger(true, handlername, caller, "DEBUG", "Processing show_id[" & i & "]: " & show_id) of ParentScript
 			set show_offset to my HDHRShowSearch(my cm(handlername, caller), show_id)
 			if show_offset is 0 then
-				logger(true, handlername, caller, "WARN", "Unable to locate show, " & errmsg) of ParentScript
+				logger(true, handlername, caller, "WARN", "Unable to locate show") of ParentScript
 				--return false
 			else
 				if show_use_seriesid of item show_offset of Show_info is true then
