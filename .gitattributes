@@ -1,2 +1,8 @@
 * text=auto
-*.applescript  diff=astextplain
+
+# Normalize source AppleScript files
+*.applescript text eol=lf linguist-language=AppleScript
+
+# Offer readable diffs for compiled script artifacts
+*.scpt diff=astextplain
+*.scptd diff=astextplain
