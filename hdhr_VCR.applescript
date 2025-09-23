@@ -52,7 +52,6 @@ use AppleScript version "2.4"
 use scripting additions
 use application "JSON Helper"
 
-##Test 2
 ##########    This sets up the script.  If we fail here, the script will cease loading    ##########
 on setup_lib(caller)
 	set handlername to "setuplib"
@@ -88,7 +87,7 @@ on setup_script(caller)
 	set handlername to "setup_script"
 	try
 		set Local_env to (name of current application)
-		set Version_local to "20250516"
+		set Version_local to "20250922"
 		set Config_version to 1
 		set temp_info to (system info)
 		set Local_ip to IPv4 address of temp_info

@@ -15,7 +15,7 @@ end cm
 on load_hdhrVCR_vars()
 	set handlername to "load_hdhrVCR_vars_lib"
 	-- We need to receive states from the hdhr_vcr here
-	set vers_lib to "20250616"
+	set vers_lib to "20250922"
 	return vers_lib
 end load_hdhrVCR_vars
 
@@ -1234,6 +1234,3 @@ on seriesScanRefresh(caller, show_id)
 	end if
 end seriesScanRefresh
 *)
-
-on testhandler()
-end testhandler
