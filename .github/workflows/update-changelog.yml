@@ -3,7 +3,7 @@ name: Auto update changelog
 on:
   push:
     branches:
-      - main
+      - master
 
 permissions:
   contents: write
