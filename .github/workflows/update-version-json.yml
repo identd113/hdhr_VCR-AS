@@ -1,0 +1,35 @@
+name: Auto update version manifest
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  version_manifest:
+    if: github.event.deleted == false
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Synchronize version manifest
+        run: python3 .github/scripts/update_version_json.py
+
+      - name: Commit version manifest update
+        run: |
+          if git diff --quiet --exit-code version.json; then
+            echo "No version manifest updates to commit."
+          else
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add version.json
+            git commit -m "chore: sync version manifest with Version_local"
+            git push
+          fi
