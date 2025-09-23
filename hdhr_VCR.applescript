@@ -52,6 +52,7 @@ use AppleScript version "2.4"
 use scripting additions
 use application "JSON Helper"
 
+##Test 2
 ##########    This sets up the script.  If we fail here, the script will cease loading    ##########
 on setup_lib(caller)
 	set handlername to "setuplib"
