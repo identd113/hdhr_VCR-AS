@@ -3,7 +3,7 @@ name: Auto update version metadata
 on:
   push:
     branches:
-      - master  # Trigger when commits land on the default branch
+      - main  # Trigger when commits land on the default branch
     paths:  # Only run when the primary AppleScript sources change
       - "hdhr_VCR.applescript"
       - "hdhr_VCR_lib.applescript"
