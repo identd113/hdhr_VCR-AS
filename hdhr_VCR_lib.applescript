@@ -15,7 +15,7 @@ end cm
 on load_hdhrVCR_vars()
 	set handlername to "load_hdhrVCR_vars_lib"
 	-- We need to receive states from the hdhr_vcr here
-	set vers_lib to "20250922"
+	set vers_lib to "20250924"
 	return vers_lib
 end load_hdhrVCR_vars
 
@@ -1050,6 +1050,30 @@ on convertByteSize(caller, byteSize, KBSize, decPlaces)
 	end if
 	return conversion
 end convertByteSize
+
+on showSeek(caller, start_time, end_time, chan, hdhr_device)
+	set handlername to "showSeek_lib"
+	set Show_info to Show_info of ParentScript
+	set temp_showids to {}
+	try
+		repeat with i from 1 to length of Show_info
+			if show_active of item i of Show_info is true then
+				if hdhr_device is hdhr_record of item i of Show_info then
+					if chan is show_channel of item i of Show_info or chan is "" then
+						if start_time is show_next of item i of Show_info or start_time is "" then
+							if end_time is show_end of item i of Show_info or end_time is "" then
+								set end of temp_showids to show_id of item i of Show_info
+							end if
+						end if
+					end if
+				end if
+			end if
+		end repeat
+		return temp_showids
+	on error
+		return false
+	end try
+end showSeek
 
 ----NOT IN USE------
 (*
