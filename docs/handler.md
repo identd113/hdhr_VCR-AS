@@ -1,14 +1,17 @@
-# Handler Reference
+Handler Reference
+=================
 
-## Overview
+Overview
+--------
 The hdhr_VCR project packages two collaborating AppleScript files that turn an HDHomeRun tuner into a lightweight DVR. The `hdhr_VCR.applescript` file hosts the main application logic and user interface flow, while `hdhr_VCR_lib.applescript` provides reusable helpers for date math, logging, SeriesID handling, and other utilities that keep the core script tidy.
 
-## Purpose
+Purpose
+-------
 This guide gives a formatted inventory of every handler in both scripts, the inputs they expect, the values they return, and how the surrounding run loop treats `missing value` results. AppleScript commonly uses `missing value` to indicate "no response"; wherever a handler returns it, the table explains whether the application's main loop, idle loop, or other retry logic will revisit the handler.
 
 ---
 
-## `hdhr_VCR.applescript`
+<h2><code>hdhr_VCR.applescript</code></h2>
 
 | Handler | Inputs | Outputs | Notes & Missing Value Handling |
 | --- | --- | --- | --- |
@@ -95,7 +98,7 @@ This guide gives a formatted inventory of every handler in both scripts, the inp
 
 ---
 
-## `hdhr_VCR_lib.applescript`
+<h2><code>hdhr_VCR_lib.applescript</code></h2>
 
 | Handler | Inputs | Outputs | Notes & Missing Value Handling |
 | --- | --- | --- | --- |
