@@ -431,13 +431,12 @@ on getTfromN(this_number)
 	end try
 end getTfromN
 
-on end_jsonhelper()
-	try
-		set handlername to "end_jsonhelper_lib"
-		tell application "JSON Helper" to quit
-	on error errmsg
-		return {handlername, errmsg}
-	end try
+on end_jsonhelper(caller)
+	set handlername to "kill_jsonhelper"
+	logger(true, handlername, caller, "ERROR", "Attempting to restart JSONHelper") of ParentScript
+	tell application "JSON Helper" to quit
+	logger(true, handlername, caller, "INFO", "JSONHelper was killed") of ParentScript
+	delay 3
 end end_jsonhelper
 
 on epoch2datetime(caller, epochseconds)
@@ -990,14 +989,6 @@ on recordSee(caller, the_record)
 	end try
 end recordSee
 
-on recordSee2(caller, the_record)
-	set handlername to "recordSee_lib"
-	try
-		set the_record to the_record as text
-	on error errmsg
-		return errmsg
-	end try
-end recordSee2
 
 on show_name_fix(caller, show_id, show_object)
 	set handlername to "show_name_fix_lib"
@@ -1074,6 +1065,7 @@ on showSeek(caller, start_time, end_time, chan, hdhr_device)
 		return false
 	end try
 end showSeek
+
 
 ----NOT IN USE------
 (*
@@ -1257,4 +1249,14 @@ on seriesScanRefresh(caller, show_id)
 		seriesScanUpdate(my cm(handlername, caller), show_id) of ParentScript
 	end if
 end seriesScanRefresh
+
+on recordSee2(caller, the_record)
+	set handlername to "recordSee_lib"
+	try
+		set the_record to the_record as text
+	on error errmsg
+		return errmsg
+	end try
+end recordSee2
+
 *)

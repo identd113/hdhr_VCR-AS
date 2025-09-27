@@ -530,7 +530,7 @@ on quit {}
 			end if
 		else
 			my save_data("quit(noshows)")
-			end_jsonhelper() of LibScript
+			end_jsonhelper(my cm(handlername, caller)) of LibScript
 			continue quit
 		end if
 		if quit_response is "Yes" then
@@ -541,12 +541,12 @@ on quit {}
 				end if
 			end repeat
 			my save_data("quit(yes)")
-			end_jsonhelper() of LibScript
+			end_jsonhelper(my cm(handlername, caller)) of LibScript
 			continue quit
 		end if
 		if quit_response is "No" then
 			my save_data("quit(no)")
-			end_jsonhelper() of LibScript
+			end_jsonhelper(my cm(handlername, caller)) of LibScript
 			continue quit
 		end if
 		if quit_response is "Go Back" then
@@ -950,18 +950,10 @@ on check_version(caller)
 		my logger(true, handlername, caller, "ERROR", "Unable to check for new versions: " & errmsg)
 		set version_response to {versions:{{changelog:"Unable to check for new versions", hdhr_version:"20210101"}}}
 		set Version_remote to hdhr_version of item 1 of versions of version_response
-		my kill_jsonhelper(my cm(handlername, caller))
+		kill_jsonhelper(my cm(handlername, caller)) of LibScript
 		my check_version(my cm(handlername, caller))
 	end try
 end check_version
-
-on kill_jsonhelper(caller)
-	set handlername to "kill_jsonhelper"
-	my logger(true, handlername, caller, "ERROR", "Attempting to restart JSONHelper")
-	tell application "JSON Helper" to quit
-	my logger(true, handlername, caller, "INFO", "JSONHelper was killed")
-	delay 3
-end kill_jsonhelper
 
 on check_version_dialog(caller)
 	set handlername to "check_version_display"
@@ -2699,31 +2691,6 @@ on showPathVerify(caller, show_id)
 	end if
 end showPathVerify
 
-on checkfileexists2(caller, filepath)
-	set handlername to "checkfileexists"
-	--try
-	my logger(true, handlername, caller, "DEBUG", filepath as text)
-	
-	-- Defensive POSIX conversion
-	if class of filepath is not alias then
-		try
-			set filepath to POSIX file (filepath as text)
-			my logger(true, handlername, caller, "DEBUG", "Converted to POSIX file")
-		on error err2
-			my logger(true, handlername, caller, "ERROR", "Failed to convert filepath: " & err2)
-			return false
-		end try
-	end if
-	
-	tell application "System Events" to return (exists disk item filepath)
-	
-	--on error errmsg
-	--	my logger(true, handlername, caller, "ERROR", "System Events reported: " & errmsg)
-	--	return false
-	--end try
-end checkfileexists2
-
-
 on checkfileexists(caller, filepath)
 	set handlername to "checkfileexists"
 	try
@@ -2965,45 +2932,6 @@ on curl2icon(caller, thelink)
 	return POSIX file temp_path
 end curl2icon
 
-on curl2icon2(caller, thelink)
-	set handlername to "curl2icon"
-	if thelink is in {"", {}, missing value} then
-		return caution
-	end if
-	try
-		set savename to last item of my stringlistflip(my cm(handlername, caller), thelink, "/", "list")
-	on error errmsg
-		my logger(true, handlername, caller, "WARN", "Unable to pull image, providing default image")
-		my logger(true, handlername, caller, "WARN", "err, " & errmsg)
-		return caution
-	end try
-	try
-		set temp_path to POSIX path of (path to home folder) & "Library/Caches/hdhr_VCR/" & savename as text
-		if my checkfileexists(my cm(handlername, caller), temp_path) is true then
-			my logger(true, handlername, caller, "DEBUG", "File exists")
-			try
-				do shell script "touch " & temp_path
-			on error errmsg
-				my logger(true, handlername, caller, "WARN", "Unable to update date modified of " & savename)
-				my logger(true, handlername, caller, "WARN", "err, " & errmsg)
-			end try
-		else
-			do shell script "curl --connect-timeout 10 --silent -H 'appname:" & name of me & "' '" & thelink & "' -o '" & temp_path & "'"
-			set temp_path_type to (do shell script "file -Ib " & temp_path)
-			if temp_path_type does not contain "image" then
-				my logger(true, handlername, caller, "WARN", "Icon is not an image, defaulting to alert icon")
-				do shell script "rm " & temp_path
-				return caution
-			end if
-			my logger(true, handlername, caller, "INFO", "File does not exist: " & quote & temp_path & quote & ", creating new icon is " & temp_path_type)
-		end if
-		return POSIX file temp_path
-	on error errmsg
-		my logger(true, handlername, caller, "ERROR", "curl --connect-timeout 10 --silent -H 'appname:" & name of me & "' '" & thelink & "' -o '" & temp_path & "'")
-		my logger(true, handlername, caller, "ERROR", "err, " & errmsg)
-		return caution
-	end try
-end curl2icon2
 
 on showid2PID(caller, show_id, kill_pid, logging)
 	set handlername to "showid2PID"
@@ -3236,20 +3164,6 @@ on existing_shows(caller)
 	end if
 end existing_shows
 
-on check_after_midnight2(caller)
-	set handlername to "check_after_midnight"
-	set temp_time to day of (current date)
-	try
-		if Check_after_midnight_time is not temp_time then
-			set Check_after_midnight_time to temp_time
-			return true
-		end if
-	on error errmsg
-		set Check_after_midnight_time to temp_time
-	end try
-	return false
-end check_after_midnight2
-
 on cm(handlername, caller)
 	return {handlername & "(" & caller & ")"} as text
 end cm
@@ -3451,3 +3365,84 @@ on idle_change(caller, loop_delay, loop_delay_sec)
 		set Idle_timer_dateobj to temp_time
 	end if
 end idle_change
+
+----NOT IN USE------
+(*
+on checkfileexists2(caller, filepath)
+	set handlername to "checkfileexists"
+	--try
+	my logger(true, handlername, caller, "DEBUG", filepath as text)
+	
+	-- Defensive POSIX conversion
+	if class of filepath is not alias then
+		try
+			set filepath to POSIX file (filepath as text)
+			my logger(true, handlername, caller, "DEBUG", "Converted to POSIX file")
+		on error err2
+			my logger(true, handlername, caller, "ERROR", "Failed to convert filepath: " & err2)
+			return false
+		end try
+	end if
+	
+	tell application "System Events" to return (exists disk item filepath)
+	
+	--on error errmsg
+	--	my logger(true, handlername, caller, "ERROR", "System Events reported: " & errmsg)
+	--	return false
+	--end try
+end checkfileexists2
+
+on curl2icon2(caller, thelink)
+	set handlername to "curl2icon"
+	if thelink is in {"", {}, missing value} then
+		return caution
+	end if
+	try
+		set savename to last item of my stringlistflip(my cm(handlername, caller), thelink, "/", "list")
+	on error errmsg
+		my logger(true, handlername, caller, "WARN", "Unable to pull image, providing default image")
+		my logger(true, handlername, caller, "WARN", "err, " & errmsg)
+		return caution
+	end try
+	try
+		set temp_path to POSIX path of (path to home folder) & "Library/Caches/hdhr_VCR/" & savename as text
+		if my checkfileexists(my cm(handlername, caller), temp_path) is true then
+			my logger(true, handlername, caller, "DEBUG", "File exists")
+			try
+				do shell script "touch " & temp_path
+			on error errmsg
+				my logger(true, handlername, caller, "WARN", "Unable to update date modified of " & savename)
+				my logger(true, handlername, caller, "WARN", "err, " & errmsg)
+			end try
+		else
+			do shell script "curl --connect-timeout 10 --silent -H 'appname:" & name of me & "' '" & thelink & "' -o '" & temp_path & "'"
+			set temp_path_type to (do shell script "file -Ib " & temp_path)
+			if temp_path_type does not contain "image" then
+				my logger(true, handlername, caller, "WARN", "Icon is not an image, defaulting to alert icon")
+				do shell script "rm " & temp_path
+				return caution
+			end if
+			my logger(true, handlername, caller, "INFO", "File does not exist: " & quote & temp_path & quote & ", creating new icon is " & temp_path_type)
+		end if
+		return POSIX file temp_path
+	on error errmsg
+		my logger(true, handlername, caller, "ERROR", "curl --connect-timeout 10 --silent -H 'appname:" & name of me & "' '" & thelink & "' -o '" & temp_path & "'")
+		my logger(true, handlername, caller, "ERROR", "err, " & errmsg)
+		return caution
+	end try
+end curl2icon2
+
+on check_after_midnight2(caller)
+	set handlername to "check_after_midnight"
+	set temp_time to day of (current date)
+	try
+		if Check_after_midnight_time is not temp_time then
+			set Check_after_midnight_time to temp_time
+			return true
+		end if
+	on error errmsg
+		set Check_after_midnight_time to temp_time
+	end try
+	return false
+end check_after_midnight2
+*)
