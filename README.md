@@ -103,3 +103,11 @@ _See below for a visual walkthrough of the process:_
 
 ```applescript
 {show_title:"Example", show_time:16, ...}
+```
+
+---
+
+## Maintainer Automation
+
+See [docs/CODEX_REQUESTS.md](docs/CODEX_REQUESTS.md) for details on the workflow
+that archives Codex requests automatically after a pull request merges.

@@ -1,0 +1,129 @@
+name: Archive Codex requests
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  pull-requests: read
+  contents: read
+  issues: write
+
+jobs:
+  archive:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Archive referenced Codex requests
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.CODEX_ARCHIVE_TOKEN || github.token }}
+          script: |
+            const body = context.payload.pull_request.body ?? "";
+            const pattern = /Codex Request:\s*(https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/issues\/\d+)/gi;
+            const matches = [...body.matchAll(pattern)];
+
+            if (matches.length === 0) {
+              core.info("No Codex request references detected in the pull request body.");
+              return;
+            }
+
+            const requestsByRepo = new Map();
+
+            for (const match of matches) {
+              const issueUrl = match[1];
+              const parsed = issueUrl.match(/https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/issues\/(\d+)/i);
+
+              if (!parsed) {
+                core.warning(`Unable to parse Codex request reference: ${issueUrl}`);
+                continue;
+              }
+
+              const [, owner, repo, issueNumberRaw] = parsed;
+              const issueNumber = Number.parseInt(issueNumberRaw, 10);
+
+              if (Number.isNaN(issueNumber)) {
+                core.warning(`Skipping Codex request with invalid issue number from ${issueUrl}`);
+                continue;
+              }
+
+              const key = `${owner}/${repo}`;
+              if (!requestsByRepo.has(key)) {
+                requestsByRepo.set(key, { owner, repo, issues: new Set() });
+              }
+
+              requestsByRepo.get(key).issues.add(issueNumber);
+            }
+
+            if (requestsByRepo.size === 0) {
+              core.info("No valid Codex request references found after parsing.");
+              return;
+            }
+
+            async function ensureArchivedLabel(owner, repo) {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name: "archived" });
+                core.info(`'archived' label already present in ${owner}/${repo}.`);
+              } catch (error) {
+                if (error.status === 404) {
+                  try {
+                    await github.rest.issues.createLabel({
+                      owner,
+                      repo,
+                      name: "archived",
+                      color: "BFD4F2",
+                      description: "Codex request has been archived after merge"
+                    });
+                    core.info(`Created 'archived' label in ${owner}/${repo}.`);
+                  } catch (createError) {
+                    core.warning(`Unable to create 'archived' label in ${owner}/${repo}: ${createError.message}`);
+                  }
+                } else {
+                  core.warning(`Failed to verify 'archived' label in ${owner}/${repo}: ${error.message}`);
+                }
+              }
+            }
+
+            for (const entry of requestsByRepo.values()) {
+              const { owner, repo, issues } = entry;
+
+              await ensureArchivedLabel(owner, repo);
+
+              for (const issueNumber of issues) {
+                core.info(`Archiving Codex request ${owner}/${repo}#${issueNumber}.`);
+
+                try {
+                  await github.rest.issues.update({
+                    owner,
+                    repo,
+                    issue_number: issueNumber,
+                    state: "closed"
+                  });
+                } catch (error) {
+                  core.warning(`Unable to close ${owner}/${repo}#${issueNumber}: ${error.message}`);
+                  continue;
+                }
+
+                try {
+                  await github.rest.issues.addLabels({
+                    owner,
+                    repo,
+                    issue_number: issueNumber,
+                    labels: ["archived"]
+                  });
+                } catch (error) {
+                  core.warning(`Unable to apply 'archived' label to ${owner}/${repo}#${issueNumber}: ${error.message}`);
+                }
+
+                try {
+                  await github.rest.issues.createComment({
+                    owner,
+                    repo,
+                    issue_number: issueNumber,
+                    body: `This Codex request was automatically archived after ${context.payload.pull_request.html_url} was merged.`
+                  });
+                } catch (error) {
+                  core.warning(`Unable to add archival comment to ${owner}/${repo}#${issueNumber}: ${error.message}`);
+                }
+              }
+            }
