@@ -15,7 +15,7 @@ end cm
 on load_hdhrVCR_vars()
 	set handlername to "load_hdhrVCR_vars_lib"
 	-- We need to receive states from the hdhr_vcr here
-	set vers_lib to "20250924"
+	set vers_lib to "20251203"
 	return vers_lib
 end load_hdhrVCR_vars
 
@@ -431,12 +431,15 @@ on getTfromN(this_number)
 	end try
 end getTfromN
 
-on end_jsonhelper(caller)
-	set handlername to "kill_jsonhelper"
+on end_jsonhelper(caller, restart)
+	set handlername to "end_jsonhelper"
 	logger(true, handlername, caller, "ERROR", "Attempting to restart JSONHelper") of ParentScript
 	tell application "JSON Helper" to quit
 	logger(true, handlername, caller, "INFO", "JSONHelper was killed") of ParentScript
-	delay 3
+	delay 0.1
+	if restart is true then
+		tell application "JSON Helper" to open
+	end if
 end end_jsonhelper
 
 on epoch2datetime(caller, epochseconds)
@@ -1065,6 +1068,47 @@ on showSeek(caller, start_time, end_time, chan, hdhr_device)
 		return false
 	end try
 end showSeek
+
+on cleanFolder(caller, folderLoc, time_offset, ext_remove)
+	set handlername to "cleanFolder_lib"
+	set cd to current date
+	set oldest_date_boundry to (cd + time_offset)
+	set deleted_filecount to 0
+	logger(true, handlername, caller, "DEBUG", "oldest_date_boundry:" & oldest_date_boundry) of ParentScript
+	if class of folderLoc is text then
+		set folderLoc to (POSIX file folderLoc) as alias
+	end if
+	tell application "System Events"
+		-- Make sure System Events treats folderLoc as a folder
+		set old_files to every file of (folderLoc) whose name extension is ext_remove and modification date is less than oldest_date_boundry
+		set fileCount to (length of old_files)
+		logger(true, handlername, caller, "DEBUG", "Matching Files: " & fileCount) of ParentScript
+		-- Reasonable defaults: start from the boundary, not from 1970 or 'now'
+		set oldest_date_test to oldest_date_boundry
+		set newest_date_test to oldest_date_boundry
+		if fileCount is not 0 then
+			repeat with i from 1 to fileCount
+				set temp to (modification date of (item i of old_files)) as date
+				
+				if temp is less than oldest_date_test then
+					logger(true, handlername, caller, "DEBUG", "oldfile_swap new: " & temp & " / old: " & oldest_date_test) of ParentScript
+					set oldest_date_test to temp
+				end if
+				
+				if temp is greater than newest_date_test then
+					logger(true, handlername, caller, "DEBUG", "newfile_swap new: " & temp & " / old: " & newest_date_test) of ParentScript
+					set newest_date_test to temp
+				end if
+				set deleted_filecount to deleted_filecount + 1
+				delete item i of old_files
+			end repeat
+			logger(true, handlername, caller, "INFO", deleted_filecount & " " & quote & ext_remove & quote & "'s deleted from " & (folderLoc as text)) of ParentScript
+		else
+			logger(true, handlername, caller, "INFO", "No cache files to be removed") of ParentScript
+		end if
+	end tell
+end cleanFolder
+
 
 
 ----NOT IN USE------

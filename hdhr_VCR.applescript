@@ -34,6 +34,7 @@ global Logger_levels
 global Logger_levels_all
 global Loglines_written
 global Loglines_max
+global Base_icon_path
 global Missing_tuner_retry_count
 global Check_after_midnight_time
 global First_open
@@ -57,11 +58,18 @@ use application "JSON Helper"
 on setup_lib(caller)
 	set handlername to "setuplib"
 	try
-		tell application "Finder"
-			set loaded_script_path to (path to documents folder as text) & "hdhr_VCR_lib.scpt"
-			set loaded_script_alias to loaded_script_path as alias
-			set loaded_script_name to (name of loaded_script_alias) as text
-		end tell
+		--	tell application "Finder"
+		--		set loaded_script_path to (path to documents folder as text) & "hdhr_VCR_lib.scpt"
+		--		set loaded_script_alias to loaded_script_path as alias
+		--		set loaded_script_name to (name of loaded_script_alias) as text
+		--	end tell
+		set loaded_script_path to (path to documents folder as text) & "hdhr_VCR_lib.scpt"
+		set loaded_script_alias to loaded_script_path as alias
+		
+		set loaded_script_info to info for loaded_script_alias
+		set loaded_script_name to (name of loaded_script_info) as text
+		
+		
 	on error errmsg
 		set temp_message to "Unable to load hdhr_VCR_lib, quitting..." & return & errmsg
 		display notification temp_message subtitle "Path: " & (path to documents folder as text) & "hdhr_VCR_lib.scpt"
@@ -75,6 +83,7 @@ on setup_lib(caller)
 end setup_lib
 
 on setup_icons(caller)
+	set Base_icon_path to POSIX path of (path to home folder) & "Library/Caches/hdhr_VCR/" as text
 	try
 		set Icon_record to {Warning_icon:character id {9888, 65039}, Play_icon:character id 9654, Record_icon:character id 128308, Recordsoon_icon:character id 11093, Tv_icon:character id 128250, Plus_icon:character id 10133, Single_icon:character id {49, 65039, 8419}, Series_icon:character id 128257, Series1_icon:character id 128258, Edit_icon:character id {9999, 65039}, Soon_icon:character id 128284, Disk_icon:character id 128190, Update_icon:character id 8682, Stop_icon:character id 9726, Up_icon:character id 128316, Up1_icon:character id 128314, Up2_icon:character id 9195, Check_icon:character id 9989, Uncheck_icon:character id 10060, Futureshow_icon:character id {9197, 65039}, Calendar_icon:character id 128197, Calendar2_icon:character id 128198, Hourglass_icon:character id 9203, Film_icon:character id 127910, Back_icon:character id 8592, Done_icon:character id 9989, Running_icon:character id {127939, 8205, 9794, 65039}, Add_icon:character id 127381, Series3_icon:character id 128256, Star_icon:character id 9733, Eject_icon:character id 9167}
 		set IconList to {Warning_icon of Icon_record, Play_icon of Icon_record, Record_icon of Icon_record, Recordsoon_icon of Icon_record, Tv_icon of Icon_record, Plus_icon of Icon_record, Single_icon of Icon_record, Series_icon of Icon_record, Series1_icon of Icon_record, Edit_icon of Icon_record, Soon_icon of Icon_record, Disk_icon of Icon_record, Update_icon of Icon_record, Stop_icon of Icon_record, Up_icon of Icon_record, Up1_icon of Icon_record, Up2_icon of Icon_record, Check_icon of Icon_record, Uncheck_icon of Icon_record, Futureshow_icon of Icon_record, Calendar_icon of Icon_record, Calendar2_icon of Icon_record, Hourglass_icon of Icon_record, Film_icon of Icon_record, Back_icon of Icon_record, Done_icon of Icon_record, Running_icon of Icon_record, Add_icon of Icon_record, Series3_icon of Icon_record, Star_icon of Icon_record, Eject_icon of Icon_record}
@@ -229,6 +238,7 @@ on run {}
 		## Lets check for a new version! This will trigger OSX to prompt for confirmation to talk to JSONHelper, the library we use for JSON related matters.
 		my check_version(cmi)
 		if Online_detected is true then
+			my logger(true, handlername, caller, "WARN", "GuideHours: " & GuideHours)
 			my HDHRDeviceDiscovery(cmi, "")
 		else
 			my logger(true, handlername, caller, "ERROR", "online_detected is " & Online_detected)
@@ -639,7 +649,7 @@ on hdhrGRID(caller, hdhr_device, hdhr_channel)
 				set Back_channel to hdhr_channel
 				--set hdhrGRID_selected to Icon_record & " Back"
 				my validate_show_info(my cm(handlername, caller), (the_show_id of item selected_show of Show_status_list), true)
-				my idle_change(cm, 1, 3)
+				my idle_change(my cm(handlername, caller), 1, 3)
 				set hdhrGRID_selected_length_skipped to hdhrGRID_selected_length_skipped + 1
 				set item i of hdhrGRID_selected to {}
 				if hdhrGRID_selected_length_skipped is hdhrGRID_selected_length then
@@ -845,7 +855,9 @@ end tuner_mismatch
 on is_channel_record(caller, hdhr_tuner, channelcheck, cd)
 	set handlername to "is_channel_record"
 	set temp_show_line to {}
-	copy (current date) to cd
+	if cd is "" then
+		copy (current date) to cd
+	end if
 	repeat with i from 1 to length of Show_info
 		repeat 1 times
 			if (weekday of (cd) as text) is in show_air_date of item i of Show_info then --fix recently added
@@ -931,7 +943,9 @@ on get_show_state(caller, hdhr_tuner, channelcheck, start_time, end_time)
 						else
 							return {show_stat:"deact", the_show_id:show_record_id, status_icon:Uncheck_icon of Icon_record}
 						end if
-						--end if
+						--Fix Add here SeriesID icon for shows that match an existing seriesid recording.
+					else
+						--	return {show_stat:"test", the_show_id:show_record_id, status_icon:Disk_icon of Icon_record}
 					end if
 				on error errmsg
 					my logger(true, handlername, caller, "ERROR", "Oops, " & errmsg)
@@ -1339,26 +1353,26 @@ on setup(caller)
 				try
 					set temp to false
 					repeat until temp is true
-						set guide_length to (display dialog "How many hours of guide data to grab?" & return & "1-24 valid range" default answer GuideHours buttons {"Run", "12H (Default)", "Set"} default button 3)
+						set guide_length to (display dialog "How many hours of guide data to grab?" & return & "1-24 valid range" default answer GuideHours of Hdhr_config buttons {"Run", "12H (Default)", "Set"} default button 3)
 						
 						if button returned of guide_length is "Set" then
 							try
-								set GuideHours to (text returned of guide_length as integer)
+								set GuideHours of Hdhr_config to (text returned of guide_length as integer)
 							on error errmsg
 								set temp to false
 							end try
 						end if
 						
 						if button returned of guide_length is "12H (Default)" then
-							set GuideHours to 12
+							set GuideHours of Hdhr_config to 12
 						end if
-						if GuideHours is less than 25 and GuideHours is greater than 0 then
+						if GuideHours of Hdhr_config is less than 25 and GuideHours of Hdhr_config is greater than 0 then
 							set temp to true
 						else
 							set temp to false
 						end if
 					end repeat
-					my logger(true, handlername, caller, "INFO", "GuideHours(vars): " & GuideHours)
+					my logger(true, handlername, caller, "INFO", "GuideHours(vars): " & GuideHours of Hdhr_config)
 				end try
 				
 				set rerun_discovery to button returned of (display dialog "Rerun HDHRDeviceDiscovery?" buttons {"Skip", "Yes"} default button 2 with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout with icon note)
@@ -1404,7 +1418,7 @@ on setup(caller)
 		
 		set save_config to button returned of (display dialog "Save hdhr config file?" buttons {"Skip", "Yes"} default button 2 with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout with icon note)
 		try
-			if save_config is "Yes" then 
+			if save_config is "Yes" then
 				my save_data(my cm(handlername, caller))
 			else
 				my logger(true, handlername, caller, "WARN", "hdhr config NOT saved")
@@ -1427,9 +1441,9 @@ on AreWeOnline(caller)
 	if Online_detected and Hdhr_detected is true then
 		my read_data(my cm(handlername, caller))
 		--FIX new line
-		my sync_config(my cm(handlername, caller), true)
-		set Hdhr_config to {Notify_upnext:Notify_upnext, Notify_recording:Notify_recording, Hdhr_setup_folder:Hdhr_setup_folder, Config_version:Config_version, GuideHours:GuideHours}
-		my logger(true, handlername, caller, "INFO", "GuideHours (var): " & GuideHours)
+		-- my sync_config(my cm(handlername, caller), true)
+		--set Hdhr_config to {Notify_upnext:Notify_upnext, Notify_recording:Notify_recording, Hdhr_setup_folder:Hdhr_setup_folder, Config_version:Config_version, GuideHours:GuideHours}
+		my logger(true, handlername, caller, "INFO", "GuideHours (var): " & GuideHours of Hdhr_config)
 		return true
 	else
 		my logger(true, handlername, caller, "ERROR", "hdhr_detected is " & Hdhr_detected)
@@ -1629,6 +1643,7 @@ on main(caller, emulated_button_press)
 			quit {}
 		end if
 		my idle_change(cm, 1, 3)
+		cleanFolder(cm, Base_icon_path, -60 * days, "jpg") of LibScript
 		return
 	end if
 end main
@@ -2281,7 +2296,7 @@ on getHDHR_Guide(caller, hdhr_device)
 			set hdhr_guide_data to my hdhr_api(my cm(handlername, caller), "https://api.hdhomerun.com/api/guide.php?DeviceAuth=" & device_auth & "&Duration=" & GuideHours)
 			set hdhr_guide of item tuner_offset of HDHR_DEVICE_LIST to hdhr_guide_data
 			set hdhr_guide_update of item tuner_offset of HDHR_DEVICE_LIST to cd
-			my logger(true, handlername, caller, "INFO", "Updated Guide for " & hdhr_device & ", for " & GuideHours & " hours")
+			my logger(true, handlername, caller, "INFO", "Updated Guide for " & hdhr_device & ", for " & GuideHours of Hdhr_config & " hours")
 			set progress completed steps to 1
 		end if
 	on error errmsg
@@ -2675,7 +2690,7 @@ on save_data(caller)
 					my logger(true, handlername, caller, "FATAL", "Error reading the file, errmsg: " & errmsg)
 				end try
 				set eof of ref_num to 0
-				my sync_config(my cm(handlername, caller), false)
+				-- my sync_config(my cm(handlername, caller), false)
 				set json_temp to {the_shows:temp_show_info, config:Hdhr_config}
 				try
 					set temp_show_info_json to (make JSON from json_temp)
@@ -2761,7 +2776,7 @@ on checkfileexists(caller, filepath)
 			set filepath to POSIX file filepath
 			my logger(true, handlername, caller, "DEBUG", "filepath is now posix file")
 		end if
-		tell application "Finder" to return (exists filepath)
+		tell application "System Events" to return (exists filepath)
 	on error errmsg
 		my logger(true, handlername, caller, "ERROR", "Finder reported: " & errmsg)
 		return false
@@ -2777,8 +2792,9 @@ on read_data(caller)
 		set show_info_json to (read JSON from hdhr_vcr_config_data)
 		set Show_info to the_shows of show_info_json
 		set Hdhr_config to config of show_info_json
+		my sync_config(my cm(handlername, caller), true)
 		my logger(true, handlername, caller, "INFO", "GuideHours (config): " & GuideHours of Hdhr_config)
-		my logger(true, handlername, caller, "INFO", "GuideHours (var): " & GuideHours)
+		--my logger(true, handlername, caller, "INFO", "GuideHours (var): " & GuideHours)
 		my logger(true, handlername, caller, "INFO", "Config version: " & Config_version of Hdhr_config)
 		
 		my logger(true, handlername, caller, "INFO", "Loading config from \"" & POSIX path of hdhr_vcr_config_file & "\"...")
@@ -2963,7 +2979,7 @@ on curl2icon(caller, thelink)
 		my logger(true, handlername, caller, "WARN", "err: " & errmsg)
 		return caution
 	end try
-	set temp_path to POSIX path of (path to home folder) & "Library/Caches/hdhr_VCR/" & savename as text
+	set temp_path to Base_icon_path & savename as text
 	-- If cached, update timestamp
 	if my checkfileexists(my cm(handlername, caller), temp_path) then
 		my logger(true, handlername, caller, "DEBUG", "File exists: " & savename)
@@ -3238,23 +3254,28 @@ on seriesScan(caller, seriesID, hdhr_device, thechan, show_id)
 	set show_channel_list to {}
 	set tuner_offset to my HDHRDeviceSearch(my cm(handlername, caller), hdhr_device)
 	set hdhr_guide to hdhr_guide of item tuner_offset of HDHR_DEVICE_LIST
-	repeat with i from 1 to length of hdhr_guide
-		set temp_channel to (GuideNumber of item i of hdhr_guide) as text
-		set guide_temp to Guide of item i of hdhr_guide
-		repeat with i2 from 1 to length of guide_temp
-			if seriesID of item i2 of guide_temp is seriesID then
-				if thechan is "" then
-					set end of show_channel_list to temp_channel
-					set end of show_match_list to item i2 of guide_temp
-				else
-					if thechan is temp_channel then
+	try
+		repeat with i from 1 to length of hdhr_guide
+			set temp_channel to (GuideNumber of item i of hdhr_guide) as text
+			set guide_temp to Guide of item i of hdhr_guide
+			repeat with i2 from 1 to length of guide_temp
+				if seriesID of item i2 of guide_temp is seriesID then
+					if thechan is "" then
 						set end of show_channel_list to temp_channel
 						set end of show_match_list to item i2 of guide_temp
+					else
+						if thechan is temp_channel then
+							set end of show_channel_list to temp_channel
+							set end of show_match_list to item i2 of guide_temp
+						end if
 					end if
 				end if
-			end if
+			end repeat
 		end repeat
-	end repeat
+	on error errmsg
+		my logger(true, handlername, caller, "ERROR", "hdhr_guide likely empty, " & errmsg)
+		return {}
+	end try
 	set show_match_list_length to length of show_match_list
 	if show_match_list_length is greater than 0 then
 		if thechan is "" then
@@ -3456,45 +3477,6 @@ on checkfileexists2(caller, filepath)
 	--end try
 end checkfileexists2
 
-on curl2icon2(caller, thelink)
-	set handlername to "curl2icon"
-	if thelink is in {"", {}, missing value} then
-		return caution
-	end if
-	try
-		set savename to last item of my stringlistflip(my cm(handlername, caller), thelink, "/", "list")
-	on error errmsg
-		my logger(true, handlername, caller, "WARN", "Unable to pull image, providing default image")
-		my logger(true, handlername, caller, "WARN", "err, " & errmsg)
-		return caution
-	end try
-	try
-		set temp_path to POSIX path of (path to home folder) & "Library/Caches/hdhr_VCR/" & savename as text
-		if my checkfileexists(my cm(handlername, caller), temp_path) is true then
-			my logger(true, handlername, caller, "DEBUG", "File exists")
-			try
-				do shell script "touch " & temp_path
-			on error errmsg
-				my logger(true, handlername, caller, "WARN", "Unable to update date modified of " & savename)
-				my logger(true, handlername, caller, "WARN", "err, " & errmsg)
-			end try
-		else
-			do shell script "curl --connect-timeout 10 --silent -H 'appname:" & name of me & "' '" & thelink & "' -o '" & temp_path & "'"
-			set temp_path_type to (do shell script "file -Ib " & temp_path)
-			if temp_path_type does not contain "image" then
-				my logger(true, handlername, caller, "WARN", "Icon is not an image, defaulting to alert icon")
-				do shell script "rm " & temp_path
-				return caution
-			end if
-			my logger(true, handlername, caller, "INFO", "File does not exist: " & quote & temp_path & quote & ", creating new icon is " & temp_path_type)
-		end if
-		return POSIX file temp_path
-	on error errmsg
-		my logger(true, handlername, caller, "ERROR", "curl --connect-timeout 10 --silent -H 'appname:" & name of me & "' '" & thelink & "' -o '" & temp_path & "'")
-		my logger(true, handlername, caller, "ERROR", "err, " & errmsg)
-		return caution
-	end try
-end curl2icon2
 
 on check_after_midnight2(caller)
 	set handlername to "check_after_midnight"
