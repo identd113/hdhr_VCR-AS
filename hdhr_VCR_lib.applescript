@@ -273,11 +273,12 @@ on list_position(caller, this_item, this_list, is_strict)
 			repeat with i from 1 to length of this_list
 				if is_strict is false then
 					if (item i of this_list as text) contains (this_item as text) then
-						logger(true, handlername, caller, "DEBUG", "Offset found: " & i) of ParentScript
+						logger(true, handlername, caller, "DEBUG", "Offset contains: " & i) of ParentScript
 						return i
 					end if
 				else
 					if (item i of this_list as text) is (this_item as text) then
+						logger(true, handlername, caller, "DEBUG", "Offset is: " & i) of ParentScript
 						return i
 					end if
 				end if
@@ -290,6 +291,71 @@ on list_position(caller, this_item, this_list, is_strict)
 end list_position
 
 on short_date(caller, the_date_object, twentyfourtime, show_seconds)
+	set handlername to "short_date_lib"
+	try
+		set locale to locale of ParentScript
+		set timeAMPM to ""
+		
+		-- takes date object, and converts to a shorter time string
+		if the_date_object is "?" then return "?"
+		if the_date_object is "" then return ""
+		
+		-- Year last 2 digits
+		set year_string to (items -2 thru end of ((year of the_date_object) as text))
+		
+		-- Pull numeric parts as integers first
+		set theMonth to (month of the_date_object) * 1
+		set theDay to day of the_date_object
+		set theHour to hours of the_date_object
+		set theMinute to minutes of the_date_object
+		set theSecond to seconds of the_date_object
+		
+		-- Pad using padnum
+		set month_string to my padnum("short_date(" & caller & ")", theMonth, false)
+		set day_string to my padnum("short_date(" & caller & ")", theDay, false)
+		set minutes_string to my padnum("short_date(" & caller & ")", theMinute, false)
+		set seconds_string to my padnum("short_date(" & caller & ")", theSecond, false)
+		
+		-- Hours handling
+		if twentyfourtime is false then
+			if theHour ≥ 12 then
+				set timeAMPM to " PM"
+				if theHour > 12 then set theHour to theHour - 12
+			else
+				set timeAMPM to " AM"
+			end if
+			
+			-- 12-hour clock midnight/noon rules
+			if theHour is 0 then set theHour to 12
+			
+			-- In 12-hour mode you typically *don’t* want a leading zero,
+			-- but if you DO want it, swap the next line for padnum(...)
+			set hours_string to (theHour as text)
+		else
+			-- 24-hour mode: pad to 2 digits
+			set hours_string to my padnum("short_date(" & caller & ")", theHour, false)
+		end if
+		
+		if locale is "en_US" then
+			if show_seconds is true then
+				return (month_string & "." & day_string & "." & year_string & " " & hours_string & "." & minutes_string & "." & seconds_string & timeAMPM) as text
+			else
+				return (month_string & "." & day_string & "." & year_string & " " & hours_string & "." & minutes_string & timeAMPM) as text
+			end if
+		else
+			if show_seconds is true then
+				return (year_string & "/" & month_string & "/" & day_string & " " & hours_string & "." & minutes_string & "." & seconds_string & timeAMPM) as text
+			else
+				return (year_string & "/" & month_string & "/" & day_string & " " & hours_string & "." & minutes_string & timeAMPM) as text
+			end if
+		end if
+		
+	on error errmsg
+		return {handlername, errmsg}
+	end try
+end short_date
+
+on short_date2(caller, the_date_object, twentyfourtime, show_seconds)
 	set handlername to "short_date_lib"
 	try
 		set locale to locale of ParentScript
@@ -363,7 +429,7 @@ on short_date(caller, the_date_object, twentyfourtime, show_seconds)
 	on error errmsg
 		return {handlername, errmsg}
 	end try
-end short_date
+end short_date2
 
 on padnum(caller, thenum, splitdot)
 	set handlername to "padnum_lib"
@@ -383,7 +449,7 @@ on padnum(caller, thenum, splitdot)
 				set end of the_result to (item i of thenum) as text
 			end if
 		end repeat
-		return stringlistflip("test", the_result, ".", "string")
+		return stringlistflip(my cm(handlername, caller), the_result, ".", "string")
 	on error errmsg
 		return {handlername, errmsg}
 	end try

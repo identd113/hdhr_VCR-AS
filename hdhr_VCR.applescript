@@ -58,11 +58,7 @@ use application "JSON Helper"
 on setup_lib(caller)
 	set handlername to "setuplib"
 	try
-		--	tell application "Finder"
-		--		set loaded_script_path to (path to documents folder as text) & "hdhr_VCR_lib.scpt"
-		--		set loaded_script_alias to loaded_script_path as alias
-		--		set loaded_script_name to (name of loaded_script_alias) as text
-		--	end tell
+	
 		set loaded_script_path to (path to documents folder as text) & "hdhr_VCR_lib.scpt"
 		set loaded_script_alias to loaded_script_path as alias
 		
@@ -512,7 +508,7 @@ on idle
 	end if
 	if First_open is true then
 		my logger(true, handlername, caller, "INFO", "Idle_loop: " & Idle_loop)
-		if Idle_loop is 2 then --and Idle_count_delay = 0 then
+		if Idle_loop is 2 then
 			my logger(true, handlername, caller, "INFO", "Now running initial main() at end of idle loop")
 			set First_open to false
 			my main(cm, "run")
@@ -871,16 +867,16 @@ on is_channel_record(caller, hdhr_tuner, channelcheck, cd)
 								my logger(true, handlername, caller, "TRACE", channelcheck & " marked as Record_icon in channel list")
 								exit repeat
 							else
-								if sec_to_show < 4 * hours then
-									if sec_to_show < 0 then
+								if sec_to_show is less than 4 * hours then
+									if sec_to_show is less than 0 then
 										set beginning of temp_show_line to Warning_icon of Icon_record
 										my logger(true, handlername, caller, "TRACE", channelcheck & " marked as Warning_icon in channel list")
 										exit repeat
-									else if sec_to_show < 1 * hours then
+									else if sec_to_show is less than 1 * hours then
 										set beginning of temp_show_line to Film_icon of Icon_record
 										my logger(true, handlername, caller, "TRACE", channelcheck & " marked as Film_icon in channel list")
 										exit repeat
-									else if sec_to_show < 4 * hours then
+									else if sec_to_show is less than 4 * hours then
 										set end of temp_show_line to Up_icon of Icon_record
 										my logger(true, handlername, caller, "TRACE", channelcheck & " marked as Up_icon in channel list")
 										exit repeat
@@ -1531,7 +1527,7 @@ on main(caller, emulated_button_press)
 		else
 			try
 				with timeout of 15 seconds
-					my HDHRDeviceDiscovery(my cm(handlername, caller), "")
+					my HDHRDeviceDiscovery(cm, "")
 					
 				end timeout
 			on error errnum
@@ -1556,7 +1552,7 @@ on main(caller, emulated_button_press)
 			set temp_show_line to " " & (show_title of item i of Show_info & " on " & show_channel of item i of Show_info & " at " & show_time of item i of Show_info & " for " & show_length of item i of Show_info & " minutes on " & my stringlistflip("main", show_air_date of item i of Show_info, ", ", "string"))
 			--remove
 			
-			set temp_show_line to ((status_icon of seriesStatusIcons(my cm(handlername, caller), show_id of item i of Show_info) of LibScript) as text) & temp_show_line
+			set temp_show_line to ((status_icon of seriesStatusIcons(cm, show_id of item i of Show_info) of LibScript) as text) & temp_show_line
 			
 			if show_active of item i of Show_info is true then
 				
@@ -1595,7 +1591,6 @@ on main(caller, emulated_button_press)
 		end repeat
 		if length of show_list is not 0 then
 			set temp_show_list to (choose from list show_list with title my check_version_dialog(caller) with prompt "" & length of show_list & " shows to edit: " & return & Single_icon of Icon_record & " Single   " & Series_icon of Icon_record & " Series" & "   " & Series3_icon of Icon_record & " SeriesID" & "   " & Record_icon of Icon_record & " Recording" & "   " & Uncheck_icon of Icon_record & " Inactive" & "   " & Warning_icon of Icon_record & " Error" & return & Film_icon of Icon_record & " Up Next < 1h" & "  " & Up_icon of Icon_record & " Up Next < 4h" & "  " & Up2_icon of Icon_record & " Up Next > 4h" & "  " & Futureshow_icon of Icon_record & " Future Show" & "   " & Done_icon of Icon_record & " Recorded today" OK button name Edit_icon of Icon_record & " Edit.." cancel button name Running_icon of Icon_record & " Run" default items item 1 of show_list with multiple selections allowed without empty selection allowed)
-			
 			if temp_show_list is not false then
 				repeat with i3 from 1 to length of temp_show_list
 					set temp_show_list_offset to (my list_position(cm, (item i3 of temp_show_list as text), show_list, true))
@@ -1784,7 +1779,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 					my logger(true, handlername, caller, "INFO", "(Manual) show length: " & show_length of temp_show_info)
 				else
 					
-					set hdhr_response_channel_title to fixall of my show_name_fix(my cm(handlername, caller), "", item i3 of hdhrGRID_response)
+					set hdhr_response_channel_title to fixall of my show_name_fix(cm, "", item i3 of hdhrGRID_response)
 					try
 						set default_record_day to (weekday of my epoch2datetime(cm, (my getTfromN(StartTime of item i3 of hdhrGRID_response)))) as text
 					on error errmsg
@@ -2767,18 +2762,22 @@ on showPathVerify(caller, show_id)
 end showPathVerify
 
 on checkfileexists(caller, filepath)
-	set handlername to "checkfileexists"
+	set handlername to "checkfileexists2"
 	try
 		my logger(true, handlername, caller, "DEBUG", filepath as text)
-		--if class of filepath is not «class furl» then
+		
 		if class of filepath is not alias then
 			my logger(true, handlername, caller, "INFO", "filepath class is " & class of filepath)
-			set filepath to POSIX file filepath
-			my logger(true, handlername, caller, "DEBUG", "filepath is now posix file")
+			set filepath to POSIX file (filepath as text)
+			my logger(true, handlername, caller, "DEBUG", "filepath is now alias via POSIX file")
 		end if
-		tell application "System Events" to return (exists filepath)
-	on error errmsg
-		my logger(true, handlername, caller, "ERROR", "Finder reported: " & errmsg)
+		
+		tell application "System Events"
+			return (exists disk item filepath)
+		end tell
+		
+	on error errmsg number errnum
+		my logger(true, handlername, caller, "ERROR", "System Events reported (" & errnum & "): " & errmsg)
 		return false
 	end try
 end checkfileexists
@@ -2967,11 +2966,14 @@ end next_shows
 
 on curl2icon(caller, thelink)
 	set handlername to "curl2icon"
+	my logger(true, handlername, caller, "INFO", thelink)
 	-- Return default if link is missing or empty
-	if thelink is missing value or thelink is in {"", {}} then
+	if thelink is in {"", {}, missing value} then
+		my logger(true, handlername, caller, "WARN", "Passed link is invalid")
 		return caution
 	end if
 	-- Derive filename from URL
+	my logger(true, handlername, caller, "INFO", "2")
 	try
 		set savename to last item of my stringlistflip(my cm(handlername, caller), thelink, "/", "list")
 	on error errmsg
@@ -2979,34 +2981,48 @@ on curl2icon(caller, thelink)
 		my logger(true, handlername, caller, "WARN", "err: " & errmsg)
 		return caution
 	end try
-	set temp_path to Base_icon_path & savename as text
+	try
+		set temp_path to Base_icon_path & savename as text
+		my logger(true, handlername, caller, "WARN", temp_path)
+	on error errmsg
+		my logger(true, handlername, caller, "WARN", "Base path invalid, err " & thelink)
+	end try
 	-- If cached, update timestamp
-	if my checkfileexists(my cm(handlername, caller), temp_path) then
-		my logger(true, handlername, caller, "DEBUG", "File exists: " & savename)
-		try
-			do shell script "touch " & quoted form of temp_path
-		on error errmsg
-			my logger(true, handlername, caller, "WARN", "Unable to update date modified of " & savename)
-			my logger(true, handlername, caller, "WARN", "err: " & errmsg)
-		end try
-	else
-		-- Download with HTTP error checking
-		try
-			do shell script "curl --fail --connect-timeout 10 --silent -H 'appname:" & name of me & "' " & quoted form of thelink & " -o " & quoted form of temp_path
-		on error errmsg
-			my logger(true, handlername, caller, "ERROR", "curl failed for " & quoted form of thelink)
-			my logger(true, handlername, caller, "ERROR", "err: " & errmsg)
-			return caution
-		end try
-		-- Verify it's an image
-		set temp_path_type to do shell script "file -Ib " & quoted form of temp_path
-		if temp_path_type does not contain "image" then
-			my logger(true, handlername, caller, "WARN", "Icon is not an image (" & temp_path_type & "), defaulting to alert icon")
-			do shell script "rm " & quoted form of temp_path
-			return caution
+	try
+		if my checkfileexists(my cm(handlername, caller), temp_path) then
+			my logger(true, handlername, caller, "DEBUG", "File exists: " & savename)
+			try
+				do shell script "touch " & quoted form of temp_path
+			on error errmsg
+				my logger(true, handlername, caller, "WARN", "Unable to update date modified of " & savename)
+				my logger(true, handlername, caller, "WARN", "err: " & errmsg)
+			end try
+		else
+			-- Download with HTTP error checking
+			
+			set temp_curl to "curl --fail --connect-timeout 10 --silent -H 'appname:" & name of me & "' " & quoted form of thelink & " -o " & quoted form of temp_path
+			try
+				do shell script temp_curl
+				my logger(true, handlername, caller, "WARN", temp_curl)
+			on error errmsg
+				my logger(true, handlername, caller, "ERROR", "curl failed for " & quoted form of thelink)
+				my logger(true, handlername, caller, "ERROR", "err: " & errmsg)
+				return caution
+			end try
+			-- Verify it's an image
+			set temp_path_type to do shell script "file -Ib " & quoted form of temp_path
+			if temp_path_type does not contain "image" then
+				my logger(true, handlername, caller, "WARN", "Icon is not an image (" & temp_path_type & "), defaulting to alert icon")
+				do shell script "rm " & quoted form of temp_path
+				return caution
+			else
+				my logger(true, handlername, caller, "WARN", "Icon is valid")
+			end if
+			my logger(true, handlername, caller, "INFO", "Created new icon: " & quoted form of temp_path & ", type: " & temp_path_type)
 		end if
-		my logger(true, handlername, caller, "INFO", "Created new icon: " & quoted form of temp_path & ", type: " & temp_path_type)
-	end if
+	on error errmsg
+		my logger(true, handlername, caller, "WARN", "General Error, " & errmsg)
+	end try
 	-- Return alias to the image file
 	return POSIX file temp_path
 end curl2icon
@@ -3381,7 +3397,7 @@ on seriesScanUpdate(caller, show_id)
 						end if
 						if (show_channel of item show_offset of Show_info) is not channel_number then
 							--my logger(true, handlername, caller, "INFO", "Old channel = " & (show_channel of item show_offset of Show_info))
-							my logger(true, handlername, caller, "INFO", "New channel = " & channel_number)
+							my logger(true, handlername, caller, "INFO", "New channel: " & channel_number)
 							set show_channel of item show_offset of Show_info to channel_number
 						end if
 						
@@ -3452,7 +3468,6 @@ on idle_change(caller, loop_delay, loop_delay_sec)
 end idle_change
 
 ----NOT IN USE------
-(*
 on checkfileexists2(caller, filepath)
 	set handlername to "checkfileexists"
 	--try
@@ -3476,11 +3491,11 @@ on checkfileexists2(caller, filepath)
 	--	return false
 	--end try
 end checkfileexists2
-
+(*
 
 on check_after_midnight2(caller)
 	set handlername to "check_after_midnight"
-	set temp_time to day of (current date)
+	set temp_time to day of (current date) 
 	try
 		if Check_after_midnight_time is not temp_time then
 			set Check_after_midnight_time to temp_time
