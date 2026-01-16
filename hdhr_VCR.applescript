@@ -58,7 +58,7 @@ use application "JSON Helper"
 on setup_lib(caller)
 	set handlername to "setuplib"
 	try
-	
+		
 		set loaded_script_path to (path to documents folder as text) & "hdhr_VCR_lib.scpt"
 		set loaded_script_alias to loaded_script_path as alias
 		
@@ -110,7 +110,7 @@ on setup_script(caller)
 	set handlername to "setup_script"
 	try
 		set Local_env to (name of current application)
-		set Version_local to "20251130"
+		set Version_local to "20260115"
 		set Config_version to 1
 		set temp_info to (system info)
 		set Local_ip to IPv4 address of temp_info
@@ -235,11 +235,12 @@ on run {}
 		my check_version(cmi)
 		if Online_detected is true then
 			my logger(true, handlername, caller, "WARN", "GuideHours: " & GuideHours)
+			my logger(true, handlername, caller, "INFO", "AreWeOnline: " & my AreWeOnline(cmi))
 			my HDHRDeviceDiscovery(cmi, "")
 		else
 			my logger(true, handlername, caller, "ERROR", "online_detected is " & Online_detected)
 		end if
-		my logger(true, handlername, caller, "INFO", "AreWeOnline: " & my AreWeOnline(cmi))
+		--my logger(true, handlername, caller, "INFO", "AreWeOnline: " & my AreWeOnline(cmi))
 		--Prompts for permission for removable media
 		my showPathVerify(cmi, "")
 		--my show_info_dump(my cm(handlername, caller), "", false)
@@ -284,7 +285,7 @@ on idle
 				if hdhr_guide_update of item i2 of HDHR_DEVICE_LIST is not missing value then
 					if minutes of (cd) is in {0, 30} then
 						if ((cd) - (hdhr_guide_update of item i2 of HDHR_DEVICE_LIST)) div 60 is greater than or equal to 5 then
-							my logger(true, handlername, caller, "INFO", "Periodic update of tuner " & device_id of item i2 of HDHR_DEVICE_LIST & ", last update: " & my fixdate(cm, hdhr_guide_update of item i2 of HDHR_DEVICE_LIST))
+							my logger(true, handlername, caller, "INFO", "Periodic update of tuner " & device_id of item i2 of HDHR_DEVICE_LIST & ", last update: " & my fixDate(cm, hdhr_guide_update of item i2 of HDHR_DEVICE_LIST))
 							try
 								with timeout of 15 seconds
 									my HDHRDeviceDiscovery(cm, device_id of item i2 of HDHR_DEVICE_LIST)
@@ -383,7 +384,7 @@ on idle
 									if notify_recording_time of item i of Show_info is less than (cd) or notify_recording_time of item i of Show_info is missing value then
 										display notification "Ends " & my short_date(cm, show_end of item i of Show_info, false, false) & " (" & (my ms2time("idle(19)", (show_end of item i of Show_info) - (cd), "s", 3)) & ") " with title Record_icon of Icon_record & " Recording in progress (" & hdhr_record of item i of Show_info & ")" subtitle quote & show_title of item i of Show_info & quote & " on " & show_channel of item i of Show_info & " (" & my channel2name(cm, show_channel of item i of Show_info as text, hdhr_record of item i of Show_info) & ")"
 										set notify_recording_time of item i of Show_info to (cd) + (Notify_recording * minutes)
-										my logger(true, handlername, caller, "INFO", "Recording in progress for " & quote & (show_title of item i of Show_info & quote & " on " & show_channel of item i of Show_info & ", ends in " & my ms2time("idle_rip(19.1)", (show_end of item i of Show_info) - (cd), "s", 3)) & ", Next Update: " & my fixdate(cm, time string of (notify_recording_time of item i of Show_info)))
+										my logger(true, handlername, caller, "INFO", "Recording in progress for " & quote & (show_title of item i of Show_info & quote & " on " & show_channel of item i of Show_info & ", ends in " & my ms2time("idle_rip(19.1)", (show_end of item i of Show_info) - (cd), "s", 3)) & ", Next Update: " & my fixDate(cm, time string of (notify_recording_time of item i of Show_info)))
 										
 										my tuner_inuse(cm, hdhr_record of item i of Show_info)
 										my update_folder(cm, show_dir of item i of Show_info)
@@ -1119,7 +1120,7 @@ on nextday(caller, the_show_id)
 	if show_end of item show_offset of Show_info is not nextup + ((show_length of item show_offset of Show_info) * minutes) then
 		set show_end of item show_offset of Show_info to nextup + ((show_length of item show_offset of Show_info) * minutes)
 		my logger(true, handlername, caller, "INFO", Â
-			"Show end of " & quote & show_title of item show_offset of Show_info & quote & " set to: " & my fixdate(my cm(handlername, caller), (nextup + ((show_length of item show_offset of Show_info) * minutes))))
+			"Show end of " & quote & show_title of item show_offset of Show_info & quote & " set to: " & my fixDate(my cm(handlername, caller), (nextup + ((show_length of item show_offset of Show_info) * minutes))))
 		my logger(true, handlername, caller, "DEBUG", Â
 			"WORK Show end class: " & class of (show_end of item show_offset of Show_info))
 	else
@@ -2548,7 +2549,7 @@ on save_data(caller)
 					end try
 					
 					try
-						set show_time_OriginalAirdate of item i5 of temp_show_info to my fixdate(my cm(handlername, caller), (show_time_OriginalAirdate of item i5 of temp_show_info))
+						set show_time_OriginalAirdate of item i5 of temp_show_info to my fixDate(my cm(handlername, caller), (show_time_OriginalAirdate of item i5 of temp_show_info))
 					on error errmsg
 						set item i5 of temp_show_info to item i5 of temp_show_info & {show_time_OriginalAirdate:""}
 						my logger(true, handlername, caller, "INFO", "Added show_time_OriginalAirdate to " & quote & show_title of item i5 of temp_show_info & quote)
@@ -2599,21 +2600,21 @@ on save_data(caller)
 					end try
 					
 					try
-						set show_last of item i5 of temp_show_info to my fixdate(my cm(handlername, caller), (show_last of item i5 of temp_show_info))
+						set show_last of item i5 of temp_show_info to my fixDate(my cm(handlername, caller), (show_last of item i5 of temp_show_info))
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", errmsg)
 						set item i5 of temp_show_info to item i5 of temp_show_info & {show_last:""}
 						my logger(true, handlername, caller, "INFO", "Added show_last to " & quote & show_title of item i5 of temp_show_info & quote)
 					end try
 					try
-						set show_next of item i5 of temp_show_info to my fixdate(my cm(handlername, caller), (show_next of item i5 of temp_show_info))
+						set show_next of item i5 of temp_show_info to my fixDate(my cm(handlername, caller), (show_next of item i5 of temp_show_info))
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", errmsg)
 						set item i5 of temp_show_info to item i5 of temp_show_info & {show_next:""}
 						my logger(true, handlername, caller, "INFO", "Added show_next to " & quote & show_title of item i5 of temp_show_info & quote)
 					end try
 					try
-						set show_end of item i5 of temp_show_info to my fixdate(my cm(handlername, caller), (show_end of item i5 of temp_show_info))
+						set show_end of item i5 of temp_show_info to my fixDate(my cm(handlername, caller), (show_end of item i5 of temp_show_info))
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", errmsg)
 						set item i5 of temp_show_info to item i5 of temp_show_info & {show_end:""}
@@ -2621,7 +2622,7 @@ on save_data(caller)
 					end try
 					
 					try
-						set notify_recording_time of item i5 of temp_show_info to my fixdate(my cm(handlername, caller), (notify_recording_time of item i5 of temp_show_info))
+						set notify_recording_time of item i5 of temp_show_info to my fixDate(my cm(handlername, caller), (notify_recording_time of item i5 of temp_show_info))
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", errmsg)
 						set item i5 of temp_show_info to item i5 of temp_show_info & {notify_recording_time:""}
@@ -2629,7 +2630,7 @@ on save_data(caller)
 					end try
 					
 					try
-						set notify_upnext_time of item i5 of temp_show_info to my fixdate(my cm(handlername, caller), (notify_upnext_time of item i5 of temp_show_info))
+						set notify_upnext_time of item i5 of temp_show_info to my fixDate(my cm(handlername, caller), (notify_upnext_time of item i5 of temp_show_info))
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", errmsg)
 						set item i5 of temp_show_info to item i5 of temp_show_info & {notify_upnext_time:""}
@@ -2762,7 +2763,8 @@ on showPathVerify(caller, show_id)
 end showPathVerify
 
 on checkfileexists(caller, filepath)
-	set handlername to "checkfileexists2"
+	set handlername to "checkfileexists"
+	log filepath
 	try
 		my logger(true, handlername, caller, "DEBUG", filepath as text)
 		
@@ -2964,70 +2966,6 @@ end next_shows
 
 ##########    These are custom handlers.  They are more like libraries    ##########
 
-on curl2icon(caller, thelink)
-	set handlername to "curl2icon"
-	my logger(true, handlername, caller, "INFO", thelink)
-	-- Return default if link is missing or empty
-	if thelink is in {"", {}, missing value} then
-		my logger(true, handlername, caller, "WARN", "Passed link is invalid")
-		return caution
-	end if
-	-- Derive filename from URL
-	my logger(true, handlername, caller, "INFO", "2")
-	try
-		set savename to last item of my stringlistflip(my cm(handlername, caller), thelink, "/", "list")
-	on error errmsg
-		my logger(true, handlername, caller, "WARN", "Unable to pull image, providing default image")
-		my logger(true, handlername, caller, "WARN", "err: " & errmsg)
-		return caution
-	end try
-	try
-		set temp_path to Base_icon_path & savename as text
-		my logger(true, handlername, caller, "WARN", temp_path)
-	on error errmsg
-		my logger(true, handlername, caller, "WARN", "Base path invalid, err " & thelink)
-	end try
-	-- If cached, update timestamp
-	try
-		if my checkfileexists(my cm(handlername, caller), temp_path) then
-			my logger(true, handlername, caller, "DEBUG", "File exists: " & savename)
-			try
-				do shell script "touch " & quoted form of temp_path
-			on error errmsg
-				my logger(true, handlername, caller, "WARN", "Unable to update date modified of " & savename)
-				my logger(true, handlername, caller, "WARN", "err: " & errmsg)
-			end try
-		else
-			-- Download with HTTP error checking
-			
-			set temp_curl to "curl --fail --connect-timeout 10 --silent -H 'appname:" & name of me & "' " & quoted form of thelink & " -o " & quoted form of temp_path
-			try
-				do shell script temp_curl
-				my logger(true, handlername, caller, "WARN", temp_curl)
-			on error errmsg
-				my logger(true, handlername, caller, "ERROR", "curl failed for " & quoted form of thelink)
-				my logger(true, handlername, caller, "ERROR", "err: " & errmsg)
-				return caution
-			end try
-			-- Verify it's an image
-			set temp_path_type to do shell script "file -Ib " & quoted form of temp_path
-			if temp_path_type does not contain "image" then
-				my logger(true, handlername, caller, "WARN", "Icon is not an image (" & temp_path_type & "), defaulting to alert icon")
-				do shell script "rm " & quoted form of temp_path
-				return caution
-			else
-				my logger(true, handlername, caller, "WARN", "Icon is valid")
-			end if
-			my logger(true, handlername, caller, "INFO", "Created new icon: " & quoted form of temp_path & ", type: " & temp_path_type)
-		end if
-	on error errmsg
-		my logger(true, handlername, caller, "WARN", "General Error, " & errmsg)
-	end try
-	-- Return alias to the image file
-	return POSIX file temp_path
-end curl2icon
-
-
 on showid2PID(caller, show_id, kill_pid, logging)
 	set handlername to "showid2PID"
 	set showid2PID_result to false
@@ -3082,7 +3020,7 @@ on tuner_dump(caller)
 end tuner_dump
 
 on epoch2show_time(caller, epoch)
-	set handlername to "epoch2datetime"
+	set handlername to "epoch2show_time"
 	return epoch2show_time(caller, epoch) of LibScript
 end epoch2show_time
 
@@ -3116,10 +3054,10 @@ on replace_chars(thestring, target, replacement)
 	return replace_chars(thestring, target, replacement) of LibScript
 end replace_chars
 
-on fixdate(caller, theDate)
+on fixDate(caller, theDate)
 	set handlername to "fixDate"
-	return fixdate(my cm(handlername, caller), theDate) of LibScript
-end fixdate
+	return fixDate(my cm(handlername, caller), theDate) of LibScript
+end fixDate
 
 on stringToUtf8(caller, thestring)
 	set handlername to "stringToUtf8"
@@ -3167,7 +3105,7 @@ on getTfromN(this_number)
 end getTfromN
 
 on HDHRShowSearch(caller, the_show_id)
-	set handlername to "getTfromN"
+	set handlername to "HDHRShowSearch"
 	return HDHRShowSearch(caller, the_show_id) of LibScript
 end HDHRShowSearch
 
@@ -3195,6 +3133,11 @@ on show_name_fix(caller, show_id, show_object)
 	set handlername to "show_name_fix"
 	return show_name_fix(my cm(handlername, caller), show_id, show_object) of LibScript
 end show_name_fix
+
+on curl2icon(caller, thelink)
+	set handlername to "curl2icon"
+	return curl2icon(my cm(handlername, caller), thelink) of LibScript
+end curl2icon
 
 on logger(logtofile, the_handler, caller, loglevel, message)
 	set handlername to "logger"
@@ -3467,32 +3410,8 @@ on idle_change(caller, loop_delay, loop_delay_sec)
 	end if
 end idle_change
 
-----NOT IN USE------
-on checkfileexists2(caller, filepath)
-	set handlername to "checkfileexists"
-	--try
-	my logger(true, handlername, caller, "DEBUG", filepath as text)
-	
-	-- Defensive POSIX conversion
-	if class of filepath is not alias then
-		try
-			set filepath to POSIX file (filepath as text)
-			my logger(true, handlername, caller, "DEBUG", "Converted to POSIX file")
-		on error err2
-			my logger(true, handlername, caller, "ERROR", "Failed to convert filepath: " & err2)
-			return false
-		end try
-	end if
-	
-	tell application "System Events" to return (exists disk item filepath)
-	
-	--on error errmsg
-	--	my logger(true, handlername, caller, "ERROR", "System Events reported: " & errmsg)
-	--	return false
-	--end try
-end checkfileexists2
 (*
-
+----NOT IN USE------
 on check_after_midnight2(caller)
 	set handlername to "check_after_midnight"
 	set temp_time to day of (current date) 

@@ -15,7 +15,7 @@ end cm
 on load_hdhrVCR_vars()
 	set handlername to "load_hdhrVCR_vars_lib"
 	-- We need to receive states from the hdhr_vcr here
-	set vers_lib to "20251203"
+	set vers_lib to "20260103"
 	return vers_lib
 end load_hdhrVCR_vars
 
@@ -1176,6 +1176,68 @@ on cleanFolder(caller, folderLoc, time_offset, ext_remove)
 end cleanFolder
 
 
+on curl2icon(caller, thelink)
+	set handlername to "curl2icon_lib"
+	logger(true, handlername, caller, "INFO", thelink) of ParentScript
+	-- Return default if link is missing or empty
+	if thelink is in {"", {}, missing value} then
+		logger(true, handlername, caller, "WARN", "Passed link is invalid") of ParentScript
+		return caution
+	end if
+	-- Derive filename from URL
+	logger(true, handlername, caller, "INFO", "2") of ParentScript
+	try
+		set savename to last item of my stringlistflip(my cm(handlername, caller), thelink, "/", "list")
+	on error errmsg
+		logger(true, handlername, caller, "WARN", "Unable to pull image, providing default image") of ParentScript
+		logger(true, handlername, caller, "WARN", "err: " & errmsg) of ParentScript
+		return caution
+	end try
+	try
+		set temp_path to (Base_icon_path of ParentScript) & savename as text
+		logger(true, handlername, caller, "WARN", temp_path) of ParentScript
+	on error errmsg
+		logger(true, handlername, caller, "WARN", "Base path invalid, err " & thelink) of ParentScript
+	end try
+	-- If cached, update timestamp
+	try
+		if checkfileexists(my cm(handlername, caller), temp_path) of ParentScript then
+			logger(true, handlername, caller, "DEBUG", "File exists: " & savename) of ParentScript
+			try
+				do shell script "touch " & quoted form of temp_path
+			on error errmsg
+				logger(true, handlername, caller, "WARN", "Unable to update date modified of " & savename) of ParentScript
+				logger(true, handlername, caller, "WARN", "err: " & errmsg) of ParentScript
+			end try
+		else
+			-- Download with HTTP error checking
+			
+			set temp_curl to "curl --fail --connect-timeout 10 --silent -H 'appname:" & name of me & "' " & quoted form of thelink & " -o " & quoted form of temp_path
+			try
+				do shell script temp_curl
+				logger(true, handlername, caller, "WARN", temp_curl) of ParentScript
+			on error errmsg
+				logger(true, handlername, caller, "ERROR", "curl failed for " & quoted form of thelink) of ParentScript
+				logger(true, handlername, caller, "ERROR", "err: " & errmsg) of ParentScript
+				return caution
+			end try
+			-- Verify it's an image
+			set temp_path_type to do shell script "file -Ib " & quoted form of temp_path
+			if temp_path_type does not contain "image" then
+				logger(true, handlername, caller, "WARN", "Icon is not an image (" & temp_path_type & "), defaulting to alert icon") of ParentScript
+				do shell script "rm " & quoted form of temp_path
+				return caution
+			else
+				logger(true, handlername, caller, "WARN", "Icon is valid") of ParentScript
+			end if
+			logger(true, handlername, caller, "INFO", "Created new icon: " & quoted form of temp_path & ", type: " & temp_path_type) of ParentScript
+		end if
+	on error errmsg
+		logger(true, handlername, caller, "WARN", "General Error, " & errmsg) of ParentScript
+	end try
+	-- Return alias to the image file
+	return POSIX file temp_path
+end curl2icon
 
 ----NOT IN USE------
 (*
@@ -1270,30 +1332,6 @@ on nextday2(caller, the_show_id)
 	end if
 	return nextup
 end nextday2
-
-on showSeek(caller, start_time, end_time, chan, hdhr_device)
-	set handlername to "showSeek_lib"
-	set Show_info to Show_info of ParentScript
-	set temp_showids to {}
-	try
-		repeat with i from 1 to length of Show_info
-			if show_active of item i of Show_info is true then
-				if hdhr_device is hdhr_record of item i of Show_info then
-					if chan is show_channel of item i of Show_info or chan is "" then
-						if start_time is show_next of item i of Show_info or start_time is "" then
-							if end_time is show_end of item i of Show_info or end_time is "" then
-								set end of temp_showids to show_id of item i of Show_info
-							end if
-						end if
-					end if
-				end if
-			end if
-		end repeat
-		return temp_showids
-	on error
-		return false
-	end try
-end showSeek
 
 on enums2icons(caller, enumarray)
 	set handlername to "statusEnums"
