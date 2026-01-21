@@ -56,7 +56,7 @@ use application "JSON Helper"
 
 ##########    This sets up the script.  If we fail here, the script will cease loading    ##########
 on setup_lib(caller)
-	set handlername to "setuplib"
+	set handlername to "setup_lib"
 	try
 		
 		set loaded_script_path to (path to documents folder as text) & "hdhr_VCR_lib.scpt"
@@ -79,6 +79,7 @@ on setup_lib(caller)
 end setup_lib
 
 on setup_icons(caller)
+	set handlername to "setup_icons"
 	set Base_icon_path to POSIX path of (path to home folder) & "Library/Caches/hdhr_VCR/" as text
 	try
 		set Icon_record to {Warning_icon:character id {9888, 65039}, Play_icon:character id 9654, Record_icon:character id 128308, Recordsoon_icon:character id 11093, Tv_icon:character id 128250, Plus_icon:character id 10133, Single_icon:character id {49, 65039, 8419}, Series_icon:character id 128257, Series1_icon:character id 128258, Edit_icon:character id {9999, 65039}, Soon_icon:character id 128284, Disk_icon:character id 128190, Update_icon:character id 8682, Stop_icon:character id 9726, Up_icon:character id 128316, Up1_icon:character id 128314, Up2_icon:character id 9195, Check_icon:character id 9989, Uncheck_icon:character id 10060, Futureshow_icon:character id {9197, 65039}, Calendar_icon:character id 128197, Calendar2_icon:character id 128198, Hourglass_icon:character id 9203, Film_icon:character id 127910, Back_icon:character id 8592, Done_icon:character id 9989, Running_icon:character id {127939, 8205, 9794, 65039}, Add_icon:character id 127381, Series3_icon:character id 128256, Star_icon:character id 9733, Eject_icon:character id 9167}
@@ -235,12 +236,12 @@ on run {}
 		my check_version(cmi)
 		if Online_detected is true then
 			my logger(true, handlername, caller, "WARN", "GuideHours: " & GuideHours)
-			my logger(true, handlername, caller, "INFO", "AreWeOnline: " & my AreWeOnline(cmi))
+			--my logger(true, handlername, caller, "INFO", "AreWeOnline: " & my AreWeOnline(cmi))
 			my HDHRDeviceDiscovery(cmi, "")
 		else
 			my logger(true, handlername, caller, "ERROR", "online_detected is " & Online_detected)
 		end if
-		--my logger(true, handlername, caller, "INFO", "AreWeOnline: " & my AreWeOnline(cmi))
+		my logger(true, handlername, caller, "INFO", "AreWeOnline: " & my AreWeOnline(cmi))
 		--Prompts for permission for removable media
 		my showPathVerify(cmi, "")
 		--my show_info_dump(my cm(handlername, caller), "", false)
@@ -705,7 +706,7 @@ on tuner_overview(caller)
 end tuner_overview
 
 on tuner_ready_time(caller, hdhr_model)
-	set handlername to "tuner_end"
+	set handlername to "tuner_ready_time"
 	set temp to {}
 	set lowest_number to 99999999
 	copy (current date) to cd
@@ -780,7 +781,7 @@ on tuner_inuse(caller, device_id)
 end tuner_inuse
 
 on tuner_status(caller, device_id)
-	set handlername to "tuner_staus"
+	set handlername to "tuner_status"
 	set tuneractive to 0
 	set tuner_offset to my HDHRDeviceSearch(my cm(handlername, caller), device_id)
 	if tuner_offset is 0 then
@@ -914,39 +915,42 @@ on get_show_state(caller, hdhr_tuner, channelcheck, start_time, end_time)
 	repeat with i from 1 to length of Show_info
 		set show_record_id to show_id of item i of Show_info
 		--  if hdhr_tuner is hdhr_record of item i of Show_info and show_active of item i of Show_info is true and channelcheck is show_channel of item i of Show_info then
-		if hdhr_tuner is hdhr_record of item i of Show_info and channelcheck is show_channel of item i of Show_info then
-			my logger(true, handlername, caller, "TRACE", "show_start: " & class of (show_next of item i of Show_info) & ", start_time: " & class of (start_time))
-			
-			if show_recording of item i of Show_info is true then
-				if cd is greater than or equal to start_time and cd is less than or equal to end_time then
-					my logger(true, handlername & i, caller, "INFO", "Marked as recording: " & show_title of item i of Show_info)
-					my logger(true, handlername & i, caller, "DEBUG", "REC show_record_id: " & show_record_id & ", offset:" & i)
-					return {show_stat:"record", the_show_id:show_record_id, status_icon:Record_icon of Icon_record}
-				end if
-			else
-				try
-					if my aroundDate(my cm(handlername, caller), start_time, show_next of item i of Show_info, 120) of LibScript is true then
-						my logger(true, handlername & i, caller, "INFO", "Marked as upnext:    " & show_title of item i of Show_info & ", channel " & channelcheck)
-						my logger(true, handlername & i, caller, "DEBUG", "UPNEXT show_record_id: " & show_record_id & ", offset " & i)
-						if show_active of item i of Show_info is true then
-							if cd is greater than or equal to start_time and cd is less than or equal to end_time then
-								my logger(true, handlername & i, caller, "INFO", "Marked as NOT recording: " & show_title of item i of Show_info)
-								return {show_stat:"norecord", the_show_id:show_record_id, status_icon:Warning_icon of Icon_record}
-							else if start_time - cd is less than or equal to 1 * hours then
-								return {show_stat:"upnext0", the_show_id:show_record_id, status_icon:Film_icon of Icon_record}
+		if hdhr_tuner is hdhr_record of item i of Show_info then
+			if channelcheck is show_channel of item i of Show_info then
+				my logger(true, handlername, caller, "TRACE", "show_start: " & class of (show_next of item i of Show_info) & ", start_time: " & class of (start_time))
+				
+				if show_recording of item i of Show_info is true then
+					if cd is greater than or equal to start_time and cd is less than or equal to end_time then
+						my logger(true, handlername & i, caller, "INFO", "Marked as recording: " & show_title of item i of Show_info)
+						my logger(true, handlername & i, caller, "DEBUG", "REC show_record_id: " & show_record_id & ", offset:" & i)
+						return {show_stat:"record", the_show_id:show_record_id, status_icon:Record_icon of Icon_record}
+					end if
+				else
+					try
+						if aroundDate(my cm(handlername, caller), start_time, show_next of item i of Show_info, 120) of LibScript is true then
+							my logger(true, handlername & i, caller, "INFO", "Marked as upnext:    " & show_title of item i of Show_info & ", channel " & channelcheck)
+							my logger(true, handlername & i, caller, "DEBUG", "UPNEXT show_record_id: " & show_record_id & ", offset " & i)
+							if show_active of item i of Show_info is true then
+								if cd is greater than or equal to start_time and cd is less than or equal to end_time then
+									my logger(true, handlername & i, caller, "INFO", "Marked as NOT recording: " & show_title of item i of Show_info)
+									return {show_stat:"norecord", the_show_id:show_record_id, status_icon:Warning_icon of Icon_record}
+								else if start_time - cd is less than or equal to 1 * hours then
+									return {show_stat:"upnext0", the_show_id:show_record_id, status_icon:Film_icon of Icon_record}
+								else
+									return {show_stat:"upnext", the_show_id:show_record_id, status_icon:Up_icon of Icon_record}
+								end if
 							else
-								return {show_stat:"upnext", the_show_id:show_record_id, status_icon:Up_icon of Icon_record}
+								return {show_stat:"deact", the_show_id:show_record_id, status_icon:Uncheck_icon of Icon_record}
 							end if
 						else
-							return {show_stat:"deact", the_show_id:show_record_id, status_icon:Uncheck_icon of Icon_record}
+							--	return {show_stat:"test", the_show_id:show_record_id, status_icon:Disk_icon of Icon_record}
 						end if
-						--Fix Add here SeriesID icon for shows that match an existing seriesid recording.
-					else
-						--	return {show_stat:"test", the_show_id:show_record_id, status_icon:Disk_icon of Icon_record}
-					end if
-				on error errmsg
-					my logger(true, handlername, caller, "ERROR", "Oops, " & errmsg)
-				end try
+					on error errmsg
+						my logger(true, handlername, caller, "ERROR", "Oops, " & errmsg)
+					end try
+				end if
+			else
+				--Ohter channel
 			end if
 		end if
 	end repeat
@@ -989,7 +993,7 @@ on check_version(caller)
 end check_version
 
 on check_version_dialog(caller)
-	set handlername to "check_version_display"
+	set handlername to "check_version_dialog"
 	--This handler compares the current version, and the current remote version, and sets a string to show the status
 	if Version_remote is greater than Version_local then
 		set temp to Version_local & " " & Update_icon of Icon_record & " " & Version_remote
@@ -1143,7 +1147,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 		end repeat
 	else
 		set i to my HDHRShowSearch(my cm(handlername, caller), show_to_check)
-		my logger(true, handlername, caller, "TRACE", "Running validate on " & show_title of item i of Show_info & ", should_edit: " & should_edit)
+		my logger(true, handlername, caller, "TRACE", "Running validate on " & quote & show_title of item i of Show_info & quote & ", should_edit: " & should_edit)
 		if should_edit is true then
 			if show_active of item i of Show_info is true then
 				if (show_fail_count of item i of Show_info) is greater than or equal to Fail_count then
@@ -2764,14 +2768,14 @@ end showPathVerify
 
 on checkfileexists(caller, filepath)
 	set handlername to "checkfileexists"
-	log filepath
 	try
-		my logger(true, handlername, caller, "DEBUG", filepath as text)
+		my logger(true, handlername, caller, "INFO", filepath as text)
+		my logger(true, handlername, caller, "INFO", "filepath class is " & class of filepath)
 		
-		if class of filepath is not alias then
+		if class of filepath is alias then
 			my logger(true, handlername, caller, "INFO", "filepath class is " & class of filepath)
-			set filepath to POSIX file (filepath as text)
-			my logger(true, handlername, caller, "DEBUG", "filepath is now alias via POSIX file")
+			set filepath to POSIX file (filepath)
+			my logger(true, handlername, caller, "INFO", "filepath is now alias via POSIX file")
 		end if
 		
 		tell application "System Events"
@@ -3139,6 +3143,8 @@ on curl2icon(caller, thelink)
 	return curl2icon(my cm(handlername, caller), thelink) of LibScript
 end curl2icon
 
+######    EDD LIB GLUE
+
 on logger(logtofile, the_handler, caller, loglevel, message)
 	set handlername to "logger"
 	set caller to (caller) as text
@@ -3364,19 +3370,19 @@ on seriesScanUpdate(caller, show_id)
 							my logger(true, handlername, caller, "INFO", "The show, " & show_title of item show_offset of Show_info & ", was updated")
 							--	my idle_change(my cm(handlername, caller), 1, 2)
 						else
-							--	my logger(true, handlername, caller, "INFO", "This show is a dupe")
+							--	my logger(true, handlername, caller, "INFO", "This show is a dupe") 
 						end if
 					else
 						my logger(true, handlername, caller, "WARN", "The show, " & show_title of item show_offset of Show_info & " was not updated, as it was recording")
 					end if
 				end if
 			else
-				my logger(true, handlername, caller, "INFO", "There are no upcoming shows for " & show_title of item show_offset of Show_info)
+				my logger(true, handlername, caller, "INFO", "There are no upcoming shows for " & quote & show_title of item show_offset of Show_info & quote)
 				--set show_time of item show_offset of Show_info to ((show_time of item show_offset of Show_info) + 2 * hours)
 				set show_next of item show_offset of Show_info to ((show_next of item show_offset of Show_info) + 4 * hours)
 			end if
 		else
-			my logger(true, handlername, caller, "DEBUG", "The show, " & show_title of item show_offset of Show_info & " is not tracked by SeriesID")
+			my logger(true, handlername, caller, "DEBUG", "The show, " & quote & show_title of item show_offset of Show_info & quote & " is not tracked by SeriesID")
 		end if
 	end if
 end seriesScanUpdate

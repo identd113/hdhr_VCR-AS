@@ -255,10 +255,10 @@ on ms2time(caller, totalMS, time_duration, level_precision)
 		end if
 		if length of temp_time_string is not 0 then
 			logger(true, handlername, caller, "TRACE", "Result: " & temp_time_string) of ParentScript
-			return my stringlistflip("ms2time(" & caller & ")", temp_time_string, " ", "string")
+			return my stringlistflip(my cm(handlername, caller), temp_time_string, " ", "string")
 		else
 			logger(true, handlername, caller, "TRACE", "Result: 0ms") of ParentScript
-			return my stringlistflip("ms2time(" & caller & ")", "0ms", " ", "string")
+			return my stringlistflip(my cm(handlername, caller), "0ms", " ", "string")
 		end if
 	on error errmsg
 		return {handlername, errmsg}
@@ -309,12 +309,11 @@ on short_date(caller, the_date_object, twentyfourtime, show_seconds)
 		set theHour to hours of the_date_object
 		set theMinute to minutes of the_date_object
 		set theSecond to seconds of the_date_object
-		
 		-- Pad using padnum
-		set month_string to my padnum("short_date(" & caller & ")", theMonth, false)
-		set day_string to my padnum("short_date(" & caller & ")", theDay, false)
-		set minutes_string to my padnum("short_date(" & caller & ")", theMinute, false)
-		set seconds_string to my padnum("short_date(" & caller & ")", theSecond, false)
+		set month_string to my padnum(my cm(handlername, caller), theMonth, false)
+		set day_string to my padnum(my cm(handlername, caller), theDay, false)
+		set minutes_string to my padnum(my cm(handlername, caller), theMinute, false)
+		set seconds_string to my padnum(my cm(handlername, caller), theSecond, false)
 		
 		-- Hours handling
 		if twentyfourtime is false then
@@ -333,7 +332,7 @@ on short_date(caller, the_date_object, twentyfourtime, show_seconds)
 			set hours_string to (theHour as text)
 		else
 			-- 24-hour mode: pad to 2 digits
-			set hours_string to my padnum("short_date(" & caller & ")", theHour, false)
+			set hours_string to my padnum(my cm(handlername, caller), theHour, false)
 		end if
 		
 		if locale is "en_US" then
@@ -354,82 +353,6 @@ on short_date(caller, the_date_object, twentyfourtime, show_seconds)
 		return {handlername, errmsg}
 	end try
 end short_date
-
-on short_date2(caller, the_date_object, twentyfourtime, show_seconds)
-	set handlername to "short_date_lib"
-	try
-		set locale to locale of ParentScript
-		set timeAMPM to ""
-		--takes date object, and coverts to a shorter time string
-		if the_date_object is not "?" then
-			if the_date_object is not "" then
-				set year_string to (items -2 thru end of (year of the_date_object as text))
-				
-				if ((month of the_date_object) * 1) is less than 10 then
-					set month_string to ("0" & ((month of the_date_object) * 1)) as text
-				else
-					set month_string to ((month of the_date_object) * 1) as text
-				end if
-				
-				if day of the_date_object is less than 10 then
-					set day_string to ("0" & day of the_date_object) as text
-				else
-					set day_string to (day of the_date_object) as text
-				end if
-				
-				if minutes of the_date_object is less than 10 then
-					set minutes_string to "0" & minutes of the_date_object
-				else
-					set minutes_string to (minutes of the_date_object) as text
-				end if
-				
-				if hours of the_date_object is less than 10 then
-					set hours_string to "0" & hours of the_date_object
-				else
-					set hours_string to (hours of the_date_object) as text
-				end if
-				if twentyfourtime is false then
-					if hours_string is greater than or equal to 12 then
-						set timeAMPM to " PM"
-						if hours_string is greater than 12 then
-							set hours_string to (hours_string - 12)
-							if hours_string is 0 then
-								set hours_string to "12"
-							end if
-						end if
-					else
-						set hours_string to my padnum("short_date(" & caller & ")", hours_string, false)
-						set timeAMPM to " AM"
-					end if
-				end if
-				if seconds of the_date_object is less than 10 then
-					set seconds_string to "0" & seconds of the_date_object
-				else
-					set seconds_string to (seconds of the_date_object) as text
-				end if
-				if locale is "en_US" then
-					if show_seconds is true then
-						return (month_string & "." & day_string & "." & year_string & " " & hours_string & "." & minutes_string & "." & seconds_string & timeAMPM) as text
-					else
-						return (month_string & "." & day_string & "." & year_string & " " & hours_string & "." & minutes_string & timeAMPM) as text
-					end if
-				else
-					if show_seconds is true then
-						return (year_string & "/" & month_string & "/" & day_string & " " & hours_string & "." & minutes_string & "." & seconds_string & timeAMPM) as text
-					else
-						return (year_string & "/" & month_string & "/" & day_string & " " & hours_string & "." & minutes_string & timeAMPM) as text
-					end if
-				end if
-			else
-				return ""
-			end if
-		else
-			return "?"
-		end if
-	on error errmsg
-		return {handlername, errmsg}
-	end try
-end short_date2
 
 on padnum(caller, thenum, splitdot)
 	set handlername to "padnum_lib"
@@ -564,7 +487,7 @@ on tuner_dump(caller)
 				set end of tuner_dump_per_item to ("statusURL: " & (statusURL of item i of HDHR_DEVICE_LIST))
 				set end of tuner_dump_per_item to ("channel_mapping: " & (channel_mapping of item i of HDHR_DEVICE_LIST))
 				set end of tuner_dump_per_item to ("hdhr_model: " & (hdhr_model of item i of HDHR_DEVICE_LIST))
-				set temp to my stringlistflip("tuner_dump(" & caller & ")", tuner_dump_per_item, ", ", "string")
+				set temp to my stringlistflip(my cm(handlername, caller), tuner_dump_per_item, ", ", "string")
 				logger(true, handlername, caller, "INFO", temp) of ParentScript
 			on error errmsg
 				logger(true, handlername, caller, "WARN", errmsg) of ParentScript
@@ -1161,7 +1084,6 @@ on curl2icon(caller, thelink)
 		return caution
 	end if
 	-- Derive filename from URL
-	logger(true, handlername, caller, "INFO", "2") of ParentScript
 	try
 		set savename to last item of my stringlistflip(my cm(handlername, caller), thelink, "/", "list")
 	on error errmsg
@@ -1171,15 +1093,17 @@ on curl2icon(caller, thelink)
 	end try
 	try
 		set temp_path to (Base_icon_path of ParentScript) & savename as text
-		logger(true, handlername, caller, "WARN", temp_path) of ParentScript
+		logger(true, handlername, caller, "DEBUG", "temp_path: " & temp_path) of ParentScript
 	on error errmsg
 		logger(true, handlername, caller, "WARN", "Base path invalid, err " & thelink) of ParentScript
 	end try
 	-- If cached, update timestamp
 	try
-		if checkfileexists(my cm(handlername, caller), temp_path) of ParentScript then
-			logger(true, handlername, caller, "DEBUG", "File exists: " & savename) of ParentScript
+		logger(true, handlername, caller, "DEBUG", "Cache check") of ParentScript
+		if checkfileexists(my cm(handlername, caller), temp_path) of ParentScript is true then
+			logger(true, handlername, caller, "INFO", "File exists: " & savename) of ParentScript
 			try
+				logger(true, handlername, caller, "DEBUG", "Quoted Form: " & quoted form of temp_path) of ParentScript
 				do shell script "touch " & quoted form of temp_path
 			on error errmsg
 				logger(true, handlername, caller, "WARN", "Unable to update date modified of " & savename) of ParentScript
@@ -1204,7 +1128,7 @@ on curl2icon(caller, thelink)
 				do shell script "rm " & quoted form of temp_path
 				return caution
 			else
-				logger(true, handlername, caller, "WARN", "Icon is valid") of ParentScript
+				logger(true, handlername, caller, "WARN", "Icon is valid image") of ParentScript
 			end if
 			logger(true, handlername, caller, "INFO", "Created new icon: " & quoted form of temp_path & ", type: " & temp_path_type) of ParentScript
 		end if
