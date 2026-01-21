@@ -1,6 +1,12 @@
 Handler Reference
 =================
 
+Maintenance
+-----------
+Update this reference whenever handlers are added, removed, or modified in
+`hdhr_VCR.applescript` or `hdhr_VCR_lib.applescript` so the inputs/returns stay
+accurate.
+
 Overview
 --------
 The hdhr_VCR project packages two collaborating AppleScript files that turn an HDHomeRun tuner into a lightweight DVR. The
@@ -201,4 +207,3 @@ The `logger` handler is implemented locally to keep log writes within the applic
 | `isSystemShutdown` | `caller` | `boolean` or `{…}` | Detects whether macOS is in the middle of shutting down. |
 | `corrupt_showinfo` | `caller` | `missing value` | Logging hook that fires when saved show data looks corrupted. |
 | `isModifierKeyPressed` | `caller`, `checkKey`, `desc` | `record` or `{…}` | Reports modifier key state for UI shortcuts. |
-
