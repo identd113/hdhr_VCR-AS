@@ -15,10 +15,6 @@ This repository contains the AppleScript sources and assets for the hdhr_VCR sma
 
 ## Coding Standards
 - Follow the AppleScript conventions captured in `docs/APPLE_SCRIPT_STYLE.md` for any `.applescript` edits.
-- Reuse shared handlers instead of duplicating logic; most string and list helpers already live in `hdhr_VCR_lib.applescript`.
-- Preserve the existing logging pattern so log parsing tools stay compatible.
-- When one handler calls another within the same script, prefix it with `my`; when calling across scripts, use `of ParentScript`
-  or `of LibScript` as appropriate.
 
 ## Testing Expectations
 - There are no automated tests. Perform the macOS smoke tests described in `docs/TESTING.md` when the behavior of recordings, notifications, or device discovery changes.
