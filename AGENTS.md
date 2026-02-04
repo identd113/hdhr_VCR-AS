@@ -6,7 +6,7 @@ This repository contains the AppleScript sources and assets for the hdhr_VCR sma
 - Keep `hdhr_VCR.applescript` and `hdhr_VCR_lib.applescript` in the project root; downstream users expect these exact filenames when exporting the app bundle.
 - When you introduce a user-facing change, update `README.md` to reflect the new workflow or capability.
 - If you bump the in-script `Version_local` or library version, add a matching entry to `version.json` (newest release at the top of the list).
-- Use YYMMDD for version naming (for example, `250919`) across `version.json` and
+- Use YYYYMMDD for version naming (for example, `20250919`) across `version.json` and
   `CHANGELOG.md`.
 - Screenshots in this repo document the UI flow. If the UI changes meaningfully,
   refresh the corresponding PNG and keep resolution/aspect consistent with the
