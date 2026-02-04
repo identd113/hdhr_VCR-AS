@@ -110,6 +110,7 @@ end sync_config
 on setup_script(caller)
 	set handlername to "setup_script"
 	try
+		set cache_me to (name of me)
 		set Local_env to (name of current application)
 		set Version_local to "20260115"
 		set Config_version to 1
@@ -118,12 +119,12 @@ on setup_script(caller)
 		set Locale to user locale of temp_info
 		set Hostname to host name of temp_info
 		set Hdhr_setup_folder to "Volumes:"
-		set Configfilename_json to ((name of me) & "-" & Hostname & ".json") as text
-		set Logfilename to (name of me) & ".log" as text
+		set Configfilename_json to (cache_me & "-" & Hostname & ".json") as text
+		set Logfilename to cache_me & ".log" as text
 		set Version_url to "https://raw.githubusercontent.com/identd113/hdhr_VCR-AS/master/version.json"
 		set Version_remote to "0"
 		set Config_dir to path to documents folder
-		do shell script "mkdir -p ~/Library/Caches/" & (name of me) & "/"
+		do shell script "mkdir -p ~/Library/Caches/" & cache_me & "/"
 		copy (current date) to Idle_timer_dateobj
 		set Debugger_apps to {"Script Editor", "Script Debugger", "Smile"}
 	on error errmsg
@@ -1107,7 +1108,7 @@ on nextday(caller, the_show_id)
 	try
 		-- record_check_pre is 1 week before nextup
 		set record_check_pre to ((nextup) - 1 * weeks)
-		-- record_check_post is that pre-date plus the showÕs length
+		-- record_check_post is that pre-date plus the showÃ•s length
 		set record_check_post to (record_check_pre) + ((show_length of item show_offset of Show_info) * minutes)
 		-- If the current time (cd_object) is in that window, log and set show_next
 		
@@ -1123,12 +1124,12 @@ on nextday(caller, the_show_id)
 	
 	if show_end of item show_offset of Show_info is not nextup + ((show_length of item show_offset of Show_info) * minutes) then
 		set show_end of item show_offset of Show_info to nextup + ((show_length of item show_offset of Show_info) * minutes)
-		my logger(true, handlername, caller, "INFO", Â
+		my logger(true, handlername, caller, "INFO", Ã‚
 			"Show end of " & quote & show_title of item show_offset of Show_info & quote & " set to: " & my fixDate(my cm(handlername, caller), (nextup + ((show_length of item show_offset of Show_info) * minutes))))
-		my logger(true, handlername, caller, "DEBUG", Â
+		my logger(true, handlername, caller, "DEBUG", Ã‚
 			"WORK Show end class: " & class of (show_end of item show_offset of Show_info))
 	else
-		my logger(true, handlername, caller, "INFO", Â
+		my logger(true, handlername, caller, "INFO", Ã‚
 			"MATCHED Show end of " & quote & show_title of item show_offset of Show_info & quote & " set to: " & (nextup + ((show_length of item show_offset of Show_info) * minutes)))
 	end if
 	
@@ -1260,7 +1261,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 					
 					set default_selection to item (my list_position(my cm(handlername, caller), show_channel of item i of Show_info, channel_mapping of item tuner_offset of HDHR_DEVICE_LIST, false)) of channel_mapping of item tuner_offset of HDHR_DEVICE_LIST
 					set channel_choice to (choose from list channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with prompt "What channel does this show air on?" default items default_selection with title my check_version_dialog(my cm(handlername, caller)) cancel button name Running_icon of Icon_record & " Run" OK button name "Next.." without empty selection allowed)
-					--Fix Result: error "CanÕt get item 1 of false." number -1728 from item 1 of false
+					--Fix Result: error "CanÃ•t get item 1 of false." number -1728 from item 1 of false
 					set channel_temp to word 1 of item 1 of channel_choice
 					if channel_choice is false then
 						my logger(true, handlername, caller, "INFO", "User clicked " & quote & "Run" & quote)
@@ -3391,7 +3392,7 @@ on idle_change(caller, loop_delay, loop_delay_sec)
 	set handlername to "idle_change"
 	copy (current date) to cd
 	--	my logger(true, handlername, caller, "WARN", "Started")
-	-- only run if we havenÕt passed the end date yet
+	-- only run if we havenÃ•t passed the end date yet
 	if Idle_timer_dateobj is less than or equal to (cd) then
 		
 		-- if loop_delay is empty or a list, leave Idle_timer alone
