@@ -30,6 +30,7 @@ reference reflects the handlers that exist in the current sources and the values
 | `setup_script` | `caller` | `boolean` | Initializes environment data (paths, locale, caches); startup halts if `false`. |
 | `setup_globals` | `caller` | `boolean` | Resets global state for a fresh run; failures stop progression to runtime. |
 | `setup_logging` | `caller` | `boolean` | Establishes logging defaults and opens the log folder. |
+| `sync_config` | `caller`, `config2var` | `missing value` | Syncs configuration values between globals and the config record. |
 | `idle_change` | `caller`, `loop_delay`, `loop_delay_sec` | `missing value` | Overrides the idle delay and schedules when the override expires. |
 
 ### Native AppleScript event handlers
@@ -92,12 +93,10 @@ event entry points before returning control to the scheduler.
 | `save_data` | `caller` | `boolean` or `missing value` | Persists configuration JSON; user cancellations return `false`. |
 | `showPathVerify` | `caller`, `show_id` | `boolean` | Ensures the recording folder exists for a given show. |
 | `checkfileexists` | `caller`, `filepath` | `boolean` | Path existence check with logging. |
-| `checkfileexists2` | `caller`, `filepath` | `boolean` | Currently unused; retained as a silent existence check for legacy integrations. |
 | `read_data` | `caller` | `boolean` or `missing value` | Loads saved configuration and triggers guided setup when missing. |
 | `add_record_url` | `caller`, `the_channel`, `the_device` | `text` | Retrieves the streaming URL for a channel/device pair. |
 | `showid2PID` | `caller`, `show_id`, `kill_pid`, `logging` | `{text, list}` | Finds associated curl processes and optionally terminates them. |
 | `curl2icon` | `caller`, `thelink` | `alias` | Downloads and returns a Finder alias for channel icons. |
-| `curl2icon2` | `caller`, `thelink` | `alias` | Currently unused fallback icon fetcher kept for manual testing compatibility. |
 
 ### Status and formatting helpers
 
@@ -113,7 +112,7 @@ event entry points before returning control to the scheduler.
 These handlers exist for compatibility with older scripts. Each simply calls the identically named library handler (passing the
 same arguments) and returns whatever the library returns:
 
-`epoch2show_time`, `datetime2epoch`, `epoch2datetime`, `emptylist`, `stringlistflip`, `epoch`, `replace_chars`, `fixdate`,
+`epoch2show_time`, `datetime2epoch`, `epoch2datetime`, `emptylist`, `stringlistflip`, `epoch`, `replace_chars`, `fixDate`,
 `stringToUtf8`, `isSystemShutdown`, `repeatProgress`, `ms2time`, `list_position`, `short_date`, `padnum`, `is_number`,
 `getTfromN`, `HDHRShowSearch`, `isModifierKeyPressed`, `date2touch`, `time_set`, `update_folder`, `show_name_fix`.
 
@@ -146,7 +145,14 @@ The `logger` handler is implemented locally to keep log writes within the applic
 | `update_record_urls` | `caller`, `the_device` | `missing value` | Refreshes saved stream URLs for all shows on a device. |
 | `add_record_url` | `caller`, `the_channel`, `the_device` | `text` or `{…}` | Returns the streaming URL and error info on failure. |
 | `date2touch` | `caller`, `datetime`, `filepath` | `missing value` or `{…}` | Updates file modification times. |
-| `end_jsonhelper` | `caller` | `missing value` | Quits the JSON Helper app and allows the parent to restart it later. |
+| `cleanFolder` | `caller`, `folderLoc`, `time_offset`, `ext_remove` | `missing value` | Deletes cache files older than the time boundary for a given extension. |
+| `end_jsonhelper` | `caller`, `restart` | `missing value` | Quits the JSON Helper app and optionally reopens it. |
+
+### State management helpers
+
+| Handler | Inputs | Returns | Notes |
+| --- | --- | --- | --- |
+| `corrupt_showinfo` | `caller` | `boolean` | Clears the parent `Show_info` list when corruption is detected. |
 
 ### Text, list, and conversion utilities
 
@@ -155,6 +161,7 @@ The `logger` handler is implemented locally to keep log writes within the applic
 | `emptylist` | `caller`, `klist` | `list` or `{…}` | Removes blanks from list values. |
 | `stringlistflip` | `caller`, `thearg`, `delim`, `returned` | `list`, `text`, or `{…}` | Converts between delimited strings and lists. |
 | `replace_chars` | `thestring`, `target`, `replacement` | `text` or `{…}` | Performs character substitution without regex. |
+| `fixDate` | `caller`, `theDate` | `text` or `{…}` | Normalizes date strings by removing thin-space separators. |
 | `stringToUtf8` | `caller`, `thestring` | `text` or `{…}` | Normalises strings to UTF-8 safe values. |
 | `list_position` | `caller`, `this_item`, `this_list`, `is_strict` | `integer` or `{…}` | Returns the position of an item in a list. |
 | `padnum` | `caller`, `thenum`, `splitdot` | `text` or `{…}` | Zero pads numeric strings. |
@@ -164,9 +171,7 @@ The `logger` handler is implemented locally to keep log writes within the applic
 | `encode_strikethrough` | `caller`, `thedata`, `decimel_char` | `text` | Adds Unicode strikethrough markers to text. |
 | `convertByteSize` | `caller`, `byteSize`, `KBSize`, `decPlaces` | `text` | Formats byte counts with human-readable suffixes. |
 | `recordSee` | `caller`, `the_record` | `text` | Produces a text representation of a record for logs. |
-| `recordSee2` | `caller`, `the_record` | `text` | Variant that preserves raw error strings. |
 | `show_name_fix` | `caller`, `show_id`, `show_object` | `record` | Normalises show metadata imported from the guide. |
-| `enums2icons` | `caller`, `enumarray` | `list` or `{}` | Maps status enumeration values to emoji glyphs. |
 
 ### Date, time, and scheduling helpers
 
@@ -181,7 +186,6 @@ The `logger` handler is implemented locally to keep log writes within the applic
 | `ms2time` | `caller`, `totalMS`, `time_duration`, `level_precision` | `text` or `{…}` | Formats durations into readable strings. |
 | `short_date` | `caller`, `the_date_object`, `twentyfourtime`, `show_seconds` | `text` or `{…}` | Formats timestamps for logs and dialogs. |
 | `check_after_midnight` | `caller` | `boolean` | Detects when a new day has started to reset daily counters. |
-| `nextday2` | `caller`, `the_show_id` | `date` | Calculates the next airing for a show using schedule metadata. |
 | `aroundDate` | `caller`, `thisdate`, `thatdate`, `secOffset` | `boolean` | Tests whether two dates are within a tolerance. |
 
 ### Device, guide, and series helpers
@@ -191,19 +195,14 @@ The `logger` handler is implemented locally to keep log writes within the applic
 | `tuner_dump` | `caller` | `list` | Enumerates tuners, streaming URLs, and refresh timing. |
 | `HDHRShowSearch` | `caller`, `the_show_id` | `integer` or `0` | Finds a show index by ID. |
 | `match2showid` | `caller`, `hdhr_tuner`, `channelcheck`, `start_time`, `end_time` | `integer` | Resolves guide slots to show IDs. |
-| `showSeek` | `caller`, `start_time`, `end_time`, `chan`, `hdhr_device` | `list` or `false` | Filters `Show_info` for matching entries. |
-| `get_show_state2` | `caller`, `hdhr_tuner`, `channelcheck`, `start_time`, `end_time` | `record` | Legacy variant retained for reference. |
 | `seriesScanAdd` | `caller`, `show_id` | `missing value` | Queues show IDs for SeriesID updates. |
 | `seriesScanRun` | `caller`, `execute` | `missing value` | Processes the SeriesID refresh queue. |
-| `seriesScanList` | `caller`, `show_id`, `updateRecord` | `missing value` | Ensures SeriesID queue entries remain unique. |
-| `seriesScanRefresh` | `caller`, `show_id` | `missing value` | Bulk refresh of SeriesID-managed shows. |
 | `seriesStatusIcons` | `caller`, `show_id` | `record` | Maps show status values to icon enumerations for display. |
-| `show_icons` | `caller`, `hdhr_device`, `thechan` | `missing value` | Placeholder that demonstrates icon lookups; not used. |
+| `iconEnumPopulate` | `caller`, `show_id` | `record` | Generates status and series enums for a specific show (unused). |
 
 ### System integration
 
 | Handler | Inputs | Returns | Notes |
 | --- | --- | --- | --- |
-| `isSystemShutdown` | `caller` | `boolean` or `{…}` | Detects whether macOS is in the middle of shutting down. |
-| `corrupt_showinfo` | `caller` | `missing value` | Logging hook that fires when saved show data looks corrupted. |
+| `isSystemShutdown` | `caller` | `boolean` or `{…}` | Inspects recent log entries to detect shutdown or restart attempts. |
 | `isModifierKeyPressed` | `caller`, `checkKey`, `desc` | `record` or `{…}` | Reports modifier key state for UI shortcuts. |
