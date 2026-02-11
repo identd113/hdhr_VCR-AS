@@ -122,7 +122,7 @@ end fixDate
 
 on stringToUtf8(caller, thestring)
 	set handlername to "stringToUtf8_lib"
-	set non_utf8 to {"á", "é", "í", "ó", "ú", "Á", "É", "Í", "Ó", "Ú", "à", "è", "ì", "ò", "ù", "À", "È", "Ì", "Ò", "Ù", "â", "ê", "î", "ô", "û", "Â", "Ê", "Î", "Ô", "Û", "ä", "ë", "ï", "ö", "ü", "Ä", "Ë", "Ï", "Ö", "Ü", "ã", "ñ", "õ", "Ã", "Ñ", "Õ", "å", "Å", "ç", "Ç", "ø", "Ø", character id 8239, ":"}
+	set non_utf8 to {"‚Ä°", "≈Ω", "‚Äô", "‚Äî", "≈ì", "√ß", "∆í", "√™", "√Æ", "√≤", "ÀÜ", "¬è", "‚Äú", "Àú", "¬ù", "√ã", "√©", "√≠", "√±", "√¥", "‚Ä∞", "¬ê", "‚Äù", "‚Ñ¢", "≈æ", "√•", "√¶", "√´", "√Ø", "√≥", "≈†", "‚Äò", "‚Ä¢", "≈°", "≈∏", "‚Ç¨", "√®", "√¨", "‚Ä¶", "‚Ä†", "‚Äπ", "‚Äì", "‚Ä∫", "√å", "‚Äû", "√ç", "≈í", "¬Å", "¬ç", "‚Äö", "¬ø", "¬Ø", character id 8239, ":"}
 	set fixed_utf8 to {"a", "e", "i", "o", "u", "A", "E", "I", "O", "U", "a", "e", "i", "o", "u", "A", "E", "I", "O", "U", "a", "e", "i", "o", "u", "A", "E", "I", "O", "U", "a", "e", "i", "o", "u", "A", "E", "I", "O", "U", "a", "n", "o", "A", "N", "O", "a", "A", "c", "C", "o", "O", " ", ""}
 	set fixed_string to thestring
 	try
@@ -317,7 +317,7 @@ on short_date(caller, the_date_object, twentyfourtime, show_seconds)
 		
 		-- Hours handling
 		if twentyfourtime is false then
-			if theHour ≥ 12 then
+			if theHour ¬≥ 12 then
 				set timeAMPM to " PM"
 				if theHour > 12 then set theHour to theHour - 12
 			else
@@ -327,7 +327,7 @@ on short_date(caller, the_date_object, twentyfourtime, show_seconds)
 			-- 12-hour clock midnight/noon rules
 			if theHour is 0 then set theHour to 12
 			
-			-- In 12-hour mode you typically *don’t* want a leading zero,
+			-- In 12-hour mode you typically *don√ït* want a leading zero,
 			-- but if you DO want it, swap the next line for padnum(...)
 			set hours_string to (theHour as text)
 		else
@@ -649,74 +649,6 @@ on date2touch(caller, datetime, filepath)
 end date2touch
 
 on time_set(caller, adate_object, time_shift)
-	## It returns the resulting date/time object. This is a convenient way to say, “I want this date, at that time of day.”
-	set handlername to "time_set"
-	if class of adate_object is not date then
-		logger(true, handlername, caller, "ERROR", (adate_object as text) & " is not a date object!") of ParentScript
-	end if
-	set dateobject to adate_object
-	--set to midnight
-	set hours of dateobject to 0
-	set minutes of dateobject to 0
-	set seconds of dateobject to 0
-	set dateobject to dateobject + (time_shift * hours)
-	return dateobject
-end time_set
-
-on corrupt_showinfo(caller)
-	set handlername to "corrupt_showinfo"
-	try
-		set Show_info of ParentScript to {}
-		return true
-	on error
-		return false
-	end try
-end corrupt_showinfo
-
-on iconEnumPopulate(caller, show_id) --NOT USED
-	--Takes a show_id and adds enums to show_status_icons
-	set handlername to "iconEnumPopulate"
-	set status_enums to {} --includes upnext, upnext2, film, recording, inactive, warning
-	set series_enums to {}
-	logger(true, handlername, caller, "INFO", "show_id1: " & show_id) of ParentScript
-	copy (current date) to cd
-	repeat with i from 1 to length of Show_info
-		--Series status
-		logger(true, handlername, caller, "INFO", "show_id2: " & show_id) of ParentScript
-		if show_is_series of item i of Show_info is true then
-			if length of show_air_date of item i of Show_info is greater than 1 then
-				set series_enums to 8
-			else
-				set series_enums to 9
-			end if
-		else
-			set series_enums to 7
-		end if
-		--status
-		if show_id is show_id of item i of Show_info then
-			set channelcheck to show_channel of item i of Show_info
-			set sec_to_show to ((show_next of item i of Show_info) - (cd))
-			if show_recorded_today of item i of Show_info is true then
-				set status_enums to 18
-				--fixmeme
-			else
-				if sec_to_show is less than 4 * hours then -- and show_recording of item i of Show_info is false then
-					if sec_to_show is less than 0 then
-						if show_record of item i of Show_info is true then
-							set status_enums to 3
-							logger(true, handlername, caller, "TRACE", channelcheck & " marked as Record_icon in channel list") of ParentScript
-						else
-							--fixme
-							set status_enums to 1
-							logger(true, handlername, caller, "TRACE", channelcheck & " marked as Warning_icon in channel list") of ParentScript
-						end if
-					end if
-					if sec_to_show is less than 1 * hours and sec_to_show is greater than 0 then
-						set status_enums to 24
-						logger(true, handlername, caller, "TRACE", channelcheck & " marked as Film_icon in channel list") of ParentScript
-					end if
-					
-					if sec_to_show is greater than 1 * hours and sec_to_show is less than 4 * hours then
 						set status_enums to 15
 						logger(true, handlername, caller, "TRACE", channelcheck & " marked as Up_icon in channel list") of ParentScript
 					end if
@@ -976,7 +908,7 @@ on recordSee(caller, the_record)
 	try
 		set the_record to the_record as text
 	on error errmsg
-		set parsed_errmsg to item 2 of my stringlistflip(handlername, errmsg, {"Can’t make ", " into"}, "list")
+		set parsed_errmsg to item 2 of my stringlistflip(handlername, errmsg, {"Can√ït make ", " into"}, "list")
 		return parsed_errmsg
 	end try
 end recordSee
@@ -1141,6 +1073,76 @@ end curl2icon
 
 ----NOT IN USE------
 (*
+
+-- retired handler kept for reference
+on iconEnumPopulate(caller, show_id) --NOT USED
+	--Takes a show_id and adds enums to show_status_icons
+	set handlername to "iconEnumPopulate"
+	set status_enums to {} --includes upnext, upnext2, film, recording, inactive, warning
+	set series_enums to {}
+	logger(true, handlername, caller, "INFO", "show_id1: " & show_id) of ParentScript
+	copy (current date) to cd
+	repeat with i from 1 to length of Show_info
+		--Series status
+		logger(true, handlername, caller, "INFO", "show_id2: " & show_id) of ParentScript
+		if show_is_series of item i of Show_info is true then
+			if length of show_air_date of item i of Show_info is greater than 1 then
+				set series_enums to 8
+			else
+				set series_enums to 9
+			end if
+		else
+			set series_enums to 7
+		end if
+		--status
+		if show_id is show_id of item i of Show_info then
+			set channelcheck to show_channel of item i of Show_info
+			set sec_to_show to ((show_next of item i of Show_info) - (cd))
+			if show_recorded_today of item i of Show_info is true then
+				set status_enums to 18
+				--fixmeme
+			else
+				if sec_to_show is less than 4 * hours then -- and show_recording of item i of Show_info is false then
+					if sec_to_show is less than 0 then
+						if show_record of item i of Show_info is true then
+							set status_enums to 3
+							logger(true, handlername, caller, "TRACE", channelcheck & " marked as Record_icon in channel list") of ParentScript
+						else
+							--fixme
+							set status_enums to 1
+							logger(true, handlername, caller, "TRACE", channelcheck & " marked as Warning_icon in channel list") of ParentScript
+						end if
+					end if
+					if sec_to_show is less than 1 * hours and sec_to_show is greater than 0 then
+						set status_enums to 24
+						logger(true, handlername, caller, "TRACE", channelcheck & " marked as Film_icon in channel list") of ParentScript
+					end if
+					
+					if sec_to_show is greater than 1 * hours and sec_to_show is less than 4 * hours then
+						set status_enums to 15
+						logger(true, handlername, caller, "TRACE", channelcheck & " marked as Up_icon in channel list") of ParentScript
+					end if
+				else
+					if (date (date string of (cd))) is (date (date string of (show_next of item i of Show_info))) then
+						set status_enums to 17
+						logger(true, handlername, caller, "TRACE", channelcheck & " marked as upnext3 in channel list") of ParentScript
+					end if
+					if (date (date string of (cd))) is less than (date (date string of (show_next of item i of Show_info))) and (show_recorded_today of item i of Show_info) is false then
+						set status_enums to 20
+						--set temp_show_line to Futureshow_icon of Icon_record & temp_show_line
+					end if
+				end if
+			end if
+			if show_active of item i of Show_info is false then
+				set status_enums to 19
+				--19: Uncheck_icon  
+			end if
+			
+		end if
+	end repeat
+	logger(true, handlername, caller, "INFO", "End of handler") of ParentScript
+	return {series_enums, status_enums}
+end iconEnumPopulate
 
 on showSeek(caller, start_time, end_time, chan, hdhr_device)
 	set handlername to "showSeek_lib"

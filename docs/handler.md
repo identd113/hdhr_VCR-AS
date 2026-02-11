@@ -198,7 +198,6 @@ The `logger` handler is implemented locally to keep log writes within the applic
 | `seriesScanAdd` | `caller`, `show_id` | `missing value` | Queues show IDs for SeriesID updates. |
 | `seriesScanRun` | `caller`, `execute` | `missing value` | Processes the SeriesID refresh queue. |
 | `seriesStatusIcons` | `caller`, `show_id` | `record` | Maps show status values to icon enumerations for display. |
-| `iconEnumPopulate` | `caller`, `show_id` | `record` | Generates status and series enums for a specific show (unused). |
 
 ### System integration
 
