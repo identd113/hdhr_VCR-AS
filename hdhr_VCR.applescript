@@ -2771,12 +2771,12 @@ on checkfileexists(caller, filepath)
 	set handlername to "checkfileexists"
 	try
 		my logger(true, handlername, caller, "INFO", filepath as text)
-		my logger(true, handlername, caller, "INFO", "filepath class is " & class of filepath)
+		my logger(true, handlername, caller, "DEBUG", "filepath class is " & class of filepath)
 		
 		if class of filepath is alias then
 			my logger(true, handlername, caller, "INFO", "filepath class is " & class of filepath)
 			set filepath to POSIX file (filepath)
-			my logger(true, handlername, caller, "INFO", "filepath is now alias via POSIX file")
+			my logger(true, handlername, caller, "INFO", "filepath is now: " & filepath)
 		end if
 		
 		tell application "System Events"
@@ -3016,17 +3016,17 @@ end showid2PID
 ##########    These are handlers loaded from the Library, we do specific things in them    ##########
 on add_record_url(caller, the_channel, the_device)
 	set handlername to "add_record_url"
-	return add_record_url(caller, the_channel, the_device) of LibScript
+	return add_record_url(my cm(handlername, caller), the_channel, the_device) of LibScript
 end add_record_url
 
 on tuner_dump(caller)
 	set handlername to "tuner_dump"
-	return tuner_dump(caller) of LibScript
+	return tuner_dump(my cm(handlername, caller)) of LibScript
 end tuner_dump
 
 on epoch2show_time(caller, epoch)
 	set handlername to "epoch2show_time"
-	return epoch2show_time(caller, epoch) of LibScript
+	return epoch2show_time(my cm(handlername, caller), epoch) of LibScript
 end epoch2show_time
 
 on datetime2epoch(caller, the_date_object)
@@ -3036,17 +3036,17 @@ end datetime2epoch
 
 on epoch2datetime(caller, epochseconds)
 	set handlername to "epoch2datetime"
-	return epoch2datetime(caller, epochseconds) of LibScript
+	return epoch2datetime(my cm(handlername, caller), epochseconds) of LibScript
 end epoch2datetime
 
 on emptylist(caller, klist)
 	set handlername to "emptylist"
-	return emptylist(caller, klist) of LibScript
+	return emptylist(my cm(handlername, caller), klist) of LibScript
 end emptylist
 
 on stringlistflip(caller, thearg, delim, returned)
 	set handlername to "stringlistflip"
-	return stringlistflip(caller, thearg, delim, returned) of LibScript
+	return stringlistflip(my cm(handlername, caller), thearg, delim, returned) of LibScript
 end stringlistflip
 
 on epoch(cd)
@@ -3076,7 +3076,7 @@ end isSystemShutdown
 
 on repeatProgress(caller, loop_delay, loop_total)
 	set handlername to "repeatProgress"
-	return repeatProgress(caller, loop_delay, loop_total) of LibScript
+	return repeatProgress(my cm(handlername, caller), loop_delay, loop_total) of LibScript
 end repeatProgress
 
 on ms2time(caller, totalMS, time_duration, level_precision)
@@ -3111,7 +3111,7 @@ end getTfromN
 
 on HDHRShowSearch(caller, the_show_id)
 	set handlername to "HDHRShowSearch"
-	return HDHRShowSearch(caller, the_show_id) of LibScript
+	return HDHRShowSearch(my cm(handlername, caller), the_show_id) of LibScript
 end HDHRShowSearch
 
 on isModifierKeyPressed(caller, checkKey, desc)
@@ -3371,7 +3371,7 @@ on seriesScanUpdate(caller, show_id)
 							my logger(true, handlername, caller, "INFO", "The show, " & show_title of item show_offset of Show_info & ", was updated")
 							--	my idle_change(my cm(handlername, caller), 1, 2)
 						else
-							--	my logger(true, handlername, caller, "INFO", "This show is a dupe") 
+							--	my logger(true, handlername, caller, "INFO", "This show is a dupe")
 						end if
 					else
 						my logger(true, handlername, caller, "WARN", "The show, " & show_title of item show_offset of Show_info & " was not updated, as it was recording")
