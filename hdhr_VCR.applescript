@@ -1276,9 +1276,11 @@ on validate_show_info(caller, show_to_check, should_edit)
 					set default_selection to item (my list_position(my cm(handlername, caller), show_channel of item i of Show_info, channel_mapping of item tuner_offset of HDHR_DEVICE_LIST, false)) of channel_mapping of item tuner_offset of HDHR_DEVICE_LIST
 					set channel_choice to (choose from list channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with prompt "What channel does this show air on?" default items default_selection with title my check_version_dialog(my cm(handlername, caller)) cancel button name Running_icon of Icon_record & " Run" OK button name "Next.." without empty selection allowed)
 					--Fix Result: error "CanÕt get item 1 of false." number -1728 from item 1 of false
-					set channel_temp to word 1 of item 1 of channel_choice
 					if channel_choice is false then
 						my logger(true, handlername, caller, "INFO", "User clicked " & quote & "Run" & quote)
+						return false
+					else
+						set channel_temp to word 1 of item 1 of channel_choice
 					end if
 					
 				else
