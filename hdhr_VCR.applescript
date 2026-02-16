@@ -36,6 +36,9 @@ global Loglines_written
 global Loglines_max
 global Base_icon_path
 global Missing_tuner_retry_count
+global Check_version_retry_count
+global Hdhr_api_retry_count
+global Default_max_tries
 global Check_after_midnight_time
 global First_open
 global Show_status_list
@@ -153,6 +156,9 @@ on setup_globals(caller)
 		set Hdhr_detected to false
 		set Back_channel to missing value
 		set Missing_tuner_retry_count to 0
+		set Check_version_retry_count to 0
+		set Hdhr_api_retry_count to 0
+		set Default_max_tries to 5
 		set Shutdown_reason to "No shutdown attempted"
 		set Show_status_list to {}
 		set Max_disk_percentage to 93
@@ -968,7 +974,7 @@ on show_info_dump(caller, show_id_lookup, userdisplay)
 	end if
 	set i to my HDHRShowSearch(my cm(handlername, caller), show_id_lookup)
 	if Local_env is not in Debugger_apps then
-		my logger(true, handlername, caller, "TRACE", "show " & i & ", show_title: " & show_title of item i of Show_info & ", show_time: " & show_time of item i of Show_info & ", show_length: " & show_length of item i of Show_info & ", show_air_date: " & show_air_date of item i of Show_info & ", show_transcode: " & show_transcode of item i of Show_info & ", show_temp_dir: " & show_temp_dir of item i of Show_info & ", show_dir: " & show_dir of item i of Show_info & ", show_channel: " & show_channel of item i of Show_info & ", show_active: " & show_active of item i of Show_info & ", show_id: " & show_id of item i of Show_info & ", show_recording: " & show_recording of item i of Show_info & ", show_last: " & show_last of item i of Show_info & ", show_next: " & show_next of item i of Show_info & ", show_end: " & notify_upnext_time of item i of Show_info & ", notify_recording_time: " & notify_recording_time of item i of Show_info & ", hdhr_record: " & hdhr_record of item i of Show_info & ", show_is_series: " & show_is_series of item i of Show_info)
+		my logger(true, handlername, caller, "TRACE", "show " & i & ", show_title: " & show_title of item i of Show_info & ", show_time: " & show_time of item i of Show_info & ", show_length: " & show_length of item i of Show_info & ", show_air_date: " & show_air_date of item i of Show_info & ", show_transcode: " & show_transcode of item i of Show_info & ", show_temp_dir: " & show_temp_dir of item i of Show_info & ", show_dir: " & show_dir of item i of Show_info & ", show_channel: " & show_channel of item i of Show_info & ", show_active: " & show_active of item i of Show_info & ", show_id: " & show_id of item i of Show_info & ", show_recording: " & show_recording of item i of Show_info & ", show_last: " & show_last of item i of Show_info & ", show_next: " & show_next of item i of Show_info & ", show_end: " & show_end of item i of Show_info & ", notify_recording_time: " & notify_recording_time of item i of Show_info & ", hdhr_record: " & hdhr_record of item i of Show_info & ", show_is_series: " & show_is_series of item i of Show_info)
 	end if
 end show_info_dump
 
@@ -977,6 +983,7 @@ on check_version(caller)
 	try
 		with timeout of 10 seconds
 			set version_response to (fetch JSON from Version_url with cleaning feed)
+			set Check_version_retry_count to 0
 			set Version_remote to hdhr_version of item 1 of versions of version_response
 			set Online_detected to true
 			my logger(true, handlername, caller, "INFO", "Current Version: " & Version_local & ", Remote Version: " & Version_remote & ", Lib Version: " & LibScript_version)
@@ -985,9 +992,16 @@ on check_version(caller)
 			end if
 		end timeout
 	on error errmsg
+		set Check_version_retry_count to Check_version_retry_count + 1
 		my logger(true, handlername, caller, "ERROR", "Unable to check for new versions: " & errmsg)
+		my logger(true, handlername, caller, "WARN", "Version check retry " & Check_version_retry_count & " of " & Default_max_tries)
 		set version_response to {versions:{{changelog:"Unable to check for new versions", hdhr_version:"20210101"}}}
 		set Version_remote to hdhr_version of item 1 of versions of version_response
+		if Check_version_retry_count is greater than or equal to Default_max_tries then
+			set Online_detected to false
+			my logger(true, handlername, caller, "FATAL", "Version check failed after " & Check_version_retry_count & " attempts; skipping online startup actions")
+			return false
+		end if
 		end_jsonhelper(my cm(handlername, caller), true) of LibScript
 		my check_version(my cm(handlername, caller))
 	end try
@@ -2244,6 +2258,7 @@ on hdhr_api(caller, hdhr_ready)
 		with timeout of 8 seconds
 			my logger(true, handlername, caller, "DEBUG", "API call: " & hdhr_ready)
 			set hdhr_api_result to (fetch JSON from hdhr_ready with cleaning feed)
+			set Hdhr_api_retry_count to 0
 			if "JSON" is in Logger_levels and "status" is not in hdhr_ready then
 				open location hdhr_ready
 				activate me
@@ -2252,8 +2267,14 @@ on hdhr_api(caller, hdhr_ready)
 			return hdhr_api_result
 		end timeout
 	on error errmsg
+		set Hdhr_api_retry_count to Hdhr_api_retry_count + 1
 		my logger(true, handlername, caller, "ERROR", "API timeout, errmsg: " & errmsg & " at " & hdhr_ready)
+		my logger(true, handlername, caller, "WARN", "API retry " & Hdhr_api_retry_count & " of " & Default_max_tries & " for " & hdhr_ready)
 		set Hdhr_detected to false
+		if Hdhr_api_retry_count is greater than or equal to Default_max_tries then
+			my logger(true, handlername, caller, "FATAL", "API failed after " & Hdhr_api_retry_count & " attempts: " & hdhr_ready)
+			return {}
+		end if
 		end_jsonhelper(my cm(handlername, caller), true) of LibScript
 		set hdhr_api_result to my hdhr_api(my cm(handlername, caller), hdhr_ready)
 		if hdhr_api_result is not {} then

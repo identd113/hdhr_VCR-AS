@@ -107,6 +107,20 @@ _See below for a visual walkthrough of the process:_
 
 ---
 
+## Developer Testing
+
+Run the on-demand locale/time handler tests before larger date or locale
+changes:
+
+- `./scripts/run_time_tests.sh`
+- `./scripts/run_time_tests.sh --locale en_US`
+- `./scripts/run_time_tests.sh --locale en_GB`
+- `./scripts/run_time_tests.sh --fixture-date "Tuesday, January 2, 2024 at 1:05:09 PM" --fixture-date-half "Tuesday, January 2, 2024 at 1:30:09 PM"`
+
+See [docs/TESTING.md](docs/TESTING.md) for full testing guidance.
+
+---
+
 ## Maintainer Automation
 
 See [docs/CODEX_REQUESTS.md](docs/CODEX_REQUESTS.md) for details on the workflow
