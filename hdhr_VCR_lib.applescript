@@ -906,7 +906,7 @@ on seriesScanRun(caller, execute)
 			else
 				if show_use_seriesid of item show_offset of Show_info is true then
 					logger(true, handlername, caller, "TRACE", "Found series at offset " & show_offset & ", updating show_id: " & show_id) of ParentScript
-					seriesScanUpdate(my cm(handlername, caller), show_id) of ParentScript
+					seriesScanUpdate(my cm(handlername, caller), show_id)
 				else
 					logger(true, handlername, caller, "WARN", "show_id: " & show_id & " is not a show_use_seriesid series, skipping update") of ParentScript
 				end if
@@ -917,6 +917,186 @@ on seriesScanRun(caller, execute)
 		logger(true, handlername, caller, "DEBUG", "Cleared RefreshderiesiD_list") of ParentScript
 	end if
 end seriesScanRun
+
+on seriesScan(caller, seriesID, hdhr_device, thechan, show_id)
+	set handlername to "seriesScan_lib"
+	set HDHR_DEVICE_LIST to HDHR_DEVICE_LIST of ParentScript
+	logger(true, handlername, caller, "DEBUG", "seriesID: " & seriesID & ", hdhr_device: " & hdhr_device & ", thechan: " & thechan) of ParentScript
+	set show_match_list to {}
+	set show_channel_list to {}
+	set tuner_offset to HDHRDeviceSearch(my cm(handlername, caller), hdhr_device) of ParentScript
+	set hdhr_guide to hdhr_guide of item tuner_offset of HDHR_DEVICE_LIST
+	try
+		repeat with i from 1 to length of hdhr_guide
+			set temp_channel to (GuideNumber of item i of hdhr_guide) as text
+			set guide_temp to Guide of item i of hdhr_guide
+			repeat with i2 from 1 to length of guide_temp
+				if seriesID of item i2 of guide_temp is seriesID then
+					if thechan is "" then
+						set end of show_channel_list to temp_channel
+						set end of show_match_list to item i2 of guide_temp
+					else
+						if thechan is temp_channel then
+							set end of show_channel_list to temp_channel
+							set end of show_match_list to item i2 of guide_temp
+						end if
+					end if
+				end if
+			end repeat
+		end repeat
+	on error errmsg
+		logger(true, handlername, caller, "ERROR", "hdhr_guide likely empty, " & errmsg) of ParentScript
+		return {}
+	end try
+	set show_match_list_length to length of show_match_list
+	if show_match_list_length is greater than 0 then
+		if thechan is "" then
+			--	logger(true, handlername, caller, "INFO", "Total of " & show_match_list_length & " shows found, on all channels") of ParentScript
+		else
+			--	logger(true, handlername, caller, "INFO", "Total of " & show_match_list_length & " shows found, on channel " & thechan) of ParentScript
+		end if
+		logger(true, handlername, caller, "DEBUG", "Episode(s) Matched: " & show_match_list_length) of ParentScript
+		logger(true, handlername, caller, "DEBUG", "Channel(s) Matched: " & my stringlistflip(my cm(handlername, caller), show_channel_list, ", ", "string")) of ParentScript
+		logger(true, handlername, caller, "DEBUG", "HDHR Device: " & hdhr_device) of ParentScript
+		logger(true, handlername, caller, "DEBUG", "ShowID: " & show_id) of ParentScript
+		set temp to {show_match_list:show_match_list, show_channel_list:show_channel_list, hdhr_device:hdhr_device, show_id:show_id}
+		return temp
+	else
+		return {}
+	end if
+end seriesScan
+
+on seriesScanNext(caller, seriesID, hdhr_device, thechan, show_id, theoffset)
+	set handlername to "seriesScanNext_lib"
+	set Show_info to Show_info of ParentScript
+	--	logger(true, handlername, caller, "DEBUG", "real_chan: " & thechan) of ParentScript
+	--	logger(true, handlername, caller, "DEBUG", "seriesID: " & seriesID) of ParentScript
+	--	logger(true, handlername, caller, "DEBUG", "hdhr_device: " & hdhr_device) of ParentScript
+	set show_offset to my HDHRShowSearch(my cm(handlername, caller), show_id)
+	if thechan is not in {""} then
+		logger(true, handlername, caller, "TRACE", "thechan: " & thechan) of ParentScript
+	else
+		logger(true, handlername, caller, "TRACE", "thechan: All") of ParentScript
+	end if
+	set newest_show_epoch to {"9999999999"}
+	set newest_show_epoch_offset to {0}
+	set seriesScanTemp to my seriesScan(my cm(handlername, caller), seriesID, hdhr_device, thechan, show_id)
+	
+	if seriesScanTemp is not {} then
+		if length of show_match_list of seriesScanTemp is greater than 0 then
+			logger(true, handlername, caller, "INFO", "Showname: " & show_title of item show_offset of Show_info) of ParentScript
+			copy (current date) to cd
+			repeat with i from 1 to length of show_match_list of seriesScanTemp
+				set StartTime_epoch to my getTfromN(StartTime of item i of show_match_list of seriesScanTemp)
+				set EndTime_epoch to my getTfromN(EndTime of item i of show_match_list of seriesScanTemp)
+				my show_name_fix(my cm(handlername, caller), show_id, item i of show_match_list of seriesScanTemp) --correct, returns the whole channel object, build_channel might do this.
+				logger(true, handlername, caller, "DEBUG", "start: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), StartTime_epoch), false, false) & ", end: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), EndTime_epoch), false, false)) of ParentScript
+				if StartTime_epoch is less than item 1 of newest_show_epoch then
+					if cd is less than my epoch2datetime(my cm(handlername, caller), EndTime_epoch) then
+						set beginning of newest_show_epoch to StartTime_epoch
+						set beginning of newest_show_epoch_offset to i
+						logger(true, handlername, caller, "INFO", "Offset: " & theoffset & " New Start Time: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), StartTime_epoch), false, false)) of ParentScript
+					else
+						logger(true, handlername, caller, "INFO", "Return show already recording or started") of ParentScript
+					end if
+				else
+					set end of newest_show_epoch to StartTime_epoch
+					set end of newest_show_epoch_offset to i
+				end if
+			end repeat
+			--	choose from list newest_show_epoch_offset
+			if item theoffset of newest_show_epoch_offset is not 0 then
+				--	set show_offset to my HDHRShowSearch(my cm(handlername, caller), show_id of seriesScanTemp)
+				logger(true, handlername, caller, "TRACE", "Returned latest airing for " & show_title of item show_offset of Show_info) of ParentScript
+				set temp to {item (item theoffset of newest_show_epoch_offset) of show_match_list of seriesScanTemp, item (item theoffset of newest_show_epoch_offset) of show_channel_list of seriesScanTemp, show_id of seriesScanTemp}
+				return temp
+			else
+				return {}
+			end if
+		end if
+	else
+		return {}
+	end if
+end seriesScanNext
+
+on seriesScanUpdate(caller, show_id)
+	set handlername to "seriesScanUpdate_lib"
+	set Show_info to Show_info of ParentScript
+	set show_offset to my HDHRShowSearch(my cm(handlername, caller), show_id)
+	if show_offset is not 0 then
+		if show_use_seriesid of item show_offset of Show_info is true then
+			if show_use_seriesid_all of item show_offset of Show_info is true then
+				set temp_chan to ""
+			else
+				set temp_chan to show_channel of item show_offset of Show_info
+			end if
+			
+			set show_temp to my seriesScanNext(my cm(handlername, caller), show_seriesid of item show_offset of Show_info, hdhr_record of item show_offset of Show_info, temp_chan, show_id, 1)
+			--		my show_name_fix(my cm(handlername, caller), "", my seriesScanNext(my cm(handlername, caller & "+1"), show_seriesid of item show_offset of Show_info, hdhr_record of item show_offset of Show_info, temp_chan, show_id, 2))
+			if show_temp is not {} then
+				set channel_record to item 1 of show_temp
+				set channel_number to item 2 of show_temp
+				set channel_showid to item 3 of show_temp
+				if show_offset is not 0 then
+					if show_recording of item show_offset of Show_info is false then
+						set isdupe to {false, false}
+						if show_next of item show_offset of Show_info is my epoch2datetime(my cm(handlername, caller), my getTfromN(StartTime of channel_record)) then
+							logger(true, handlername, caller, "DEBUG", "show_next is the same") of ParentScript
+							set item 1 of isdupe to true
+						else
+							set show_next of item show_offset of Show_info to my epoch2datetime(my cm(handlername, caller), my getTfromN(StartTime of channel_record))
+						end if
+						
+						if show_time of item show_offset of Show_info is my epoch2show_time(my cm(handlername, caller), my getTfromN(StartTime of channel_record)) then
+							logger(true, handlername, caller, "DEBUG", "show_time is the same") of ParentScript
+							set item 2 of isdupe to true
+						else
+							set show_time of item show_offset of Show_info to my epoch2show_time(my cm(handlername, caller), my getTfromN(StartTime of channel_record))
+						end if
+						if (show_channel of item show_offset of Show_info) is not channel_number then
+							--logger(true, handlername, caller, "INFO", "Old channel = " & (show_channel of item show_offset of Show_info)) of ParentScript
+							logger(true, handlername, caller, "INFO", "New channel: " & channel_number) of ParentScript
+							set show_channel of item show_offset of Show_info to channel_number
+						end if
+						
+						if false is in isdupe then
+							set new_showid to do shell script ("uuidgen | tr -d '-'")
+							logger(true, handlername, caller, "WARN", "The show, " & show_title of item show_offset of Show_info & " showid changed from " & show_id of item show_offset of Show_info & " to " & new_showid) of ParentScript
+							set show_id of item show_offset of Show_info to new_showid
+							set Show_info of ParentScript to Show_info
+							set show_offset to my HDHRShowSearch(my cm(handlername, caller), new_showid)
+							logger(true, handlername, caller, "INFO", "show channel: " & show_channel of item show_offset of Show_info) of ParentScript
+							
+							set show_title of item show_offset of Show_info to fixall of my show_name_fix(my cm(handlername, caller), new_showid, channel_record)
+							set show_end of item show_offset of Show_info to my epoch2datetime(my cm(handlername, caller), my getTfromN(EndTime of channel_record))
+							set show_fail_count of item show_offset of Show_info to 0
+							set show_fail_reason of item show_offset of Show_info to ""
+							try
+								set show_time_OriginalAirdate of item show_offset of Show_info to my getTfromN(OriginalAirdate of channel_record)
+							end try
+							set show_length of item show_offset of Show_info to ((EndTime of channel_record) - (StartTime of channel_record)) div 60
+							set show_url of item show_offset of Show_info to my add_record_url(my cm(handlername, caller), show_channel of item show_offset of Show_info, hdhr_record of item show_offset of Show_info)
+							--my update_show(my cm(handlername, caller), new_showid, false)
+							logger(true, handlername, caller, "INFO", "The show, " & show_title of item show_offset of Show_info & ", was updated") of ParentScript
+							--	my idle_change(my cm(handlername, caller), 1, 2)
+						else
+							--	logger(true, handlername, caller, "INFO", "This show is a dupe") of ParentScript
+						end if
+					else
+						logger(true, handlername, caller, "WARN", "The show, " & show_title of item show_offset of Show_info & " was not updated, as it was recording") of ParentScript
+					end if
+				end if
+			else
+				logger(true, handlername, caller, "INFO", "There are no upcoming shows for " & quote & show_title of item show_offset of Show_info & quote) of ParentScript
+				--set show_time of item show_offset of Show_info to ((show_time of item show_offset of Show_info) + 2 * hours)
+				set show_next of item show_offset of Show_info to ((show_next of item show_offset of Show_info) + 4 * hours)
+			end if
+		else
+			logger(true, handlername, caller, "DEBUG", "The show, " & quote & show_title of item show_offset of Show_info & quote & " is not tracked by SeriesID") of ParentScript
+		end if
+	end if
+	set Show_info of ParentScript to Show_info
+end seriesScanUpdate
 
 on seriesStatusIcons(caller, show_id)
 	set handlername to "seriesStatus_Lib"
@@ -1297,7 +1477,7 @@ on seriesScanList(caller, show_id, updateRecord)
 			repeat with i from 1 to length of RefreshderiesiD_list
 				set show_offset to my HDHRShowSearch(my cm(handlername, caller), item i of RefreshderiesiD_list)
 				if show_is_series of item show_offset of Show_info is true then
-					seriesScanUpdate(my cm(handlername, caller), item i of RefreshderiesiD_list) of ParentScript
+					seriesScanUpdate(my cm(handlername, caller), item i of RefreshderiesiD_list)
 				end if
 			end repeat
 			set RefreshderiesiD_list to {}
@@ -1314,12 +1494,12 @@ on seriesScanRefresh(caller, show_id)
 	if show_id is "" then
 		repeat with i from 1 to length of Show_info
 			if show_use_seriesid of item i of Show_info is true and show_recording of item i of Show_info is false and show_active of item i of Show_info is true then
-				seriesScanUpdate(my cm(handlername, caller), show_id of item i of Show_info) of ParentScript
+				seriesScanUpdate(my cm(handlername, caller), show_id of item i of Show_info)
 			end if
 		end repeat
 		return true
 	else
-		seriesScanUpdate(my cm(handlername, caller), show_id) of ParentScript
+		seriesScanUpdate(my cm(handlername, caller), show_id)
 	end if
 end seriesScanRefresh
 

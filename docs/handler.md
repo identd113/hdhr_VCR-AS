@@ -58,9 +58,6 @@ event entry points before returning control to the scheduler.
 | `show_info_dump` | `caller`, `show_id_lookup`, `userdisplay` | `missing value` | Logging helper that dumps show metadata for debugging. |
 | `recordingnow_main` | `caller` | `text` | Summarises recordings in progress for UI display. |
 | `next_shows` | `caller` | record `{date, list, list}` | Returns the next show start plus summary lists for the main menu. |
-| `seriesScan` | `caller`, `seriesID`, `hdhr_device`, `thechan`, `show_id` | `missing value` | Seeds the SeriesID processing queue housed in the library. |
-| `seriesScanNext` | `caller`, `seriesID`, `hdhr_device`, `thechan`, `show_id`, `theoffset` | `record` or `{}` | Requests the next airing for a series; `{}` signals no match so callers can stop looping. |
-| `seriesScanUpdate` | `caller`, `show_id` | `missing value` | Refreshes SeriesID-managed shows after recordings complete. |
 | `existing_shows` | `caller` | `missing value` | Audits running helper processes tied to recordings and logs the findings. |
 | `check_after_midnight2` | `caller` | `boolean` | Legacy midnight-reset guard with no active callers in the script. |
 
@@ -199,6 +196,9 @@ The `logger` handler is implemented locally to keep log writes within the applic
 | `tuner_dump` | `caller` | `list` | Enumerates tuners, streaming URLs, and refresh timing. |
 | `HDHRShowSearch` | `caller`, `the_show_id` | `integer` or `0` | Finds a show index by ID. |
 | `match2showid` | `caller`, `hdhr_tuner`, `channelcheck`, `start_time`, `end_time` | `integer` | Resolves guide slots to show IDs. |
+| `seriesScan` | `caller`, `seriesID`, `hdhr_device`, `thechan`, `show_id` | `record` or `{}` | Scans guide data for SeriesID matches and returns candidate airings for library-managed refresh logic. |
+| `seriesScanNext` | `caller`, `seriesID`, `hdhr_device`, `thechan`, `show_id`, `theoffset` | `record` or `{}` | Chooses the next valid airing from SeriesID matches; `{}` signals no upcoming candidate. |
+| `seriesScanUpdate` | `caller`, `show_id` | `missing value` | Updates SeriesID-managed show metadata (time/channel/show_id) as part of library refresh flows. |
 | `seriesScanAdd` | `caller`, `show_id` | `missing value` | Queues show IDs for SeriesID updates. |
 | `seriesScanRun` | `caller`, `execute` | `missing value` | Processes the SeriesID refresh queue. |
 | `seriesStatusIcons` | `caller`, `show_id` | `record` | Maps show status values to icon enumerations for display. |
