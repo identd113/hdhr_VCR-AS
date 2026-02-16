@@ -49,11 +49,11 @@ event entry points before returning control to the scheduler.
 
 | Handler | Inputs | Returns | Notes |
 | --- | --- | --- | --- |
-| `hdhrGRID` | `caller`, `hdhr_device`, `hdhr_channel` | list of guide records, `true`, `false`, or `{""}` | Builds a channel guide list UI. Returns guide records for scheduling, `true` to jump back, `false` on cancel, or `{""}` for manual add. |
-| `main` | `caller`, `emulated_button_press` | `boolean` or `missing value` | Primary UI loop; returns `false` to exit or hands control back to `idle`. |
+| `hdhrGRID` | `caller`, `hdhr_device`, `hdhr_channel` | list of guide records, `true`, `false`, or `{""}` | Builds a channel guide list UI with schedule state + series glyphs. Resolves selected rows deterministically before returning guide records, `true` to jump back, `false` on cancel, or `{""}` for manual add. |
+| `main` | `caller`, `emulated_button_press` | `boolean` or `missing value` | Primary UI loop; show list rows include lineup badges plus a two-icon status layout (left = next-airing status, right = show type or inactive cancel), then apply duplicate-safe selection offset mapping before edit/update. |
 | `add_show_info` | `caller`, `hdhr_device`, `hdhr_channel` | `boolean` or `missing value` | Scheduler workflow for adding shows; returns `false` on cancel. |
 | `setup` | `caller` | `missing value` | Guides the user through first-run configuration until complete. |
-| `validate_show_info` | `caller`, `show_to_check`, `should_edit` | `missing value` | Normalises existing show entries; interactive loops continue until validation passes. |
+| `validate_show_info` | `caller`, `show_to_check`, `should_edit` | `missing value` | Normalises existing show entries; interactive loops continue until validation passes, with exact channel-number default matching in channel pickers. |
 | `record_start` | `caller`, `the_show_id`, `opt_show_length`, `force_update` | `missing value` | Validates prerequisites and launches recordings; callers loop through pending shows. |
 | `show_info_dump` | `caller`, `show_id_lookup`, `userdisplay` | `missing value` | Logging helper that dumps show metadata for debugging. |
 | `recordingnow_main` | `caller` | `text` | Summarises recordings in progress for UI display. |
@@ -86,7 +86,10 @@ event entry points before returning control to the scheduler.
 
 | Handler | Inputs | Returns | Notes |
 | --- | --- | --- | --- |
-| `build_channel_list` | `caller`, `hdhr_device`, `cd` | `missing value` | Rebuilds the cached channel list for the active device. |
+| `build_channel_list` | `caller`, `hdhr_device`, `cd` | `missing value` | Rebuilds the cached channel list for the active device, adding lineup badges and series/single channel glyphs when available. |
+| `channel_list_position` | `caller`, `channel_number`, `channel_list` | `integer` | Finds a channel row by exact first-word channel number, with guarded fallback to partial matching. |
+| `channel_lineup_badges` | `caller`, `hdhr_device`, `hdhr_channel` | `text` | Returns channel badges from lineup metadata (`[HD]` and favorite icon). |
+| `channel_series_icon` | `caller`, `hdhr_tuner`, `channelcheck` | `text` | Returns single/series/seriesID (or multi-show) glyphs for active shows on a specific channel. |
 | `channel2name` | `caller`, `the_channel`, `hdhr_device` | `text` or `false` | Resolves channel names; `false` signals the need for manual entry. |
 | `nextday` | `caller`, `the_show_id` | `date` | Computes the next airing for the provided show ID. |
 | `update_show` | `caller`, `the_show_id`, `force_update` | `missing value` | Syncs show metadata using guide data. |
@@ -104,6 +107,7 @@ event entry points before returning control to the scheduler.
 | --- | --- | --- | --- |
 | `is_channel_record` | `caller`, `hdhr_tuner`, `channelcheck`, `cd` | `text` | Builds recording-state glyphs for a channel row. |
 | `get_show_state` | `caller`, `hdhr_tuner`, `channelcheck`, `start_time`, `end_time` | `record` | Returns `{show_stat, the_show_id, status_icon}` describing schedule state. |
+| `resolve_selected_offsets` | `caller`, `selected_items`, `source_items` | `list` | Resolves selected row text back to source offsets without collapsing duplicate row text into a single match. |
 | `check_version` | `caller` | `missing value` | Contacts remote version metadata and retries locally on failure. |
 | `check_version_dialog` | `caller` | `text` | Formats version information for UI presentation. |
 | `recordingnow_main` | `caller` | `text` | See table above; kept here for quick reference when formatting menus. |

@@ -18,6 +18,12 @@ I wanted to record TV shows quickly on my HDHomeRun, without a massive install o
 
 - **Automatic HDHomeRun discovery** – Finds all compatible tuners on your network.
 - **Guide-based recording** – Automatically pulls show, season, episode, and timing info.
+- **Icon-rich selection views** – Show list, channel list, and grid now surface
+  lineup badges (`[HD]`, favorites). In the show edit list, the left icon now
+  represents next-airing status while the right icon represents show type
+  (single/series variants), with inactive shows using the cancel icon.
+- **Deterministic multi-select mapping** – Duplicate-looking rows are resolved by
+  selection order so edits/adds do not collapse into a single matched item.
 - **Flexible Series Recording:**  
   • Record by channel or *across all channels* for syndicated shows **(NEW)**  
   • Supports SeriesID tracking for smarter scheduling **(NEW)**

@@ -624,75 +624,68 @@ on hdhrGRID(caller, hdhr_device, hdhr_channel)
 		set temp_end to my epoch2datetime(my cm(handlername, caller), my getTfromN(EndTime of item i of Guide of hdhrGRID_temp))
 		set show_status to my get_show_state(my cm(handlername, caller), hdhr_device, hdhr_channel, temp_start, temp_end)
 		set end of Show_status_list to show_status
-		set end of hdhrGRID_sort to (status_icon of show_status) & " " & my padnum(my cm(handlername, caller), word 2 of my short_date(my cm(handlername, caller), temp_start, false, false), true) & "-" & my padnum(my cm(handlername, caller), word 2 of my short_date(my cm(handlername, caller), temp_end, false, false), true) & " " & temp_title
+		set temp_status_icon to status_icon of show_status
+		if the_show_id of show_status is not missing value then
+			set temp_series_icon to status_icon of seriesStatusIcons(my cm(handlername, caller), the_show_id of show_status) of LibScript
+			if temp_series_icon is not "" then
+				set temp_status_icon to temp_status_icon & temp_series_icon
+			end if
+		end if
+		set end of hdhrGRID_sort to temp_status_icon & " " & my padnum(my cm(handlername, caller), word 2 of my short_date(my cm(handlername, caller), temp_start, false, false), true) & "-" & my padnum(my cm(handlername, caller), word 2 of my short_date(my cm(handlername, caller), temp_end, false, false), true) & " " & temp_title
 	end repeat
-	set hdhrGRID_selected to choose from list hdhrGRID_sort with prompt ("Channel " & hdhr_channel & " (" & GuideName of hdhrGRID_temp & ")" & return & "Current Time: " & word 2 of my short_date(my cm(handlername, caller), (current date), false, false)) cancel button name "Manual Add" OK button name "Next.." with title my check_version_dialog(caller) default items item 1 of hdhrGRID_sort with multiple selections allowed
+	set hdhrGRID_selected to choose from list hdhrGRID_sort with prompt ("Channel " & hdhr_channel & " (" & GuideName of hdhrGRID_temp & ")" & return & "Current Time: " & word 2 of my short_date(my cm(handlername, caller), (current date), false, false) & return & return & Record_icon of Icon_record & " Recording  " & Warning_icon of Icon_record & " Warning  " & Film_icon of Icon_record & " <1h  " & Up_icon of Icon_record & " <4h  " & Uncheck_icon of Icon_record & " Inactive" & return & Single_icon of Icon_record & " Single  " & Series_icon of Icon_record & " Series  " & Series3_icon of Icon_record & " SeriesID  " & Plus_icon of Icon_record & " Multiple") cancel button name "Manual Add" OK button name "Next.." with title my check_version_dialog(caller) default items item 1 of hdhrGRID_sort with multiple selections allowed
 	
 	--Fix we may need to check for a false return here?
 	if hdhrGRID_selected is false then
 		my logger(true, handlername, caller, "INFO", "User exited")
 		return {""}
 	end if
-	
-	--fix added repeat loop to catch multiple items
-	set hdhrGRID_selected_length to length of hdhrGRID_selected
-	set hdhrGRID_selected_length_skipped to 0
-	repeat with i from 1 to hdhrGRID_selected_length
-		repeat 1 times
-			if {Back_icon of Icon_record & " Back"} is not in hdhrGRID_selected then
-				--if hdhrGRID_selected is not {Back_icon of Icon_record & " Back"} then 
-				--fix  If multiple shows are selected, drop both into deactivate flow 
-				--	choose from list hdhrGRID_selected
-				set selected_show to my list_position(my cm(handlername, caller), item i of hdhrGRID_selected, hdhrGRID_sort, true)
-			else
-				set selected_show to 0 --should this be 1?
-			end if
-			my logger(true, handlername, caller, "TRACE", "list offset:" & selected_show & ", repeat_loop: " & i)
-			my logger(true, handlername, caller, "INFO", "selected_show: " & selected_show)
-			if selected_show is greater than or equal to 1 and the_show_id of item selected_show of Show_status_list is not missing value then
-				my logger(true, handlername, caller, "INFO", "Editing, instead of adding show")
-				set Back_channel to hdhr_channel
-				--set hdhrGRID_selected to Icon_record & " Back"
-				my validate_show_info(my cm(handlername, caller), (the_show_id of item selected_show of Show_status_list), true)
-				my idle_change(my cm(handlername, caller), 1, 3)
-				set hdhrGRID_selected_length_skipped to hdhrGRID_selected_length_skipped + 1
-				set item i of hdhrGRID_selected to {}
-				if hdhrGRID_selected_length_skipped is hdhrGRID_selected_length then
-					return false
-				else
-					exit repeat
-				end if
-			else
-				my logger(true, handlername, caller, "WARN", "No Show match")
-			end if
-		end repeat
-	end repeat
-	set hdhrGRID_selected to my emptylist(my cm(handlername, caller), hdhrGRID_selected)
-	try
-		if Back_icon of Icon_record & " Back" is in hdhrGRID_selected then
-			my logger(true, handlername, caller, "INFO", "Back to channel list " & hdhr_channel)
+	set hdhrGRID_selected_offsets to my resolve_selected_offsets(my cm(handlername, caller), hdhrGRID_selected, hdhrGRID_sort)
+	if length of hdhrGRID_selected_offsets is 0 then
+		my logger(true, handlername, caller, "WARN", "No selected offsets to process")
+		return false
+	end if
+	if 1 is in hdhrGRID_selected_offsets then
+		my logger(true, handlername, caller, "INFO", "Back to channel list " & hdhr_channel)
+		set Back_channel to hdhr_channel
+		return true
+	end if
+	set list_position_response to {}
+	set edited_show_count to 0
+	repeat with i from 1 to length of hdhrGRID_selected_offsets
+		set selected_show to item i of hdhrGRID_selected_offsets
+		my logger(true, handlername, caller, "TRACE", "list offset:" & selected_show & ", repeat_loop: " & i)
+		my logger(true, handlername, caller, "INFO", "selected_show: " & selected_show)
+		if selected_show is greater than or equal to 1 and the_show_id of item selected_show of Show_status_list is not missing value then
+			my logger(true, handlername, caller, "INFO", "Editing, instead of adding show")
 			set Back_channel to hdhr_channel
-			return true
+			my validate_show_info(my cm(handlername, caller), (the_show_id of item selected_show of Show_status_list), true)
+			my idle_change(my cm(handlername, caller), 1, 3)
+			set edited_show_count to edited_show_count + 1
+		else
+			if selected_show is greater than 1 then
+				set end of list_position_response to item (selected_show - 1) of Guide of hdhrGRID_temp
+			else
+				my logger(true, handlername, caller, "WARN", "No show match for selected offset " & selected_show)
+			end if
 		end if
-	on error errmsg
-		my logger(true, handlername, caller, "WARN", "Back failed, errmsg: " & errmsg)
-	end try
-	if my epoch2datetime(my cm(handlername, caller), EndTime of item ((my list_position(my cm(handlername, caller), hdhrGRID_selected, hdhrGRID_sort, false)) - 1) of Guide of hdhrGRID_temp) is less than (current date) then
+	end repeat
+	if edited_show_count is length of hdhrGRID_selected_offsets then
+		return false
+	end if
+	if length of list_position_response is 0 then
+		my logger(true, handlername, caller, "WARN", "No guide rows selected after processing")
+		return false
+	end if
+	if my epoch2datetime(my cm(handlername, caller), EndTime of item 1 of list_position_response) is less than (current date) then
 		my logger(true, handlername, caller, "WARN", "The show time has already passed, returning...")
 		display notification "The show has already passed, refreshing tuner...."
 		my HDHRDeviceDiscovery(my cm(handlername, caller), hdhr_device)
 		set Back_channel to hdhr_channel
 		return true
 	end if
-	if hdhrGRID_selected is not false then
-		set list_position_response to {}
-		my logger(true, handlername, caller, "INFO", "Returning guide data for " & hdhr_channel & " on device " & hdhr_device)
-		repeat with i from 1 to length of hdhrGRID_selected
-			set end of list_position_response to item ((my list_position(my cm(handlername, caller), item i of hdhrGRID_selected, hdhrGRID_sort, false)) - 1) of Guide of hdhrGRID_temp
-		end repeat
-		return list_position_response
-	end if
-	return false
+	my logger(true, handlername, caller, "INFO", "Returning guide data for " & hdhr_channel & " on device " & hdhr_device)
+	return list_position_response
 end hdhrGRID
 --return {} --means we want to manually add a show
 
@@ -1022,6 +1015,123 @@ on check_version_dialog(caller)
 	return temp
 end check_version_dialog
 
+on resolve_selected_offsets(caller, selected_items, source_items)
+	set handlername to "resolve_selected_offsets"
+	set used_offsets to {}
+	set selected_offsets to {}
+	try
+		if selected_items is false then
+			return {}
+		end if
+		repeat with i from 1 to length of selected_items
+			set selected_offset to 0
+			repeat with i2 from 1 to length of source_items
+				if i2 is not in used_offsets then
+					if (item i2 of source_items as text) is (item i of selected_items as text) then
+						set selected_offset to i2
+						set end of used_offsets to i2
+						exit repeat
+					end if
+				end if
+			end repeat
+			if selected_offset is greater than 0 then
+				set end of selected_offsets to selected_offset
+			else
+				my logger(true, handlername, caller, "WARN", "Unable to resolve selected item to source offset")
+			end if
+		end repeat
+	on error errmsg
+		my logger(true, handlername, caller, "ERROR", "Unable to resolve selected offsets: " & errmsg)
+	end try
+	return selected_offsets
+end resolve_selected_offsets
+
+on channel_list_position(caller, channel_number, channel_list)
+	set handlername to "channel_list_position"
+	try
+		if channel_number is in {"", {}, false, missing value} then
+			return 1
+		end if
+		repeat with i from 1 to length of channel_list
+			try
+				if (word 1 of item i of channel_list as text) is (channel_number as text) then
+					return i
+				end if
+			end try
+		end repeat
+		set channel_offset to my list_position(my cm(handlername, caller), channel_number, channel_list, false)
+		if channel_offset is less than 1 then
+			set channel_offset to 1
+		end if
+		return channel_offset
+	on error errmsg
+		my logger(true, handlername, caller, "WARN", "Unable to locate channel offset: " & errmsg)
+		return 1
+	end try
+end channel_list_position
+
+on channel_lineup_badges(caller, hdhr_device, hdhr_channel)
+	set handlername to "channel_lineup_badges"
+	set channel_badges to ""
+	try
+		set tuner_offset to my HDHRDeviceSearch(my cm(handlername, caller), hdhr_device)
+		if tuner_offset is 0 then
+			return channel_badges
+		end if
+		set channel_lineup to hdhr_lineup of item tuner_offset of HDHR_DEVICE_LIST
+		repeat with i from 1 to length of channel_lineup
+			if (GuideNumber of item i of channel_lineup as text) is (hdhr_channel as text) then
+				try
+					if HD of item i of channel_lineup is 1 then
+						set channel_badges to channel_badges & " [HD]"
+					end if
+				end try
+				try
+					if Favorite of item i of channel_lineup is 1 then
+						set channel_badges to channel_badges & " " & Star_icon of Icon_record
+					end if
+				end try
+				exit repeat
+			end if
+		end repeat
+	on error errmsg
+		my logger(true, handlername, caller, "WARN", "Unable to determine channel badges: " & errmsg)
+	end try
+	return channel_badges
+end channel_lineup_badges
+
+on channel_series_icon(caller, hdhr_tuner, channelcheck)
+	set handlername to "channel_series_icon"
+	set show_match_offsets to {}
+	try
+		repeat with i from 1 to length of Show_info
+			if hdhr_tuner is hdhr_record of item i of Show_info and (channelcheck as text) is (show_channel of item i of Show_info as text) and show_active of item i of Show_info is true then
+				set end of show_match_offsets to i
+			end if
+		end repeat
+		if length of show_match_offsets is 1 then
+			set show_offset to item 1 of show_match_offsets
+			if show_is_series of item show_offset of Show_info is true then
+				if length of show_air_date of item show_offset of Show_info is 1 then
+					return Series1_icon of Icon_record
+				end if
+				if show_use_seriesid of item show_offset of Show_info is true then
+					return Series3_icon of Icon_record
+				end if
+				return Series_icon of Icon_record
+			else
+				return Single_icon of Icon_record
+			end if
+		end if
+		if length of show_match_offsets is greater than 1 then
+			return Plus_icon of Icon_record
+		end if
+	on error errmsg
+		my logger(true, handlername, caller, "WARN", "Unable to determine channel series icon: " & errmsg)
+	end try
+	return ""
+end channel_series_icon
+
 on build_channel_list(caller, hdhr_device, cd)
 	set handlername to "build_channel_list"
 	set channel_list_temp to {}
@@ -1037,17 +1147,11 @@ on build_channel_list(caller, hdhr_device, cd)
 			set temp to hdhr_lineup of item tuner_offset of HDHR_DEVICE_LIST
 			repeat with i from 1 to length of temp
 				--(*GuideNumber:49.2, URL:http://10.0.1.101:5004/auto/v49.2, GuideName:KMQV-LD, VideoCodec:MPEG2, AudioCodec:AC3*)
-				set channel_temp to ""
-				try
-					if HD of item i of temp is 1 then
-						set channel_temp to channel_temp & " [HD]"
-					end if
-				end try
-				try
-					if Favorite of item i of temp is 1 then
-						set channel_temp to channel_temp & " " & Star_icon of Icon_record
-					end if
-				end try
+				set channel_temp to my channel_lineup_badges(my cm(handlername, caller), hdhr_device, GuideNumber of item i of temp)
+				set channel_series_temp to my channel_series_icon(my cm(handlername, caller), hdhr_device, GuideNumber of item i of temp)
+				if channel_series_temp is not "" then
+					set channel_temp to channel_temp & " " & channel_series_temp
+				end if
 				
 				try
 					set end of channel_list_temp to GuideNumber of item i of temp & " " & GuideName of item i of temp & channel_temp
@@ -1273,7 +1377,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 				set tuner_offset to my HDHRDeviceSearch(my cm(handlername, caller), temp_tuner)
 				if tuner_offset is greater than 0 then
 					
-					set default_selection to item (my list_position(my cm(handlername, caller), show_channel of item i of Show_info, channel_mapping of item tuner_offset of HDHR_DEVICE_LIST, false)) of channel_mapping of item tuner_offset of HDHR_DEVICE_LIST
+					set default_selection to item (my channel_list_position(my cm(handlername, caller), show_channel of item i of Show_info, channel_mapping of item tuner_offset of HDHR_DEVICE_LIST)) of channel_mapping of item tuner_offset of HDHR_DEVICE_LIST
 					set channel_choice to (choose from list channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with prompt "What channel does this show air on?" default items default_selection with title my check_version_dialog(my cm(handlername, caller)) cancel button name Running_icon of Icon_record & " Run" OK button name "Next.." without empty selection allowed)
 					--Fix Result: error "CanÕt get item 1 of false." number -1728 from item 1 of false
 					if channel_choice is false then
@@ -1571,51 +1675,74 @@ on main(caller, emulated_button_press)
 		repeat with i from 1 to show_list_length
 			--set progress completed steps to i
 			--set progress additional description to show_title of item i of Show_info
-			set temp_show_line to " " & (show_title of item i of Show_info & " on " & show_channel of item i of Show_info & " at " & show_time of item i of Show_info & " for " & show_length of item i of Show_info & " minutes on " & my stringlistflip("main", show_air_date of item i of Show_info, ", ", "string"))
-			--remove
-			
-			set temp_show_line to ((status_icon of seriesStatusIcons(cm, show_id of item i of Show_info) of LibScript) as text) & temp_show_line
-			
-			if show_active of item i of Show_info is true then
+			set show_channel_badges to my channel_lineup_badges(cm, hdhr_record of item i of Show_info, show_channel of item i of Show_info)
+				set temp_show_line to " " & (show_title of item i of Show_info & " on " & show_channel of item i of Show_info & show_channel_badges & " at " & show_time of item i of Show_info & " for " & show_length of item i of Show_info & " minutes on " & my stringlistflip("main", show_air_date of item i of Show_info, ", ", "string"))
 				
-				if ((show_next of item i of Show_info) - (cd)) is less than 4 * hours and show_recording of item i of Show_info is false then
-					if ((show_next of item i of Show_info) - (cd)) is greater than 1 * hours then
-						set temp_show_line to Up_icon of Icon_record & temp_show_line
-					else if ((show_next of item i of Show_info) - (cd)) is less than 0 then
-						set temp_show_line to Warning_icon of Icon_record & temp_show_line
+				-- Right icon = recording style (single/series variants), or cancel if inactive.
+				if show_active of item i of Show_info is false then
+					set temp_show_line to Uncheck_icon of Icon_record & temp_show_line
+				else
+					if show_is_series of item i of Show_info is true then
+						if length of show_air_date of item i of Show_info is 1 then
+							set temp_show_line to Series1_icon of Icon_record & temp_show_line
+						else
+							if show_use_seriesid of item i of Show_info is true then
+								set temp_show_line to Series3_icon of Icon_record & temp_show_line
+							else
+								set temp_show_line to Series_icon of Icon_record & temp_show_line
+							end if
+						end if
 					else
-						set temp_show_line to Film_icon of Icon_record & temp_show_line
+						set temp_show_line to Single_icon of Icon_record & temp_show_line
 					end if
 				end if
-				if ((show_next of item i of Show_info) - (cd)) is greater than or equal to 4 * hours and (date (date string of (cd))) is (date (date string of (show_next of item i of Show_info))) and show_recording of item i of Show_info is false then
-					set temp_show_line to Up2_icon of Icon_record & temp_show_line
-				end if
-				if show_recording of item i of Show_info is true then
-					set temp_show_line to Record_icon of Icon_record & temp_show_line
-				end if
-				if (date (date string of (cd))) is less than (date (date string of (show_next of item i of Show_info))) and (show_recorded_today of item i of Show_info) is false then
-					set temp_show_line to Futureshow_icon of Icon_record & temp_show_line
-				end if
+				
+				-- Left icon = next-air timing/status.
 				try
-					if (show_recorded_today of item i of Show_info) is true then
-						set temp_show_line to Check_icon of Icon_record & temp_show_line
+					if ((show_next of item i of Show_info) - (cd)) is less than 4 * hours and show_recording of item i of Show_info is false then
+						if ((show_next of item i of Show_info) - (cd)) is greater than 1 * hours then
+							set temp_show_line to Up_icon of Icon_record & temp_show_line
+						else if ((show_next of item i of Show_info) - (cd)) is less than 0 then
+							set temp_show_line to Warning_icon of Icon_record & temp_show_line
+						else
+							set temp_show_line to Film_icon of Icon_record & temp_show_line
+						end if
 					end if
+					if ((show_next of item i of Show_info) - (cd)) is greater than or equal to 4 * hours and (date (date string of (cd))) is (date (date string of (show_next of item i of Show_info))) and show_recording of item i of Show_info is false then
+						set temp_show_line to Up2_icon of Icon_record & temp_show_line
+					end if
+					if show_recording of item i of Show_info is true then
+						set temp_show_line to Record_icon of Icon_record & temp_show_line
+					end if
+					if (date (date string of (cd))) is less than (date (date string of (show_next of item i of Show_info))) and (show_recorded_today of item i of Show_info) is false then
+						set temp_show_line to Futureshow_icon of Icon_record & temp_show_line
+					end if
+					try
+						if (show_recorded_today of item i of Show_info) is true then
+							set temp_show_line to Check_icon of Icon_record & temp_show_line
+						end if
+					on error errmsg
+						my logger(true, handlername, caller, "ERROR", "Error with show_recorded_today, errmsg: " & errmsg)
+					end try
 				on error errmsg
-					my logger(true, handlername, caller, "ERROR", "Error with show_recorded_today, errmsg: " & errmsg)
+					my logger(true, handlername, caller, "WARN", "Unable to determine left icon for " & quote & show_title of item i of Show_info & quote & ": " & errmsg)
+					set temp_show_line to Warning_icon of Icon_record & temp_show_line
 				end try
-			else
-				set temp_show_line to Uncheck_icon of Icon_record & temp_show_line
-			end if
-			set end of show_list to temp_show_line
+				set end of show_list to temp_show_line
 			if show_list_length is i then
 				--		set progress additional description to length of Show_info & " shows loaded"
 			end if
 		end repeat
 		if length of show_list is not 0 then
-			set temp_show_list to (choose from list show_list with title my check_version_dialog(caller) with prompt "" & length of show_list & " shows to edit: " & return & Single_icon of Icon_record & " Single   " & Series_icon of Icon_record & " Series" & "   " & Series3_icon of Icon_record & " SeriesID" & "   " & Record_icon of Icon_record & " Recording" & "   " & Uncheck_icon of Icon_record & " Inactive" & "   " & Warning_icon of Icon_record & " Error" & return & Film_icon of Icon_record & " Up Next < 1h" & "  " & Up_icon of Icon_record & " Up Next < 4h" & "  " & Up2_icon of Icon_record & " Up Next > 4h" & "  " & Futureshow_icon of Icon_record & " Future Show" & "   " & Done_icon of Icon_record & " Recorded today" OK button name Edit_icon of Icon_record & " Edit.." cancel button name Running_icon of Icon_record & " Run" default items item 1 of show_list with multiple selections allowed without empty selection allowed)
+				set temp_show_list to (choose from list show_list with title my check_version_dialog(caller) with prompt "" & length of show_list & " shows to edit:" & return & "Right icon (show type): " & Single_icon of Icon_record & " Single  " & Series1_icon of Icon_record & " One-day series  " & Series_icon of Icon_record & " Series  " & Series3_icon of Icon_record & " SeriesID  " & Uncheck_icon of Icon_record & " Inactive/Cancel" & return & "Left icon (next airing): " & Record_icon of Icon_record & " Recording  " & Warning_icon of Icon_record & " Error  " & Film_icon of Icon_record & " <1h  " & Up_icon of Icon_record & " <4h  " & Up2_icon of Icon_record & " >4h  " & Futureshow_icon of Icon_record & " Future day  " & Check_icon of Icon_record & " Recorded today" OK button name Edit_icon of Icon_record & " Edit.." cancel button name Running_icon of Icon_record & " Run" default items item 1 of show_list with multiple selections allowed without empty selection allowed)
 			if temp_show_list is not false then
-				repeat with i3 from 1 to length of temp_show_list
-					set temp_show_list_offset to (my list_position(cm, (item i3 of temp_show_list as text), show_list, true))
+				set temp_show_offsets to my resolve_selected_offsets(cm, temp_show_list, show_list)
+				if length of temp_show_offsets is 0 then
+					my logger(true, handlername, caller, "WARN", "No valid show selection offsets found")
+					return false
+				end if
+				repeat with i3 from 1 to length of temp_show_offsets
+					set temp_show_list_offset to item i3 of temp_show_offsets
 					my logger(true, handlername, caller, "INFO", "Pre-validate for " & show_title of item temp_show_list_offset of Show_info)
 					
 					my validate_show_info(cm, show_id of item temp_show_list_offset of Show_info, true)
@@ -1623,7 +1750,7 @@ on main(caller, emulated_button_press)
 						my update_show(cm, show_id of item temp_show_list_offset of Show_info, true)
 					end if
 					
-					if i3 is length of temp_show_list then
+					if i3 is length of temp_show_offsets then
 						my main("shows(" & cm & ")", "Shows")
 						return
 					end if
@@ -1702,11 +1829,11 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 		if Back_channel is missing value then
 			set default_selection to item 1 of channel_mapping of item tuner_offset of HDHR_DEVICE_LIST
 		else
-			set default_selection to item (my list_position(cm, Back_channel, channel_mapping of item tuner_offset of HDHR_DEVICE_LIST, false)) of channel_mapping of item tuner_offset of HDHR_DEVICE_LIST
+			set default_selection to item (my channel_list_position(cm, Back_channel, channel_mapping of item tuner_offset of HDHR_DEVICE_LIST)) of channel_mapping of item tuner_offset of HDHR_DEVICE_LIST
 		end if
 		my logger(true, handlername, caller, "INFO", "default_selection: " & default_selection)
 		set lineup_length to length of channel_mapping of item tuner_offset of HDHR_DEVICE_LIST
-		set hdhrGRID_list_response to (choose from list channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with prompt "What channel does this show air on?" & return & tuner_status_icon & return & lineup_length & " channels" & return & return & Record_icon of Icon_record & "Recording  " & Warning_icon of Icon_record & "Warning  " & Star_icon of Icon_record & "Favorite" & return & Film_icon of Icon_record & "<1h  " & Up_icon of Icon_record & "<4h  " & Up2_icon of Icon_record & ">4h  " with title my check_version_dialog(caller) OK button name "Next.." cancel button name Running_icon of Icon_record & " Run" default items default_selection without empty selection allowed)
+			set hdhrGRID_list_response to (choose from list channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with prompt "What channel does this show air on?" & return & tuner_status_icon & return & lineup_length & " channels" & return & return & Record_icon of Icon_record & "Recording  " & Warning_icon of Icon_record & "Warning  " & Star_icon of Icon_record & "Favorite" & return & Film_icon of Icon_record & "<1h  " & Up_icon of Icon_record & "<4h  " & Up2_icon of Icon_record & ">4h  " & return & Single_icon of Icon_record & "Single  " & Series_icon of Icon_record & "Series  " & Series3_icon of Icon_record & "SeriesID  " & Plus_icon of Icon_record & "Multiple" with title my check_version_dialog(caller) OK button name "Next.." cancel button name Running_icon of Icon_record & " Run" default items default_selection without empty selection allowed)
 		if hdhrGRID_list_response is not false then
 			--Fix This is where we have to decide if a show if we deactivate/edit or add
 			set show_channel_temp to word 1 of item 1 of hdhrGRID_list_response
