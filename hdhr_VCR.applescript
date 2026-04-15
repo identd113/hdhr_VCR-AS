@@ -1560,6 +1560,8 @@ on validate_show_info(caller, show_to_check, should_edit)
 				try
 					my save_data(my cm(handlername, caller))
 					my logger(true, handlername, caller, "INFO", "Activation saved successfully")
+					display notification with title Record_icon of Icon_record & " Show Activated!" subtitle show_title of item i of Show_info
+					return true
 				on error errmsg
 					my logger(true, handlername, caller, "ERROR", "Failed to save activation: " & errmsg)
 				end try
