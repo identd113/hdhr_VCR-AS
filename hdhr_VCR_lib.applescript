@@ -1580,4 +1580,44 @@ on recordSee2(caller, the_record)
 	end try
 end recordSee2
 
+on choose_folder_with_fallback(caller, prompt_text, default_location)
+	set handlername to "choose_folder_with_fallback"
+	set selected_folder to missing value
+	set fallback_locations to {}
+
+	-- Build fallback locations in order of preference
+	try
+		set end of fallback_locations to default_location
+	end try
+	try
+		set end of fallback_locations to (path to documents folder)
+	end try
+	try
+		set end of fallback_locations to (path to home folder)
+	end try
+	try
+		set end of fallback_locations to alias "Volumes:"
+	end try
+
+	-- Try each location in order
+	repeat with location_item in fallback_locations
+		try
+			set selected_folder to choose folder with prompt prompt_text default location location_item
+			logger(true, handlername, caller, "DEBUG", "Folder selected: " & (selected_folder as text)) of ParentScript
+			return selected_folder
+		on error errmsg
+			logger(true, handlername, caller, "DEBUG", "Failed with location " & (location_item as text) & ", error: " & errmsg) of ParentScript
+		end try
+	end repeat
+
+	-- If all attempts failed, return the first fallback location
+	if (length of fallback_locations) > 0 then
+		logger(true, handlername, caller, "WARN", "All folder selection attempts failed, using default location") of ParentScript
+		return item 1 of fallback_locations
+	else
+		logger(true, handlername, caller, "ERROR", "No valid fallback locations available") of ParentScript
+		return missing value
+	end if
+end choose_folder_with_fallback
+
 *)

@@ -1471,18 +1471,18 @@ on validate_show_info(caller, show_to_check, should_edit)
 			--fix show_air_date 			
 			if show_dir of item i of Show_info is in {missing value, {}, ""} or (class of (show_temp_dir of item i of Show_info) as text) is not "alias" or should_edit is true then
 				try
-					set show_dir_temp to choose folder with prompt "Select shows Directory" default location show_dir of item i of Show_info
-					set show_dir of item i of Show_info to show_dir_temp
-				on error errmsg
-					my logger(true, handlername, caller, "WARN", "Invalid path, errmsg: " & errmsg)
-					
 					try
-						set show_dir_temp to choose folder with prompt "The show: " & return & show_title of item i of Show_info & return & " has an invalid directory. Please choose another" default location (Hdhr_setup_folder as alias)
-						set show_dir of item i of Show_info to show_dir_temp
+						set show_dir_temp to my choose_folder_with_fallback(my cm(handlername, caller), "Select shows Directory", show_dir of item i of Show_info)
 					on error errmsg
-						my logger(true, handlername, caller, "WARN", "Invalid path, errmsg: " & errmsg)
-						my validate_show_info(my cm(handlername, caller), show_id of item i of Show_info, false)
+						my logger(true, handlername, caller, "WARN", "First attempt failed: " & errmsg)
+						set show_dir_temp to my choose_folder_with_fallback(my cm(handlername, caller), "The show: " & return & show_title of item i of Show_info & return & " has an invalid directory. Please choose another", Hdhr_setup_folder as alias)
 					end try
+					if show_dir_temp is not missing value then
+						set show_dir of item i of Show_info to show_dir_temp
+					end if
+				on error errmsg
+					my logger(true, handlername, caller, "ERROR", "Unable to select show directory: " & errmsg)
+					my validate_show_info(my cm(handlername, caller), show_id of item i of Show_info, false)
 				end try
 				set show_temp_dir of item i of Show_info to show_dir of item i of Show_info
 				my logger(true, handlername, caller, "WARN", "show_dir: " & show_dir of item i of Show_info)
@@ -1594,14 +1594,17 @@ on setup(caller)
 				try
 					set Temp_dir to alias "Volumes:"
 					repeat until Temp_dir is not alias "Volumes:"
-						set hdhr_setup_folder_temp to choose folder with prompt "Select default shows directory" default location Temp_dir
-						if hdhr_setup_folder_temp is not alias "Volumes:" then
+						set hdhr_setup_folder_temp to my choose_folder_with_fallback(my cm(handlername, caller), "Select default shows directory", Temp_dir)
+						if hdhr_setup_folder_temp is not missing value and hdhr_setup_folder_temp is not alias "Volumes:" then
 							set Hdhr_setup_folder to hdhr_setup_folder_temp as text
+							exit repeat
+						else if hdhr_setup_folder_temp is missing value then
+							my logger(true, handlername, caller, "WARN", "No folder selected for default shows directory")
 							exit repeat
 						end if
 					end repeat
 				on error errmsg
-					my logger(true, handlername, caller, "ERROR", errmsg)
+					my logger(true, handlername, caller, "ERROR", "Setup folder selection error: " & errmsg)
 				end try
 				display dialog "We need to allow notifications" & return & "Click " & quote & "Next" & quote & " to continue" buttons {"Next"} default button 1 with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout
 				display notification "Yay!" with title name of me subtitle "Notifications Enabled!"
@@ -2214,14 +2217,19 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 							my logger(true, handlername, caller, "TRACE", "Track5")
 							if update_folder_result is true then
 								my logger(true, handlername, caller, "TRACE", "Track6")
-								set show_dir of temp_show_info to choose folder with prompt "Select Show location" default location Temp_dir
+								set show_dir of temp_show_info to my choose_folder_with_fallback(my cm(handlername, caller), "Select Show location", Temp_dir)
 							else if update_folder_result is false then
 								my logger(true, handlername, caller, "TRACE", "Track7")
-								set show_dir of temp_show_info to choose folder with prompt "Unable to write to location:" & return & (failed_showdir as text) & return & "Select another location" default location Temp_dir
+								set show_dir of temp_show_info to my choose_folder_with_fallback(my cm(handlername, caller), "Unable to write to location:" & return & (failed_showdir as text) & return & "Select another location", Temp_dir)
+							end if
+							if show_dir of temp_show_info is missing value then
+								my logger(true, handlername, caller, "WARN", "No folder selected, using default")
+								set show_dir of temp_show_info to Temp_dir
 							end if
 						on error errmsg
 							my logger(true, handlername, caller, "TRACE", "Track8")
 							my logger(true, handlername, caller, "ERROR", "Unable to select show location, errmsg: " & errmsg)
+							set show_dir of temp_show_info to Temp_dir
 						end try
 						if show_dir of temp_show_info is not Temp_dir then
 							set Temp_dir to show_dir of temp_show_info
