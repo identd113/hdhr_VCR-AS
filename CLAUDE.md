@@ -24,31 +24,19 @@ Smart VCR for HDHomeRun devices. Records TV shows on macOS with guide-based, zer
 
 ## The 4-State Show Model (CRITICAL)
 
-> **📖 See:** [SHOW_STATUS.md](docs/SHOW_STATUS.md) for detailed state breakdown and [WORKFLOWS.md](docs/WORKFLOWS.md) for user guides.
+> **📖 Authoritative source:** [SHOW_STATUS.md](docs/SHOW_STATUS.md) — Read for state table and validation rules.
 
-Every show is EXACTLY ONE of these states, determined by 3 boolean variables:
+Shows are ONE of 4 states, determined by `is_series`, `use_seriesid`, `use_seriesid_all`:
 
-| State | is_series | use_seriesid | use_seriesid_all | Behavior |
-|-------|-----------|--------------|------------------|----------|
-| **Single** | false | false | false | Record 1 episode on 1 day/time/channel |
-| **DateTime** | true | false | false | Record specific days/times on 1 channel |
-| **SeriesID(Channel)** | true | true | false | Record all episodes on 1 channel (guide-driven) |
-| **SeriesID(All)** | true | true | true | Record all episodes on all channels (guide-driven) |
+- **Single**: Record 1 episode (user specifies day/time/channel)
+- **DateTime**: Record specific days/times on 1 channel (manual schedule)
+- **SeriesID(Channel)**: Record all episodes on 1 channel (guide-driven)
+- **SeriesID(All)**: Record all episodes on all channels (guide-driven)
 
-**Validation Rules:**
-- SeriesID shows MUST have all 7 days in show_air_date
-- Single/DateTime shows use manually specified channel/time/length
-- SeriesID shows get time/length from guide data, ignore manual values
-- show_next is calculated daily; shows auto-deactivate when past their end date
-
-**Critical Enforcement:**
-- When user clicks "Series" → ALWAYS show series type dialog (DateTime vs SeriesID)
-- When user clicks "Single" → Reset all series flags to false
-- Only show prompts relevant to current state:
-  - Days: Ask for DateTime/Single, Auto for SeriesID
-  - Channel: Ask for DateTime/Single/SeriesID(Channel), Skip for SeriesID(All)
-  - Time: Ask for DateTime/Single, Skip for SeriesID
-  - Length: Ask for DateTime/Single, Skip for SeriesID
+**Critical Enforcement in validate_show_info:**
+- Series button → Always show series type dialog
+- Single button → Reset all series flags
+- Filter prompts by state (see Prompt Filtering Logic below)
 
 ---
 
