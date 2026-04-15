@@ -2,6 +2,8 @@
 
 Guide to adding, editing, and managing shows with the 4-state recording system.
 
+> **📖 See:** [SHOW_STATUS.md](SHOW_STATUS.md) for state reference and [CLAUDE.md](../CLAUDE.md) for technical details.
+
 ---
 
 ## Overview: The 4 Recording States

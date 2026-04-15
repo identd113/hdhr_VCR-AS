@@ -1,6 +1,10 @@
 Handler Reference
 =================
 
+Complete reference for all handlers in `hdhr_VCR.applescript` and `hdhr_VCR_lib.applescript`.
+
+> **📖 See:** [CLAUDE.md](../CLAUDE.md) for key handler overview and [APPLE_SCRIPT_STYLE.md](APPLE_SCRIPT_STYLE.md) for handler conventions.
+
 Maintenance
 -----------
 Update this reference whenever handlers are added, removed, or modified in

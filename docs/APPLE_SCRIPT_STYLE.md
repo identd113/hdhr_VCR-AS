@@ -2,6 +2,8 @@
 
 These conventions capture how the existing scripts are structured. Follow them for any changes to `hdhr_VCR.applescript` or `hdhr_VCR_lib.applescript`.
 
+> **📖 See:** [handler.md](handler.md) for handler reference and [AGENTS.md](AGENTS.md) for contribution guidelines.
+
 ## Indentation and Formatting
 - Use **hard tabs** for indentation inside handlers. The top-level scope stays unindented.
 - Keep handler declarations flush left: `on handlerName(...)` on one line followed by the body on the next line.

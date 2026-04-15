@@ -1,5 +1,9 @@
 # Show Status Combinations
 
+Reference for the 4-state show model used throughout hdhr_VCR.
+
+> **📖 See:** [WORKFLOWS.md](WORKFLOWS.md) for user guides and [CLAUDE.md](../CLAUDE.md) for technical architecture.
+
 ## The 4 Variables
 
 | Variable | Type | Values | Purpose |

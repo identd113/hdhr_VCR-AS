@@ -2,6 +2,8 @@
 
 Detailed technical documentation for complex workflows in hdhr_VCR.
 
+> **📖 See:** [CLAUDE.md](../CLAUDE.md) for architecture overview and [WORKFLOWS.md](WORKFLOWS.md) for user guides.
+
 ---
 
 ## Table of Contents

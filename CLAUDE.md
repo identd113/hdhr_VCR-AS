@@ -24,6 +24,8 @@ Smart VCR for HDHomeRun devices. Records TV shows on macOS with guide-based, zer
 
 ## The 4-State Show Model (CRITICAL)
 
+> **📖 See:** [SHOW_STATUS.md](docs/SHOW_STATUS.md) for detailed state breakdown and [WORKFLOWS.md](docs/WORKFLOWS.md) for user guides.
+
 Every show is EXACTLY ONE of these states, determined by 3 boolean variables:
 
 | State | is_series | use_seriesid | use_seriesid_all | Behavior |
@@ -98,6 +100,8 @@ Every show is EXACTLY ONE of these states, determined by 3 boolean variables:
 
 ## Recording Lifecycle
 
+> **📖 See:** [ADVANCED_PROCESSES.md](docs/ADVANCED_PROCESSES.md#recording-lifecycle) for phase details.
+
 **Pre-Recording (idle loop):**
 - Check if show_next <= now + 35 minutes → Send "Up Next" notification
 - Check if show_end <= now and show_active=true → Start recording
@@ -123,6 +127,8 @@ Every show is EXACTLY ONE of these states, determined by 3 boolean variables:
 
 ## SeriesID Episode Matching
 
+> **📖 See:** [ADVANCED_PROCESSES.md](docs/ADVANCED_PROCESSES.md#seriesid-episode-matching) for detailed matching process.
+
 **SeriesID Acquisition:**
 - When adding SeriesID show, query guide for matching entries
 - Extract and store show_seriesid (e.g., "C472160EN1BDK")
@@ -143,6 +149,8 @@ Every show is EXACTLY ONE of these states, determined by 3 boolean variables:
 ---
 
 ## Error Handling
+
+> **📖 See:** [ADVANCED_PROCESSES.md](docs/ADVANCED_PROCESSES.md#error-handling--retry-logic) for detailed error flows.
 
 **Recording Failures:**
 - Increment show_fail_count
@@ -239,6 +247,8 @@ Every show is EXACTLY ONE of these states, determined by 3 boolean variables:
 
 ## Key Handlers
 
+> **📖 See:** [handler.md](docs/handler.md) for complete handler reference with inputs/returns.
+
 **Main Flow:**
 - `run` - Startup, discovery, initial setup
 - `idle` - Main loop (every ~10 sec): checks, updates, recordings
@@ -309,6 +319,8 @@ Every show is EXACTLY ONE of these states, determined by 3 boolean variables:
 ---
 
 ## Development Notes
+
+> **📖 See:** [APPLE_SCRIPT_STYLE.md](docs/APPLE_SCRIPT_STYLE.md) for code conventions and [TESTING.md](docs/TESTING.md) for test procedures.
 
 **Code Style:**
 - Lowercase handler names with underscores

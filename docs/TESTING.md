@@ -1,7 +1,8 @@
 # Testing hdhr_VCR
 
-Use the automated on-demand tests below for date/time handlers, then run the
-manual checklist to validate end-to-end behavior on macOS.
+Use the automated on-demand tests below for date/time handlers, then run the manual checklist to validate end-to-end behavior on macOS.
+
+> **📖 See:** [AGENTS.md](AGENTS.md) for contributor guidelines and [WORKFLOWS.md](WORKFLOWS.md) for feature workflows to test.
 
 ## Automated On-Demand Time Tests
 

@@ -1,6 +1,8 @@
-# hdhr_VCR-AS Contribution Agent
+# Contribution Guidelines
 
 This repository contains the AppleScript sources and assets for the hdhr_VCR smart DVR helper.
+
+> **📖 See:** [CLAUDE.md](../CLAUDE.md) for project overview, [APPLE_SCRIPT_STYLE.md](APPLE_SCRIPT_STYLE.md) for code standards, and [TESTING.md](TESTING.md) for test procedures.
 
 ## General Guidance
 - Keep `hdhr_VCR.applescript` and `hdhr_VCR_lib.applescript` in the project root; downstream users expect these exact filenames when exporting the app bundle.

@@ -85,9 +85,26 @@ The app supports **4 different recording modes**:
 - **Edit**: Click app icon → Edit → select show → modify settings
 - **Run**: Returns to idle recording mode
 
-📖 **For detailed workflows:** See [WORKFLOWS.md](docs/WORKFLOWS.md) for step-by-step guides for each mode.
+---
 
-📋 **For state details:** See [SHOW_STATUS.md](docs/SHOW_STATUS.md) for the 4-state convention.
+## Documentation Guide
+
+### 👤 For Users
+- **[WORKFLOWS.md](docs/WORKFLOWS.md)** — Step-by-step guides for adding/editing shows in each mode
+- **[SHOW_STATUS.md](docs/SHOW_STATUS.md)** — 4-state convention and validation rules
+
+### 👨‍💻 For Developers  
+- **[CLAUDE.md](CLAUDE.md)** — Project overview, architecture, critical requirements, and key handlers
+- **[handler.md](docs/handler.md)** — Complete handler reference for both applescript files
+- **[APPLE_SCRIPT_STYLE.md](docs/APPLE_SCRIPT_STYLE.md)** — Code style conventions and best practices
+- **[ADVANCED_PROCESSES.md](docs/ADVANCED_PROCESSES.md)** — Technical deep dives (SeriesID, recording lifecycle, etc)
+
+### 🔧 For Contributors
+- **[AGENTS.md](docs/AGENTS.md)** — Contribution guidelines and PR standards
+- **[TESTING.md](docs/TESTING.md)** — Smoke testing checklist and automated tests
+
+### 📜 Reference
+- **[CHANGELOG.md](docs/CHANGELOG.md)** — Release history and version tracking
 
 ### Screenshots
 
