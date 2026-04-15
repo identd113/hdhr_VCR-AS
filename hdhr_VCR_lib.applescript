@@ -37,24 +37,53 @@ on checkfileexists(caller, filepath)
 			logger(true, handlername, caller, "WARN", "filepath is missing value") of ParentScript
 			return false
 		end if
-		
+
 		set filepath_text to filepath as text
 		if filepath_text is "" then
 			logger(true, handlername, caller, "WARN", "filepath is empty") of ParentScript
 			return false
 		end if
-		
+
 		logger(true, handlername, caller, "INFO", filepath_text) of ParentScript
 		logger(true, handlername, caller, "DEBUG", "filepath class is " & (class of filepath as text)) of ParentScript
-		
-		try
-			set filepath_posix to POSIX path of filepath_text
-		on error
-			set filepath_posix to filepath_text
-		end try
-		
+
+		set filepath_posix to ""
+
+		-- Try to convert alias path format (e.g. "Raid6:DVR Tests:") to POSIX path
+		if filepath_text contains ":" and (character 1 of filepath_text) is not "/" then
+			try
+				-- Convert Mac alias path to POSIX: "Raid6:DVR Tests:" -> "/Volumes/Raid6/DVR Tests"
+				set posix_attempt to filepath_text
+				set posix_attempt to text 1 through -2 of posix_attempt -- Remove trailing colon: "Raid6:DVR Tests"
+				set old_delim to AppleScript's text item delimiters
+				set AppleScript's text item delimiters to ":"
+				set path_parts to every text item of posix_attempt
+				set AppleScript's text item delimiters to "/"
+				set posix_attempt to path_parts as text
+				set AppleScript's text item delimiters to old_delim
+				set posix_attempt to "/Volumes/" & posix_attempt
+				do shell script "test -e " & quoted form of posix_attempt
+				set filepath_posix to posix_attempt
+				logger(true, handlername, caller, "DEBUG", "Converted alias path to POSIX: " & filepath_posix) of ParentScript
+			on error
+				-- If that fails, try standard POSIX conversion
+				try
+					set filepath_posix to POSIX path of filepath_text
+				on error
+					set filepath_posix to filepath_text
+				end try
+			end try
+		else
+			-- Already a POSIX path or file reference
+			try
+				set filepath_posix to POSIX path of filepath_text
+			on error
+				set filepath_posix to filepath_text
+			end try
+		end if
+
 		logger(true, handlername, caller, "TRACE", "filepath normalized to: " & filepath_posix) of ParentScript
-		
+
 		try
 			do shell script "test -e " & quoted form of filepath_posix
 			return true
