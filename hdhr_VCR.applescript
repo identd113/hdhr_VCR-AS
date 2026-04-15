@@ -1405,7 +1405,12 @@ on validate_show_info(caller, show_to_check, should_edit)
 					set temp_air_date to choose from list Full_week_days default items show_air_date of item i of Show_info with title my check_version_dialog(my cm(handlername, caller)) OK button name "Next.." cancel button name Running_icon of Icon_record & " Run" with prompt "Select the days you wish to record" & return & "This is a series, so you can select multiple days" with multiple selections allowed without empty selection allowed
 
 				else
-					set temp_air_date to (choose from list Full_week_days default items show_air_date of item i of Show_info with title my check_version_dialog(my cm(handlername, caller)) OK button name "Next.." cancel button name Running_icon of Icon_record & " Run" with prompt "Select the day you wish to record" & return & "This is a single, you can only select 1 day" with empty selection allowed without multiple selections allowed)
+					-- For Single: only use first day as default (not all days)
+					set temp_default_days to {}
+					if (count of show_air_date of item i of Show_info) > 0 then
+						set temp_default_days to {item 1 of show_air_date of item i of Show_info}
+					end if
+					set temp_air_date to (choose from list Full_week_days default items temp_default_days with title my check_version_dialog(my cm(handlername, caller)) OK button name "Next.." cancel button name Running_icon of Icon_record & " Run" with prompt "Select the day you wish to record" & return & "This is a single, you can only select 1 day" with empty selection allowed without multiple selections allowed)
 				end if
 				if temp_air_date is not false then
 					set show_air_date of item i of Show_info to temp_air_date
