@@ -1509,8 +1509,6 @@ on validate_show_info(caller, show_to_check, should_edit)
 				end if
 				if should_edit is true then
 					my logger(true, handlername, caller, "DEBUG", "Sending change notification and saving")
-					set progress description to "This show has been changed!"
-					delay 0.1
 					try
 						display notification with title Edit_icon of Icon_record & " Show Changed! (" & hdhr_record of item i of Show_info & ")" subtitle "" & quote & show_title of item i of Show_info & quote & " at " & show_time of item i of Show_info
 						my logger(true, handlername, caller, "DEBUG", "Notification sent successfully")
@@ -1518,6 +1516,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 						my logger(true, handlername, caller, "WARN", "Notification failed: " & errmsg)
 					end try
 					try
+						my logger(true, handlername, caller, "DEBUG", "About to save_data for show: " & show_title of item i of Show_info)
 						my save_data(my cm(handlername, caller))
 						my logger(true, handlername, caller, "DEBUG", "Show saved successfully")
 					on error errmsg
@@ -1527,10 +1526,17 @@ on validate_show_info(caller, show_to_check, should_edit)
 			on error errmsg
 				my logger(true, handlername, caller, "ERROR", "Unexpected error after folder selection: " & errmsg)
 			end try
-			if my HDHRDeviceSearch(my cm(handlername, caller), hdhr_record of item i of Show_info) is 0 then
-				my logger(true, handlername, caller, "WARN", "The show " & quote & show_title of item i of Show_info & quote & ", will not be recorded, as the tuner " & hdhr_record of item i of Show_info & ", is no longer detected")
-				display notification with title Stop_icon of Icon_record & " Recording Stopped!"
-			end if
+			try
+				my logger(true, handlername, caller, "DEBUG", "Checking HDHRDeviceSearch for tuner: " & hdhr_record of item i of Show_info)
+				set tuner_search_result to my HDHRDeviceSearch(my cm(handlername, caller), hdhr_record of item i of Show_info)
+				my logger(true, handlername, caller, "DEBUG", "HDHRDeviceSearch result: " & tuner_search_result)
+				if tuner_search_result is 0 then
+					my logger(true, handlername, caller, "WARN", "The show " & quote & show_title of item i of Show_info & quote & ", will not be recorded, as the tuner " & hdhr_record of item i of Show_info & ", is no longer detected")
+					display notification with title Stop_icon of Icon_record & " Recording Stopped!"
+				end if
+			on error errmsg number errnum
+				my logger(true, handlername, caller, "ERROR", "Error during tuner check (err " & errnum & "): " & errmsg)
+			end try
 		else
 			set show_active_changed to false
 		end if
