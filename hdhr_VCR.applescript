@@ -1331,60 +1331,66 @@ on validate_show_info(caller, show_to_check, should_edit)
 
 				my logger(true, handlername, caller, "INFO", "Show Title prompt: " & text returned of show_title_temp & ", button_pressed: " & button returned of show_title_temp)
 
-				set series_type_changed to false
+				-- ENFORCE 4-STATE CONVENTION
 				if button returned of show_title_temp contains "Series" then
 					set show_is_series of item i of Show_info to true
-					set series_type_changed to (show_is_series_original is false)
-					if series_type_changed then
-						if show_use_seriesid of item i of Show_info is false then
-							set temp_default_button to 1
-						else if show_use_seriesid_all of item i of Show_info is true then
-							set temp_default_button to 3
-						else
-							set temp_default_button to 2
-						end if
-						set series_type to button returned of (display dialog ("What kind of series?" & return & quote & "DateTime" & quote & " Exact time & channel" & return & quote & "SeriesID(Channel)" & quote & " All SeriesID on one channel" & return & quote & "SeriesID(All)" & quote & " All SeriesID on all channels" & quote) buttons {"DateTime", "SeriesID(Channel)", "SeriesID(All)"} default button temp_default_button with title my check_version_dialog(my cm(handlername, caller)) with icon my curl2icon(my cm(handlername, caller), show_logo_url of item i of Show_info))
-						if series_type contains "DateTime" then
-							set show_use_seriesid_all of item i of Show_info to false
-							set show_use_seriesid of item i of Show_info to false
-							set should_edit to true
-						else if series_type contains "SeriesID(Channel)" then
-							set show_use_seriesid_all of item i of Show_info to false
-							set show_use_seriesid of item i of Show_info to true
-							set should_edit to false
-						else if series_type contains "SeriesID(All)" then
-							set show_use_seriesid_all of item i of Show_info to true
-							set show_use_seriesid of item i of Show_info to true
-							set should_edit to false
-						end if
+					-- Determine default button based on current state
+					if show_use_seriesid_all of item i of Show_info is true then
+						set temp_default_button to 3
+					else if show_use_seriesid of item i of Show_info is true then
+						set temp_default_button to 2
+					else
+						set temp_default_button to 1
+					end if
+					set series_type to button returned of (display dialog ("What kind of series?" & return & quote & "DateTime" & quote & " Exact time & channel" & return & quote & "SeriesID(Channel)" & quote & " All SeriesID on one channel" & return & quote & "SeriesID(All)" & quote & " All SeriesID on all channels" & quote) buttons {"DateTime", "SeriesID(Channel)", "SeriesID(All)"} default button temp_default_button with title my check_version_dialog(my cm(handlername, caller)) with icon my curl2icon(my cm(handlername, caller), show_logo_url of item i of Show_info))
+
+					-- Set state based on series type selection
+					if series_type contains "DateTime" then
+						-- DateTime Series: is_series=true, use_seriesid=false, use_seriesid_all=false
+						set show_use_seriesid of item i of Show_info to false
+						set show_use_seriesid_all of item i of Show_info to false
+						set should_edit to true
+					else if series_type contains "SeriesID(Channel)" then
+						-- SeriesID(Channel): is_series=true, use_seriesid=true, use_seriesid_all=false
+						set show_use_seriesid of item i of Show_info to true
+						set show_use_seriesid_all of item i of Show_info to false
+						set should_edit to false
+					else if series_type contains "SeriesID(All)" then
+						-- SeriesID(All): is_series=true, use_seriesid=true, use_seriesid_all=true
+						set show_use_seriesid of item i of Show_info to true
+						set show_use_seriesid_all of item i of Show_info to true
+						set should_edit to false
 					end if
 				else if button returned of show_title_temp contains "Single" then
+					-- Single: is_series=false, use_seriesid=false, use_seriesid_all=false
 					set show_is_series of item i of Show_info to false
-					set series_type_changed to (show_is_series_original is true)
-					if series_type_changed then
-						set show_use_seriesid_all of item i of Show_info to false
-						set show_use_seriesid of item i of Show_info to false
-						set should_edit to true
-					end if
+					set show_use_seriesid of item i of Show_info to false
+					set show_use_seriesid_all of item i of Show_info to false
+					set should_edit to true
 				end if
-				my logger(true, handlername, caller, "INFO", "show_is_series: " & show_is_series of item i of Show_info & ", show_use_seriesid: " & show_use_seriesid of item i of Show_info & ", show_use_seriesid_all: " & show_use_seriesid_all of item i of Show_info)
+				my logger(true, handlername, caller, "INFO", "State: is_series=" & show_is_series of item i of Show_info & ", use_seriesid=" & show_use_seriesid of item i of Show_info & ", use_seriesid_all=" & show_use_seriesid_all of item i of Show_info)
 			end if
 			
-			-- PROMPTS BY MODE:
-			-- DateTime: Ask for days, channel, time, length
-			-- SeriesID(Channel): Auto-set days, ask channel, skip time/length
-			-- SeriesID(All): Auto-set days, skip channel, skip time/length
+			-- ENFORCE STATE AND PROMPT ACCORDINGLY
+			set show_state to ""
+			if show_is_series of item i of Show_info is true then
+				if show_use_seriesid_all of item i of Show_info is true then
+					set show_state to "SeriesID(All)"
+				else if show_use_seriesid of item i of Show_info is true then
+					set show_state to "SeriesID(Channel)"
+				else
+					set show_state to "DateTime"
+				end if
+			else
+				set show_state to "Single"
+			end if
+			my logger(true, handlername, caller, "DEBUG", "Show state: " & show_state)
 
 			-- DAYS SELECTION
-			if show_use_seriesid_all of item i of Show_info is true then
-				-- SeriesID(All): Auto-set all days
-				set show_air_date of item i of Show_info to Full_week_days
-			else if show_use_seriesid of item i of Show_info is true then
-				-- SeriesID(Channel): Auto-set all days
+			if show_state is "SeriesID(All)" or show_state is "SeriesID(Channel)" then
 				set show_air_date of item i of Show_info to Full_week_days
 			else if show_air_date of item i of Show_info is missing value or length of (show_air_date of item i of Show_info) is 0 or should_edit is true or class of (show_air_date of item i of Show_info) is not list then
-				-- DateTime: Ask user for day(s)
-				if show_is_series of item i of Show_info is true then
+				if show_state is "DateTime" then
 					set temp_air_date to choose from list Full_week_days default items show_air_date of item i of Show_info with title my check_version_dialog(my cm(handlername, caller)) OK button name "Next.." cancel button name Running_icon of Icon_record & " Run" with prompt "Select the days you wish to record" & return & "This is a series, so you can select multiple days" with multiple selections allowed without empty selection allowed
 
 				else
@@ -1399,8 +1405,8 @@ on validate_show_info(caller, show_to_check, should_edit)
 			end if
 
 			-- CHANNEL SELECTION
-			-- Skip for SeriesID(All) - records all channels
-			if show_use_seriesid_all of item i of Show_info is false and (show_channel of item i of Show_info is missing value or my is_number(my cm(handlername, caller), show_channel of item i of Show_info) is false) then
+			-- Ask (DateTime/Single/SeriesID(Channel)), Skip (SeriesID(All))
+			if show_state is not "SeriesID(All)" and (show_channel of item i of Show_info is missing value or my is_number(my cm(handlername, caller), show_channel of item i of Show_info) is false) then
 
 				set temp_tuner to hdhr_record of item i of Show_info
 				set tuner_offset to my HDHRDeviceSearch(my cm(handlername, caller), temp_tuner)
@@ -1424,22 +1430,26 @@ on validate_show_info(caller, show_to_check, should_edit)
 			end if
 
 			-- TIME SELECTION
-			-- Skip for SeriesID modes - determined by guide data
-			if show_use_seriesid of item i of Show_info is false and (show_time of item i of Show_info is missing value or (show_time of item i of Show_info as number) is greater than or equal to 24 or my is_number(my cm(handlername, caller), show_time of item i of Show_info) is false or should_edit is true) then
+			-- Ask (DateTime/Single), Skip (SeriesID modes)
+			if show_state is "DateTime" or show_state is "Single" then
+				if show_time of item i of Show_info is missing value or (show_time of item i of Show_info as number) is greater than or equal to 24 or my is_number(my cm(handlername, caller), show_time of item i of Show_info) is false or should_edit is true then
 
-				try
-					set show_time of item i of Show_info to text returned of (display dialog "What time does this show air? " & return & "(0-24, use decimals, ie 9.5 for 9:30)" default answer show_time of item i of Show_info buttons {Running_icon of Icon_record & " Run", "Next.."} with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout default button 2 cancel button 1) as number
-					set show_time_orig of item i of Show_info to show_time of item i of Show_info
-				on error errmsg
-					my logger(true, handlername, caller, "INFO", "User clicked " & quote & "Run" & quote)
-					return false
-				end try
+					try
+						set show_time of item i of Show_info to text returned of (display dialog "What time does this show air? " & return & "(0-24, use decimals, ie 9.5 for 9:30)" default answer show_time of item i of Show_info buttons {Running_icon of Icon_record & " Run", "Next.."} with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout default button 2 cancel button 1) as number
+						set show_time_orig of item i of Show_info to show_time of item i of Show_info
+					on error errmsg
+						my logger(true, handlername, caller, "INFO", "User clicked " & quote & "Run" & quote)
+						return false
+					end try
+				end if
 			end if
 
 			-- LENGTH SELECTION
-			-- Skip for SeriesID modes - determined by guide data
-			if show_use_seriesid of item i of Show_info is false and (show_length of item i of Show_info is missing value or my is_number(my cm(handlername, caller), show_length of item i of Show_info) is false or show_length of item i of Show_info is less than or equal to 0 or should_edit is true) then
-				set show_length of item i of Show_info to text returned of (display dialog "How long is this show? (minutes)" default answer show_length of item i of Show_info with title my check_version_dialog(my cm(handlername, caller)) buttons {Running_icon of Icon_record & " Run", "Next.."} default button 2 cancel button 1 giving up after Dialog_timeout)
+			-- Ask (DateTime/Single), Skip (SeriesID modes)
+			if show_state is "DateTime" or show_state is "Single" then
+				if show_length of item i of Show_info is missing value or my is_number(my cm(handlername, caller), show_length of item i of Show_info) is false or show_length of item i of Show_info is less than or equal to 0 or should_edit is true then
+					set show_length of item i of Show_info to text returned of (display dialog "How long is this show? (minutes)" default answer show_length of item i of Show_info with title my check_version_dialog(my cm(handlername, caller)) buttons {Running_icon of Icon_record & " Run", "Next.."} default button 2 cancel button 1 giving up after Dialog_timeout)
+				end if
 			end if
 			
 			--fix show_air_date 			
