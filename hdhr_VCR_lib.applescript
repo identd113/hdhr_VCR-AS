@@ -1,5 +1,4 @@
 # hdhr_vcr library.  This needs to be located in the users Documents Folder, and not renamed.
-#Adding for Test
 
 global hdhrVCR_loaded
 property ParentScript : missing value
@@ -162,7 +161,7 @@ end fixDate
 
 on stringToUtf8(caller, thestring)
 	set handlername to "stringToUtf8_lib"
-	set non_utf8 to {"‡", "Ž", "’", "—", "œ", "ç", "ƒ", "ê", "î", "ò", "ˆ", "", "“", "˜", "", "Ë", "é", "í", "ñ", "ô", "‰", "", "”", "™", "ž", "å", "æ", "ë", "ï", "ó", "Š", "‘", "•", "š", "Ÿ", "€", "è", "ì", "…", "†", "‹", "–", "›", "Ì", "„", "Í", "Œ", "", "", "‚", "¿", "¯", character id 8239, ":"}
+	set non_utf8 to {"ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", "ï¿½", character id 8239, ":"}
 	set fixed_utf8 to {"a", "e", "i", "o", "u", "A", "E", "I", "O", "U", "a", "e", "i", "o", "u", "A", "E", "I", "O", "U", "a", "e", "i", "o", "u", "A", "E", "I", "O", "U", "a", "e", "i", "o", "u", "A", "E", "I", "O", "U", "a", "n", "o", "A", "N", "O", "a", "A", "c", "C", "o", "O", " ", ""}
 	set fixed_string to thestring
 	try
@@ -357,7 +356,7 @@ on short_date(caller, the_date_object, twentyfourtime, show_seconds)
 		
 		-- Hours handling
 		if twentyfourtime is false then
-			if theHour ³ 12 then
+			if theHour ï¿½ 12 then
 				set timeAMPM to " PM"
 				if theHour > 12 then set theHour to theHour - 12
 			else
@@ -367,7 +366,7 @@ on short_date(caller, the_date_object, twentyfourtime, show_seconds)
 			-- 12-hour clock midnight/noon rules
 			if theHour is 0 then set theHour to 12
 			
-			-- In 12-hour mode you typically *donÕt* want a leading zero,
+			-- In 12-hour mode you typically *donï¿½t* want a leading zero,
 			-- but if you DO want it, swap the next line for padnum(...)
 			set hours_string to (theHour as text)
 		else
@@ -689,7 +688,7 @@ on date2touch(caller, datetime, filepath)
 end date2touch
 
 on time_set(caller, adate_object, time_shift)
-	## It returns the resulting date/time object. This is a convenient way to say, ÒI want this date, at that time of day.Ó
+	## It returns the resulting date/time object. This is a convenient way to say, ï¿½I want this date, at that time of day.ï¿½
 	set handlername to "time_set"
 	if class of adate_object is not date then
 		logger(true, handlername, caller, "ERROR", (adate_object as text) & " is not a date object!") of ParentScript
@@ -1196,7 +1195,7 @@ on recordSee(caller, the_record)
 	try
 		set the_record to the_record as text
 	on error errmsg
-		set parsed_errmsg to item 2 of my stringlistflip(handlername, errmsg, {"CanÕt make ", " into"}, "list")
+		set parsed_errmsg to item 2 of my stringlistflip(handlername, errmsg, {"Canï¿½t make ", " into"}, "list")
 		return parsed_errmsg
 	end try
 end recordSee

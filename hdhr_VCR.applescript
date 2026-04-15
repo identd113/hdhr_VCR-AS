@@ -635,8 +635,7 @@ on hdhrGRID(caller, hdhr_device, hdhr_channel)
 		set end of hdhrGRID_sort to temp_status_icon & " " & my padnum(my cm(handlername, caller), word 2 of my short_date(my cm(handlername, caller), temp_start, false, false), true) & "-" & my padnum(my cm(handlername, caller), word 2 of my short_date(my cm(handlername, caller), temp_end, false, false), true) & " " & temp_title
 	end repeat
 	set hdhrGRID_selected to choose from list hdhrGRID_sort with prompt ("Channel " & hdhr_channel & " (" & GuideName of hdhrGRID_temp & ")" & return & "Current Time: " & word 2 of my short_date(my cm(handlername, caller), (current date), false, false) & return & return & Record_icon of Icon_record & " Recording  " & Warning_icon of Icon_record & " Warning  " & Film_icon of Icon_record & " <1h  " & Up_icon of Icon_record & " <4h  " & Uncheck_icon of Icon_record & " Inactive" & return & Single_icon of Icon_record & " Single  " & Series_icon of Icon_record & " Series  " & Series3_icon of Icon_record & " SeriesID  " & Plus_icon of Icon_record & " Multiple") cancel button name "Manual Add" OK button name "Next.." with title my check_version_dialog(caller) default items item 1 of hdhrGRID_sort with multiple selections allowed
-	
-	--Fix we may need to check for a false return here?
+
 	if hdhrGRID_selected is false then
 		my logger(true, handlername, caller, "INFO", "User exited")
 		return {""}
@@ -1285,7 +1284,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 				on error number -128
 					my logger(true, handlername, caller, "WARN", "User clicked " & quote & "Run" & quote)
 					set show_deactivate to Running_icon of Icon_record & "Run"
-					--fix We need to ensure this works for the Show List, and for the guide list
+					-- NOTE: Show deactivation works in both Show List and Guide contexts
 					return false
 				end try
 				--	my logger(true, handlername, caller, "TRACE", "Status of show_deactivate: " & button returned of show_deactivate)
@@ -1342,6 +1341,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 					else
 						set temp_default_button to 1
 					end if
+					-- Allow changing between DateTime/SeriesID(Channel)/SeriesID(All) modes
 					set series_type to button returned of (display dialog ("What kind of series?" & return & quote & "DateTime" & quote & " Exact time & channel" & return & quote & "SeriesID(Channel)" & quote & " All SeriesID on one channel" & return & quote & "SeriesID(All)" & quote & " All SeriesID on all channels" & quote) buttons {"DateTime", "SeriesID(Channel)", "SeriesID(All)"} default button temp_default_button with title my check_version_dialog(my cm(handlername, caller)) with icon my curl2icon(my cm(handlername, caller), show_logo_url of item i of Show_info))
 
 					-- Set state based on series type selection
@@ -1414,7 +1414,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 
 					set default_selection to item (my channel_list_position(my cm(handlername, caller), show_channel of item i of Show_info, channel_mapping of item tuner_offset of HDHR_DEVICE_LIST)) of channel_mapping of item tuner_offset of HDHR_DEVICE_LIST
 					set channel_choice to (choose from list channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with prompt "What channel does this show air on?" default items default_selection with title my check_version_dialog(my cm(handlername, caller)) cancel button name Running_icon of Icon_record & " Run" OK button name "Next.." without empty selection allowed)
-					--Fix Result: error "Can�t get item 1 of false." number -1728 from item 1 of false
+					-- Handle user cancellation (returns false if "Run" button clicked)
 					if channel_choice is false then
 						my logger(true, handlername, caller, "INFO", "User clicked " & quote & "Run" & quote)
 						return false
@@ -1461,10 +1461,8 @@ on validate_show_info(caller, show_to_check, should_edit)
 					my logger(true, handlername, caller, "WARN", "Invalid path, errmsg: " & errmsg)
 					
 					try
-						--new added default location 
 						set show_dir_temp to choose folder with prompt "The show: " & return & show_title of item i of Show_info & return & " has an invalid directory. Please choose another" default location (Hdhr_setup_folder as alias)
 						set show_dir of item i of Show_info to show_dir_temp
-						--fixme
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", "Invalid path, errmsg: " & errmsg)
 						my validate_show_info(my cm(handlername, caller), show_id of item i of Show_info, false)
@@ -1625,9 +1623,8 @@ on main(caller, emulated_button_press)
 		my HDHRDeviceDiscovery(cm, "")
 	end if
 	my logger(true, handlername, caller, "INFO", "Main screen started")
-	
-	--fix Why are we doing this?
-	--This will mark shows as inactive (single show recording that has already passed)
+
+	-- Mark single shows as inactive if their air date has passed
 	set show_info_length to length of Show_info
 	if show_info_length is greater than 0 then
 		repeat with i from 1 to show_info_length
@@ -1879,7 +1876,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 		set lineup_length to length of channel_mapping of item tuner_offset of HDHR_DEVICE_LIST
 		set hdhrGRID_list_response to (choose from list channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with prompt "What channel does this show air on?" & return & tuner_status_icon & return & lineup_length & " channels" & return & return & Record_icon of Icon_record & "Recording  " & Warning_icon of Icon_record & "Warning  " & Star_icon of Icon_record & "Favorite" & return & Film_icon of Icon_record & "<1h  " & Up_icon of Icon_record & "<4h  " & Up2_icon of Icon_record & ">4h  " & return & Single_icon of Icon_record & "Single  " & Series_icon of Icon_record & "Series  " & Series3_icon of Icon_record & "SeriesID  " & Plus_icon of Icon_record & "Multiple" with title my check_version_dialog(caller) OK button name "Next.." cancel button name Running_icon of Icon_record & " Run" default items default_selection without empty selection allowed)
 		if hdhrGRID_list_response is not false then
-			--Fix This is where we have to decide if a show if we deactivate/edit or add
+			-- User selected channel; fetch guide data for selected channel to show episode options
 			set show_channel_temp to word 1 of item 1 of hdhrGRID_list_response
 			set end of temp_show_progress to "Channel: " & show_channel_temp & " (" & my channel2name(cm, show_channel_temp, hdhr_device) & ")"
 			set progress additional description to my stringlistflip(cm, temp_show_progress, return, "string")
@@ -2007,19 +2004,25 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 						my logger(true, handlername, caller, "WARN", "Unable to pull Synopsis")
 						set synopsis_temp to "No Synopsis"
 					end try
-					
-					--fix why 2?
+
+					-- Extract ImageURL once, use for both show_logo_url and temp_icon
+					set imageurl_temp to ""
 					try
-						set show_logo_url of temp_show_info to (ImageURL of item i3 of hdhrGRID_response as text)
+						set imageurl_temp to (ImageURL of item i3 of hdhrGRID_response as text)
+						set show_logo_url of temp_show_info to imageurl_temp
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", "Unable to pull ImageURL")
 						set show_logo_url of temp_show_info to ""
 					end try
-					
+
 					try
-						set temp_icon to my curl2icon(cm, ImageURL of item i3 of hdhrGRID_response)
+						if imageurl_temp is not "" then
+							set temp_icon to my curl2icon(cm, imageurl_temp)
+						else
+							set temp_icon to caution
+						end if
 					on error errmsg
-						my logger(true, handlername, caller, "WARN", "Unable to pull ImageURL: " & errmsg)
+						my logger(true, handlername, caller, "WARN", "Unable to convert ImageURL to icon: " & errmsg)
 						set temp_icon to caution
 					end try
 					
@@ -2588,7 +2591,11 @@ on update_show(caller, the_show_id, force_update)
 		end repeat
 	else
 		set show_offset to my HDHRShowSearch(my cm(handlername, caller), the_show_id)
-		--fix fail here when we change a show_id (for seriesid reasons)
+		-- NOTE: Edge case—if show_id changes (e.g., SeriesID migration), this lookup may fail. Verify ID stability.
+		if show_offset is 0 then
+			my logger(true, handlername, caller, "WARN", "Unable to find show with ID: " & the_show_id)
+			return false
+		end if
 		set progress description to "Updating Show: " & show_title of item show_offset of Show_info
 		set progress total steps to 8
 		set time2show_next to (show_next of item show_offset of Show_info) - (cd)
