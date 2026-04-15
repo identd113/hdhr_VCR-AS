@@ -73,11 +73,21 @@ I wanted to record TV shows quickly on my HDHomeRun, without a massive install o
 
 ## How to Use
 
-- **Add**: Pick a tuner, pick a channel, pick a show—done.
-- **Series Recording**: Record on specific days, repeats every week.
-- **Manual Add**: Need something outside the guide? Use decimal time (e.g., 18.75 for 6:45pm).
-- **Run**: Resets UI or goes idle.
-- **Edit/Remove**: Click the app in the dock for options.
+The app supports **4 different recording modes**:
+
+1. **Single** — Record one episode on a specific day/time/channel
+2. **DateTime Series** — Record specific days/times on a specific channel
+3. **SeriesID(Channel)** — Record all episodes on one channel (any time)
+4. **SeriesID(All)** — Record all episodes on any channel (any time)
+
+**Quick Start:**
+- **Add**: Pick a tuner → enter title → choose mode → answer relevant prompts
+- **Edit**: Click app icon → Edit → select show → modify settings
+- **Run**: Returns to idle recording mode
+
+📖 **For detailed workflows:** See [WORKFLOWS.md](docs/WORKFLOWS.md) for step-by-step guides for each mode.
+
+📋 **For state details:** See [SHOW_STATUS.md](docs/SHOW_STATUS.md) for the 4-state convention.
 
 ### Screenshots
 
