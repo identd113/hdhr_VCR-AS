@@ -48,6 +48,7 @@ global Log_ignored
 global Errloc
 global Max_disk_percentage
 global Full_week_days
+global Code_version_epoch
 global RefreshderiesiD_list
 global Idle_loop
 global GuideHours
@@ -172,6 +173,7 @@ on setup_globals(caller)
 		set Icon_record to {}
 		set IconList to {}
 		set GuideHours to 12
+		set Code_version_epoch to 1744785120 -- Updated: 2026-04-14 23:32:00 UTC
 	on error errmsg
 		return false
 	end try
@@ -246,6 +248,7 @@ on run {}
 	end if
 	if startup_success is true then
 		my logger(true, handlername, caller, "INFO", "***** Starting " & name of me & " " & Version_local & " *****")
+		my logger(true, handlername, caller, "INFO", "Code version epoch: " & Code_version_epoch)
 		## Lets check for a new version! This will trigger OSX to prompt for confirmation to talk to JSONHelper, the library we use for JSON related matters.
 		my check_version(cmi)
 		-- CRITICAL: Load local config file first (always, no network needed)
