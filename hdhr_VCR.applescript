@@ -1492,6 +1492,11 @@ on validate_show_info(caller, show_to_check, should_edit)
 			if show_next of item i of Show_info is missing value or (class of (show_next of item i of Show_info) as text) is not "date" or should_edit is true then
 				if show_is_series of item i of Show_info is true then
 					set show_next of item i of Show_info to my nextday(my cm(handlername, caller), show_id of item i of Show_info)
+				else
+					-- For Single: calculate next air time from selected day and time
+					set selected_day to item 1 of show_air_date of item i of Show_info
+					set selected_time to show_time of item i of Show_info
+					set show_next of item i of Show_info to my nextday(my cm(handlername, caller), show_id of item i of Show_info)
 				end if
 			end if
 			if should_edit is true then
