@@ -5,16 +5,52 @@ This repository contains the AppleScript sources and assets for the hdhr_VCR sma
 > **📖 See:** [CLAUDE.md](../CLAUDE.md) for project overview, [APPLE_SCRIPT_STYLE.md](APPLE_SCRIPT_STYLE.md) for code standards, and [TESTING.md](TESTING.md) for test procedures.
 
 ## General Guidance
+
+**All commits must update `CHANGELOG.md`** with a summary of changes under a new date section. See format below.
+
 - Keep `hdhr_VCR.applescript` and `hdhr_VCR_lib.applescript` in the project root; downstream users expect these exact filenames when exporting the app bundle.
 - When you introduce a user-facing change, update `README.md` to reflect the new workflow or capability.
 - If you bump the in-script `Version_local` or library version, add a matching entry to `version.json` (newest release at the top of the list).
-- Use YYYYMMDD for version naming (for example, `20250919`) across `version.json` and
-  `CHANGELOG.md`.
-- Screenshots in this repo document the UI flow. If the UI changes meaningfully,
-  refresh the corresponding PNG and keep resolution/aspect consistent with the
-  existing assets.
-- If you add, remove, or change handlers in either AppleScript file, update
-  `docs/handler.md` to keep the handler reference in sync.
+- Use YYYYMMDD for version naming (for example, `20250919`) across `version.json` and `CHANGELOG.md`.
+- Screenshots in this repo document the UI flow. If the UI changes meaningfully, refresh the corresponding PNG and keep resolution/aspect consistent with the existing assets.
+- If you add, remove, or change handlers in either AppleScript file, update `docs/handler.md` to keep the handler reference in sync.
+
+## CHANGELOG.md Format
+
+Always use this structure for new entries:
+
+```markdown
+## YYYYMMDD
+
+### Fixed
+- Brief description of fix
+
+### Added
+- Brief description of new feature
+
+### Changed
+- Brief description of modification
+
+### Removed
+- Brief description of removal
+```
+
+Group related changes and keep descriptions concise. Example:
+```markdown
+## 20260415
+
+### Fixed
+- DateTime series prompts no longer appear for SeriesID(All) shows
+- Corrected disk space check threshold logic
+
+### Added
+- Cross-links between all documentation files
+- Quick reference table in WORKFLOWS.md
+
+### Changed
+- Consolidated 4-state definitions to reduce duplication
+- WORKFLOWS.md condensed from 467 to 109 lines
+```
 
 ## Comment Handling
 - Treat any text that follows a `#` character on a line in the AppleScript sources as a comment.

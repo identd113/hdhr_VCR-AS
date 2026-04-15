@@ -1,5 +1,32 @@
 # Changelog
 
+## 20260414 (Documentation Release)
+
+### Added
+- Created CLAUDE.md project guide with architecture overview, 4-state model, critical requirements, and key handlers
+- Created SHOW_STATUS.md reference documenting all 4 show states and validation rules
+- Created WORKFLOWS.md condensed user guide for adding/editing shows (prompt flow format)
+- Created ADVANCED_PROCESSES.md technical deep dives for SeriesID matching, recording lifecycle, error handling, and logging
+- Cross-linked all documentation files with 📖 references for mutual navigation
+- Added documentation guide section to README.md for different audiences (Users/Developers/Contributors)
+- Organized all non-core docs into `/docs` folder (AGENTS.md, CHANGELOG.md, etc)
+
+### Changed
+- Consolidated 4-state definitions to single source of truth (SHOW_STATUS.md)
+- WORKFLOWS.md reduced from 467 to 109 lines (77% reduction) by eliminating redundant step-by-step guides
+- CLAUDE.md condensed to avoid duplication and point to detailed docs
+- Implemented comprehensive cross-linking strategy to eliminate information silos
+- Updated AGENTS.md with requirement that all commits must update CHANGELOG.md
+- Added CHANGELOG.md format specification and examples to AGENTS.md
+
+### Result
+- Total documentation reduced from ~2600 to ~2300 lines while improving clarity
+- Clear navigation paths for different user types
+- No duplicated concepts across documents
+- All changes tracked in this unified changelog
+
+---
+
 ## 2026-04-14
 
 ### Fixed
