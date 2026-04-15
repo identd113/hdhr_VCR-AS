@@ -673,7 +673,7 @@ on hdhrGRID(caller, hdhr_device, hdhr_channel)
 		if selected_show is greater than or equal to 1 and the_show_id of item selected_show of Show_status_list is not missing value then
 			my logger(true, handlername, caller, "INFO", "Editing, instead of adding show")
 			set Back_channel to hdhr_channel
-			my validate_show_info(caller, (the_show_id of item selected_show of Show_status_list), true)
+			my validate_show_info(my cm(handlername, caller), (the_show_id of item selected_show of Show_status_list), true)
 			my idle_change(my cm(handlername, caller), 1, 3)
 			set edited_show_count to edited_show_count + 1
 		else
@@ -1487,7 +1487,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 					end if
 				on error errmsg
 					my logger(true, handlername, caller, "ERROR", "Unable to select show directory: " & errmsg)
-					my validate_show_info(caller, show_id of item i of Show_info, false)
+					my validate_show_info(my cm(handlername, caller), show_id of item i of Show_info, false)
 				end try
 				set show_temp_dir of item i of Show_info to show_dir of item i of Show_info
 				my logger(true, handlername, caller, "WARN", "show_dir: " & show_dir of item i of Show_info)
