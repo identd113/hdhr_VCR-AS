@@ -1490,19 +1490,35 @@ on validate_show_info(caller, show_to_check, should_edit)
 			end if
 			
 			if show_next of item i of Show_info is missing value or (class of (show_next of item i of Show_info) as text) is not "date" or should_edit is true then
-				if show_is_series of item i of Show_info is true then
-					set show_next of item i of Show_info to my nextday(my cm(handlername, caller), show_id of item i of Show_info)
-				else
-					-- For Single: calculate next air time from selected day and time
-					set selected_day to item 1 of show_air_date of item i of Show_info
-					set selected_time to show_time of item i of Show_info
-					set show_next of item i of Show_info to my nextday(my cm(handlername, caller), show_id of item i of Show_info)
-				end if
+				my logger(true, handlername, caller, "DEBUG", "Calculating show_next for: " & show_title of item i of Show_info)
+				try
+					if show_is_series of item i of Show_info is true then
+						set show_next of item i of Show_info to my nextday(my cm(handlername, caller), show_id of item i of Show_info)
+					else
+						-- For Single: calculate next air time from selected day and time
+						set show_next of item i of Show_info to my nextday(my cm(handlername, caller), show_id of item i of Show_info)
+					end if
+					my logger(true, handlername, caller, "DEBUG", "show_next calculated: " & show_next of item i of Show_info)
+				on error errmsg
+					my logger(true, handlername, caller, "ERROR", "Failed to calculate show_next: " & errmsg)
+				end try
 			end if
 			if should_edit is true then
+				my logger(true, handlername, caller, "DEBUG", "Sending change notification and saving")
 				set progress description to "This show has been changed!"
 				delay 0.1
-				display notification with title Edit_icon of Icon_record & " Show Changed! (" & hdhr_record of last item of Show_info & ")" subtitle "" & quote & show_title of last item of Show_info & quote & " at " & show_time of last item of Show_info
+				try
+					display notification with title Edit_icon of Icon_record & " Show Changed! (" & hdhr_record of item i of Show_info & ")" subtitle "" & quote & show_title of item i of Show_info & quote & " at " & show_time of item i of Show_info
+					my logger(true, handlername, caller, "DEBUG", "Notification sent successfully")
+				on error errmsg
+					my logger(true, handlername, caller, "WARN", "Notification failed: " & errmsg)
+				end try
+				try
+					my save_data(my cm(handlername, caller))
+					my logger(true, handlername, caller, "DEBUG", "Show saved successfully")
+				on error errmsg
+					my logger(true, handlername, caller, "ERROR", "Failed to save show: " & errmsg)
+				end try
 			end if
 			if my HDHRDeviceSearch(my cm(handlername, caller), hdhr_record of item i of Show_info) is 0 then
 				my logger(true, handlername, caller, "WARN", "The show " & quote & show_title of item i of Show_info & quote & ", will not be recorded, as the tuner " & hdhr_record of item i of Show_info & ", is no longer detected")
