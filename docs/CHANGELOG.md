@@ -1,5 +1,29 @@
 # Changelog
 
+## 20260414 (Code Cleanup & TODO Resolution)
+
+### Fixed
+- Fixed redundant ImageURL extraction (L2011)—extract once, reuse for both show_logo_url and temp_icon. Eliminates duplicate curl call.
+- Added defensive check for show_id lookup failure during show updates (L2591). Handles edge case where show_id becomes invalid during SeriesID operations.
+
+### Changed
+- Resolved 10 TODO/FIXME comments through code investigation:
+  * Clarified deactivation logic works in both Show List and Guide contexts (L1288)
+  * Documented that false return from channel list is expected user cancellation (L1417)
+  * Replaced cryptic "Why are we doing this?" with clear purpose: mark expired single shows as inactive (L1629)
+  * Clarified mode switching is available during Series editing (L1329)
+  * Documented channel selection flow: fetch guide data after user selects channel (L1879)
+- Removed incomplete/leftover comments:
+  * Deleted "#Adding for Test" from library (lib L2)
+  * Removed "--fixme" placeholder from folder selection error handler (L1467)
+
+### Result
+- All TODO comments now clarified, documented, or resolved
+- 1 code redundancy eliminated (duplicate ImageURL fetch)
+- Improved code maintainability and future developer understanding
+
+---
+
 ## 20260414 (Documentation Release)
 
 ### Added
