@@ -1474,29 +1474,22 @@ on validate_show_info(caller, show_to_check, should_edit)
 				end if
 			end if
 			
-			--fix show_air_date
+			--fix show_air_date 			
 			if show_dir of item i of Show_info is in {missing value, {}, ""} or (class of (show_temp_dir of item i of Show_info) as text) is not "alias" or should_edit is true then
-				my logger(true, handlername, caller, "DEBUG", "Folder selection needed for: " & show_title of item i of Show_info)
 				try
-					set show_dir_temp to missing value
 					try
-						my logger(true, handlername, caller, "DEBUG", "Attempting folder selection (attempt 1)")
 						set show_dir_temp to choose_folder_with_fallback(my cm(handlername, caller), "Select shows Directory", show_dir of item i of Show_info, Hdhr_setup_folder as alias) of LibScript
-						my logger(true, handlername, caller, "DEBUG", "Attempt 1 result: " & (show_dir_temp as text))
 					on error errmsg
-						my logger(true, handlername, caller, "WARN", "Attempt 1 failed: " & errmsg)
-						my logger(true, handlername, caller, "DEBUG", "Attempting folder selection (attempt 2 with fallback message)")
+						my logger(true, handlername, caller, "WARN", "First attempt failed: " & errmsg)
 						set show_dir_temp to choose_folder_with_fallback(my cm(handlername, caller), "The show: " & return & show_title of item i of Show_info & return & " has an invalid directory. Please choose another", Hdhr_setup_folder as alias, Hdhr_setup_folder as alias) of LibScript
-						my logger(true, handlername, caller, "DEBUG", "Attempt 2 result: " & (show_dir_temp as text))
 					end try
 					if show_dir_temp is not missing value then
 						set show_dir of item i of Show_info to show_dir_temp
-						my logger(true, handlername, caller, "INFO", "Show directory updated to: " & (show_dir_temp as text))
-					else
-						my logger(true, handlername, caller, "WARN", "Folder selection returned missing value, keeping existing directory")
 					end if
 				on error errmsg
-					my logger(true, handlername, caller, "ERROR", "Folder selection error: " & errmsg)
+					my logger(true, handlername, caller, "ERROR", "Unable to select show directory: " & errmsg)
+					-- Don't recursively call validate_show_info - it causes infinite loops
+					-- Just continue without changing the directory
 				end try
 				set show_temp_dir of item i of Show_info to show_dir of item i of Show_info
 				my logger(true, handlername, caller, "WARN", "show_dir: " & show_dir of item i of Show_info)
