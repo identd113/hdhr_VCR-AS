@@ -183,7 +183,7 @@ on setup_logging(caller)
 		end if
 		set Log_ignored to 0
 		set Loglines_written to 0
-		set Loglines_max to 1000 + ((length of Show_info) * 100)
+		set Loglines_max to 1000
 	on error errmsg
 		return false
 	end try
@@ -253,6 +253,7 @@ on run {}
 		my showPathVerify(cmi, "")
 		--my show_info_dump(my cm(handlername, caller), "", false)
 		my existing_shows(cmi)
+		set Loglines_max to 1000 + ((length of Show_info) * 100)
 		set First_open to true
 		my logger(true, handlername, caller, "INFO", "Initial main() skipped, will run at the end of idle")
 		--my build_channel_list(my cm(handlername, caller), "", cd)
@@ -1226,7 +1227,7 @@ on nextday(caller, the_show_id)
 	try
 		-- record_check_pre is 1 week before nextup
 		set record_check_pre to ((nextup) - 1 * weeks)
-		-- record_check_post is that pre-date plus the showÍs length
+		-- record_check_post is that pre-date plus the showï¿½s length
 		set record_check_post to (record_check_pre) + ((show_length of item show_offset of Show_info) * minutes)
 		-- If the current time (cd_object) is in that window, log and set show_next
 		
@@ -1376,7 +1377,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 					
 					set default_selection to item (my channel_list_position(my cm(handlername, caller), show_channel of item i of Show_info, channel_mapping of item tuner_offset of HDHR_DEVICE_LIST)) of channel_mapping of item tuner_offset of HDHR_DEVICE_LIST
 					set channel_choice to (choose from list channel_mapping of item tuner_offset of HDHR_DEVICE_LIST with prompt "What channel does this show air on?" default items default_selection with title my check_version_dialog(my cm(handlername, caller)) cancel button name Running_icon of Icon_record & " Run" OK button name "Next.." without empty selection allowed)
-					--Fix Result: error "CanÍt get item 1 of false." number -1728 from item 1 of false
+					--Fix Result: error "Canï¿½t get item 1 of false." number -1728 from item 1 of false
 					if channel_choice is false then
 						my logger(true, handlername, caller, "INFO", "User clicked " & quote & "Run" & quote)
 						return false
@@ -2290,51 +2291,71 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 		set progress additional description to "Discovering HDHomeRun Devices"
 		set progress completed steps to 0
 		my logger(true, handlername, caller, "INFO", "Pre Discovery")
-		set hdhr_device_discovery to my hdhr_api(my cm(handlername, caller), "http://hdhomerun.local/discover.json")
-		set length_discovery to length of hdhr_device_discovery
-		my logger(true, handlername, caller, "INFO", "Post Discovery, Tuners found: " & length_discovery)
-		
+		set hdhr_response to my hdhr_api(my cm(handlername, caller), "http://hdhomerun.local/discover.json")
+
+		-- Handle both single device (object) and multiple devices (array)
 		try
-			set is_legacy to true
-			set temp to Legacy of hdhr_device_discovery
-			my logger(true, handlername, caller, "WARN", "Unable to add tuner, device is legacy")
-		on error errmsg
-			set is_legacy to false
+			set hdhr_device_discovery to item 1 of hdhr_response
+		on error
+			set hdhr_device_discovery to hdhr_response
 		end try
-		
+
 		try
-			set is_valid to true
-			set temp to DeviceID of hdhr_device_discovery
-		on error errmsg
-			set is_valid to false
-			my logger(true, handlername, caller, "WARN", "Unable to add tuner, device has no DeviceID, err: " & errmsg)
+			set length_discovery to length of hdhr_response
+			my logger(true, handlername, caller, "INFO", "Post Discovery, Devices found: " & length_discovery)
+		on error
+			set length_discovery to 1
+			my logger(true, handlername, caller, "INFO", "Post Discovery, Device found: " & (DeviceID of hdhr_device_discovery))
 		end try
-		
-		if is_valid is false then
-			exit repeat
-		end if
-		
-		try
-			set tuner_transcode_temp to ModelNumber of hdhr_device_discovery
-			
-			if item 1 of my stringlistflip(my cm(handlername, caller), (ModelNumber of hdhr_device_discovery), "-", "list") is "HDTC" then
-				set tuner_transcode_temp to 1
-			else
-				set tuner_transcode_temp to 0
+
+		-- Process each device
+		repeat with device_idx from 1 to length_discovery
+			try
+				set hdhr_device_discovery to item device_idx of hdhr_response
+			on error
+				set hdhr_device_discovery to hdhr_response
+			end try
+
+			try
+				set is_legacy to true
+				set temp to Legacy of hdhr_device_discovery
+				my logger(true, handlername, caller, "WARN", "Unable to add tuner, device is legacy")
+			on error errmsg
+				set is_legacy to false
+			end try
+
+			try
+				set is_valid to true
+				set temp to DeviceID of hdhr_device_discovery
+			on error errmsg
+				set is_valid to false
+				my logger(true, handlername, caller, "WARN", "Unable to add tuner, device has no DeviceID, err: " & errmsg)
+			end try
+
+			if is_valid is true then
+				try
+					set tuner_transcode_temp to ModelNumber of hdhr_device_discovery
+
+					if item 1 of my stringlistflip(my cm(handlername, caller), (ModelNumber of hdhr_device_discovery), "-", "list") is "HDTC" then
+						set tuner_transcode_temp to 1
+					else
+						set tuner_transcode_temp to 0
+					end if
+
+				on error errmsg
+					my logger(true, handlername, caller, "WARN", "Unable to determine transcode settings, err: " & errmsg)
+					set tuner_transcode_temp to 0
+				end try
+				set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:(BaseURL of hdhr_device_discovery & "/discover.json"), lineup_url:LineupURL of hdhr_device_discovery, device_id:DeviceID of hdhr_device_discovery, does_transcode:tuner_transcode_temp, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:ModelNumber of hdhr_device_discovery, channel_mapping:missing value, BaseURL:BaseURL of hdhr_device_discovery, statusURL:(BaseURL of hdhr_device_discovery & "/status.json"), is_active:true, is_active_reason:"Added Tuner on startup"}
+				if is_legacy is true then
+					my logger(true, handlername, caller, "WARN", (DeviceID of hdhr_device_discovery) & " is a legacy device, so it will be deactivated")
+					set is_active of last item of HDHR_DEVICE_LIST to false
+					set is_active_reason of last item of HDHR_DEVICE_LIST to "Legacy Device"
+				else
+					my logger(true, handlername, caller, "INFO", "Tuner " & (DeviceID of hdhr_device_discovery) & " detected")
+				end if
 			end if
-			
-		on error errmsg
-			my logger(true, handlername, caller, "WARN", "Unable to determine transcode settings, err: " & errmsg)
-			set tuner_transcode_temp to 0
-		end try
-		set end of HDHR_DEVICE_LIST to {hdhr_lineup_update:missing value, hdhr_guide_update:missing value, discover_url:(BaseURL of hdhr_device_discovery & "/discover.json"), lineup_url:LineupURL of hdhr_device_discovery, device_id:DeviceID of hdhr_device_discovery, does_transcode:tuner_transcode_temp, hdhr_lineup:missing value, hdhr_guide:missing value, hdhr_model:ModelNumber of hdhr_device_discovery, channel_mapping:missing value, BaseURL:BaseURL of hdhr_device_discovery, statusURL:(BaseURL of hdhr_device_discovery & "/status.json"), is_active:true, is_active_reason:"Added Tuner on startup"}
-		if is_legacy is true then
-			my logger(true, handlername, caller, "WARN", hdhr_device & " is a legacy device, so it will be deactivated")
-			set is_active of last item of HDHR_DEVICE_LIST to false
-			set is_active_reason of last item of HDHR_DEVICE_LIST to "Legacy Device"
-		else
-			my logger(true, handlername, caller, "INFO", "Tuner " & device_id of last item of HDHR_DEVICE_LIST & " detected")
-		end if
+		end repeat
 		
 		if length of HDHR_DEVICE_LIST is greater than 0 then
 			repeat with i2 from 1 to length of HDHR_DEVICE_LIST
@@ -3357,7 +3378,7 @@ on idle_change(caller, loop_delay, loop_delay_sec)
 	set handlername to "idle_change"
 	copy (current date) to cd
 	--	my logger(true, handlername, caller, "WARN", "Started")
-	-- only run if we havenÍt passed the end date yet
+	-- only run if we havenï¿½t passed the end date yet
 	if Idle_timer_dateobj is less than or equal to (cd) then
 		
 		-- if loop_delay is empty or a list, leave Idle_timer alone

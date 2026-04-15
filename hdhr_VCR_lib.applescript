@@ -31,6 +31,46 @@ on checkDiskSpace(caller, the_path)
 	end try
 end checkDiskSpace
 
+on checkfileexists(caller, filepath)
+	set handlername to "checkfileexists_lib"
+	try
+		if filepath is missing value then
+			logger(true, handlername, caller, "WARN", "filepath is missing value") of ParentScript
+			return false
+		end if
+		
+		set filepath_text to filepath as text
+		if filepath_text is "" then
+			logger(true, handlername, caller, "WARN", "filepath is empty") of ParentScript
+			return false
+		end if
+		
+		logger(true, handlername, caller, "INFO", filepath_text) of ParentScript
+		logger(true, handlername, caller, "DEBUG", "filepath class is " & (class of filepath as text)) of ParentScript
+		
+		try
+			set filepath_posix to POSIX path of filepath_text
+		on error
+			set filepath_posix to filepath_text
+		end try
+		
+		logger(true, handlername, caller, "TRACE", "filepath normalized to: " & filepath_posix) of ParentScript
+		
+		try
+			do shell script "test -e " & quoted form of filepath_posix
+			return true
+		on error errmsg number errnum
+			if errnum is 1 then return false
+			logger(true, handlername, caller, "ERROR", "test -e failed (" & errnum & "): " & errmsg) of ParentScript
+			return false
+		end try
+	on error errmsg number errnum
+		logger(true, handlername, caller, "ERROR", "Unable to validate filepath (" & errnum & "): " & errmsg) of ParentScript
+		return false
+	end try
+end checkfileexists
+
+
 on emptylist(caller, klist)
 	set handlername to "emptylist_lib"
 	try
@@ -1280,7 +1320,7 @@ on curl2icon(caller, thelink)
 	-- If cached, update timestamp
 	try
 		logger(true, handlername, caller, "DEBUG", "Cache check") of ParentScript
-		if checkfileexists(my cm(handlername, caller), temp_path) of ParentScript is true then
+		if my checkfileexists(my cm(handlername, caller), temp_path) is true then
 			logger(true, handlername, caller, "INFO", "File exists: " & savename) of ParentScript
 			try
 				logger(true, handlername, caller, "DEBUG", "Quoted Form: " & quoted form of temp_path) of ParentScript

@@ -29,7 +29,7 @@ reference reflects the handlers that exist in the current sources and the values
 | `setup_icons` | `caller` | `boolean` | Populates emoji icons for UI prompts; later setup steps only run when this succeeds. |
 | `setup_script` | `caller` | `boolean` | Initializes environment data (paths, locale, caches); startup halts if `false`. |
 | `setup_globals` | `caller` | `boolean` | Resets global state for a fresh run; failures stop progression to runtime. |
-| `setup_logging` | `caller` | `boolean` | Establishes logging defaults and opens the log folder. |
+| `setup_logging` | `caller` | `boolean` | Establishes logging defaults and opens the log folder. Note: `Loglines_max` is initialized here with a baseline value, then recalculated after `existing_shows` loads the configuration to scale based on the number of shows. |
 | `sync_config` | `caller`, `config2var` | `missing value` | Syncs configuration values between globals and the config record. |
 | `idle_change` | `caller`, `loop_delay`, `loop_delay_sec` | `missing value` | Overrides the idle delay and schedules when the override expires. |
 
@@ -71,7 +71,7 @@ event entry points before returning control to the scheduler.
 | `tuner_status` | `caller`, `device_id` | `record` or `false` | Retrieves `{tunermax, tuneractive}`; callers retry on `false`. |
 | `tuner_mismatch` | `caller`, `device_id` | `missing value` | Audits tuner usage and corrects stale state. |
 | `AreWeOnline` | `caller` | `boolean` | Checks reachability of the configured tuner fleet. |
-| `HDHRDeviceDiscovery` | `caller`, `hdhr_device` | `missing value` | Scans for tuners, updates caches, and triggers refresh workflows. |
+| `HDHRDeviceDiscovery` | `caller`, `hdhr_device` | `missing value` | Scans for tuners via `http://hdhomerun.local/discover.json`, updates caches, and triggers refresh workflows. Handles both single device (object) and multiple devices (array) responses. |
 | `HDHRDeviceSearch` | `caller`, `hdhr_device` | `integer` | Returns the index of a tuner or 0 if the device is unknown. |
 | `hdhr_api` | `caller`, `hdhr_ready` | `record` or `{}` | Wraps JSON Helper calls; returns `{}` when the helper cannot provide data. |
 | `getHDHR_Guide` | `caller`, `hdhr_device` | `missing value` | Downloads guide data for the specified tuner. |
@@ -92,7 +92,7 @@ event entry points before returning control to the scheduler.
 | `update_show` | `caller`, `the_show_id`, `force_update` | `missing value` | Syncs show metadata using guide data. |
 | `save_data` | `caller` | `boolean` or `missing value` | Persists configuration JSON; user cancellations return `false`. |
 | `showPathVerify` | `caller`, `show_id` | `boolean` | Ensures the recording folder exists for a given show. |
-| `checkfileexists` | `caller`, `filepath` | `boolean` | Path existence check with logging. |
+| `checkfileexists` | `caller`, `filepath` | `boolean` | Library passthrough for path existence checks with normalized path handling and logging. |
 | `read_data` | `caller` | `boolean` or `missing value` | Loads saved configuration and triggers guided setup when missing. |
 | `add_record_url` | `caller`, `the_channel`, `the_device` | `text` | Retrieves the streaming URL for a channel/device pair. |
 | `showid2PID` | `caller`, `show_id`, `kill_pid`, `logging` | `{text, list}` | Finds associated curl processes and optionally terminates them. |
@@ -113,9 +113,10 @@ event entry points before returning control to the scheduler.
 These handlers exist for compatibility with older scripts. Each simply calls the identically named library handler (passing the
 same arguments) and returns whatever the library returns:
 
-`epoch2show_time`, `datetime2epoch`, `epoch2datetime`, `emptylist`, `stringlistflip`, `epoch`, `replace_chars`, `fixDate`,
-`stringToUtf8`, `isSystemShutdown`, `repeatProgress`, `ms2time`, `list_position`, `short_date`, `padnum`, `is_number`,
-`getTfromN`, `HDHRShowSearch`, `isModifierKeyPressed`, `date2touch`, `time_set`, `update_folder`, `show_name_fix`.
+`checkfileexists`, `epoch2show_time`, `datetime2epoch`, `epoch2datetime`, `emptylist`, `stringlistflip`, `epoch`,
+`replace_chars`, `fixDate`, `stringToUtf8`, `isSystemShutdown`, `repeatProgress`, `ms2time`, `list_position`,
+`short_date`, `padnum`, `is_number`, `getTfromN`, `HDHRShowSearch`, `isModifierKeyPressed`, `date2touch`, `time_set`,
+`update_folder`, `show_name_fix`.
 
 The `logger` handler is implemented locally to keep log writes within the application bundle.
 
@@ -141,6 +142,7 @@ The `logger` handler is implemented locally to keep log writes within the applic
 | Handler | Inputs | Returns | Notes |
 | --- | --- | --- | --- |
 | `checkDiskSpace` | `caller`, `the_path` | `{path, percent, available}` or `{path, 0, errmsg}` | Wraps the `df` command to report free space. |
+| `checkfileexists` | `caller`, `filepath` | `boolean` | Normalizes HFS/POSIX input paths, then runs `test -e` with logging to report existence. |
 | `update_folder` | `caller`, `update_path` | `boolean` | Ensures directories exist before writing recordings. |
 | `rotate_logs` | `caller`, `filepath` | `missing value` | Renames oversized logs and starts a new file. |
 | `update_record_urls` | `caller`, `the_device` | `missing value` | Refreshes saved stream URLs for all shows on a device. |
@@ -196,7 +198,7 @@ The `logger` handler is implemented locally to keep log writes within the applic
 | `tuner_dump` | `caller` | `list` | Enumerates tuners, streaming URLs, and refresh timing. |
 | `HDHRShowSearch` | `caller`, `the_show_id` | `integer` or `0` | Finds a show index by ID. |
 | `match2showid` | `caller`, `hdhr_tuner`, `channelcheck`, `start_time`, `end_time` | `integer` | Resolves guide slots to show IDs. |
-| `seriesScan` | `caller`, `seriesID`, `hdhr_device`, `thechan`, `show_id` | `record` or `{}` | Scans guide data for SeriesID matches and returns candidate airings for library-managed refresh logic. |
+| `seriesScan` | `caller`, `seriesID`, `hdhr_device`, `thechan`, `show_id` | `record` or `{}` | Scans guide data for SeriesID matches and returns candidate airings for library-managed refresh logic. Channel gate: if `thechan` is empty string, matches all channels; otherwise matches only the specified channel. |
 | `seriesScanNext` | `caller`, `seriesID`, `hdhr_device`, `thechan`, `show_id`, `theoffset` | `record` or `{}` | Chooses the next valid airing from SeriesID matches; `{}` signals no upcoming candidate. |
 | `seriesScanUpdate` | `caller`, `show_id` | `missing value` | Updates SeriesID-managed show metadata (time/channel/show_id) as part of library refresh flows. |
 | `seriesScanAdd` | `caller`, `show_id` | `missing value` | Queues show IDs for SeriesID updates. |
