@@ -1580,8 +1580,6 @@ on recordSee2(caller, the_record)
 	end try
 end recordSee2
 
-*)
-
 on choose_folder_with_fallback(caller, prompt_msg, show_loc, default_loc)
 	set handlername to "choose_folder_with_fallback_lib"
 	set selected_folder to missing value
@@ -1623,3 +1621,5 @@ on choose_folder_with_fallback(caller, prompt_msg, show_loc, default_loc)
 		return missing value
 	end if
 end choose_folder_with_fallback
+
+*)
