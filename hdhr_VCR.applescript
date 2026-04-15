@@ -1477,10 +1477,10 @@ on validate_show_info(caller, show_to_check, should_edit)
 			if show_dir of item i of Show_info is in {missing value, {}, ""} or (class of (show_temp_dir of item i of Show_info) as text) is not "alias" or should_edit is true then
 				try
 					try
-						set show_dir_temp to my choose_folder_with_fallback(my cm(handlername, caller), "Select shows Directory", show_dir of item i of Show_info, Hdhr_setup_folder as alias)
+						set show_dir_temp to choose_folder_with_fallback(my cm(handlername, caller), "Select shows Directory", show_dir of item i of Show_info, Hdhr_setup_folder as alias) of LibScript
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", "First attempt failed: " & errmsg)
-						set show_dir_temp to my choose_folder_with_fallback(my cm(handlername, caller), "The show: " & return & show_title of item i of Show_info & return & " has an invalid directory. Please choose another", Hdhr_setup_folder as alias, Hdhr_setup_folder as alias)
+						set show_dir_temp to choose_folder_with_fallback(my cm(handlername, caller), "The show: " & return & show_title of item i of Show_info & return & " has an invalid directory. Please choose another", Hdhr_setup_folder as alias, Hdhr_setup_folder as alias) of LibScript
 					end try
 					if show_dir_temp is not missing value then
 						set show_dir of item i of Show_info to show_dir_temp
@@ -1609,7 +1609,7 @@ on setup(caller)
 				try
 					set Temp_dir to alias "Volumes:"
 					repeat until Temp_dir is not alias "Volumes:"
-						set hdhr_setup_folder_temp to my choose_folder_with_fallback(my cm(handlername, caller), "Select default shows directory", Temp_dir, Temp_dir)
+						set hdhr_setup_folder_temp to choose_folder_with_fallback(my cm(handlername, caller), "Select default shows directory", Temp_dir, Temp_dir) of LibScript
 						if hdhr_setup_folder_temp is not missing value and hdhr_setup_folder_temp is not alias "Volumes:" then
 							set Hdhr_setup_folder to hdhr_setup_folder_temp as text
 							exit repeat
@@ -2232,10 +2232,10 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 							my logger(true, handlername, caller, "TRACE", "Track5")
 							if update_folder_result is true then
 								my logger(true, handlername, caller, "TRACE", "Track6")
-								set show_dir of temp_show_info to my choose_folder_with_fallback(my cm(handlername, caller), "Select Show location", Temp_dir, Temp_dir)
+								set show_dir of temp_show_info to choose_folder_with_fallback(my cm(handlername, caller), "Select Show location", Temp_dir, Temp_dir) of LibScript
 							else if update_folder_result is false then
 								my logger(true, handlername, caller, "TRACE", "Track7")
-								set show_dir of temp_show_info to my choose_folder_with_fallback(my cm(handlername, caller), "Unable to write to location:" & return & (failed_showdir as text) & return & "Select another location", Temp_dir, Temp_dir)
+								set show_dir of temp_show_info to choose_folder_with_fallback(my cm(handlername, caller), "Unable to write to location:" & return & (failed_showdir as text) & return & "Select another location", Temp_dir, Temp_dir) of LibScript
 							end if
 							if show_dir of temp_show_info is missing value then
 								my logger(true, handlername, caller, "WARN", "No folder selected, using default")
