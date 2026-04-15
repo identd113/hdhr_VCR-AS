@@ -1492,6 +1492,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 			end if
 
 			my logger(true, handlername, caller, "DEBUG", "After folder selection, preparing show_next calculation")
+			my logger(true, handlername, caller, "DEBUG", "should_edit: " & should_edit & ", show_next: " & show_next of item i of Show_info)
 			try
 				if show_next of item i of Show_info is missing value or (class of (show_next of item i of Show_info) as text) is not "date" or should_edit is true then
 					my logger(true, handlername, caller, "DEBUG", "Calculating show_next for: " & show_title of item i of Show_info)
@@ -1507,6 +1508,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 						my logger(true, handlername, caller, "ERROR", "Failed to calculate show_next: " & errmsg)
 					end try
 				end if
+				my logger(true, handlername, caller, "DEBUG", "After show_next check, before notification. should_edit=" & should_edit)
 				if should_edit is true then
 					my logger(true, handlername, caller, "DEBUG", "Sending change notification and saving")
 					try
@@ -1522,6 +1524,8 @@ on validate_show_info(caller, show_to_check, should_edit)
 					on error errmsg
 						my logger(true, handlername, caller, "ERROR", "Failed to save show: " & errmsg)
 					end try
+				else
+					my logger(true, handlername, caller, "DEBUG", "should_edit is false, skipping notification and save")
 				end if
 			on error errmsg
 				my logger(true, handlername, caller, "ERROR", "Unexpected error after folder selection: " & errmsg)
@@ -3027,21 +3031,48 @@ end showPathVerify
 on checkfileexists(caller, filepath)
 	set handlername to "checkfileexists"
 	try
-		my logger(true, handlername, caller, "INFO", filepath as text)
+		set filepath_text to filepath as text
+		my logger(true, handlername, caller, "INFO", filepath_text)
 		my logger(true, handlername, caller, "DEBUG", "filepath class is " & class of filepath)
-		
-		if class of filepath is alias then
-			my logger(true, handlername, caller, "INFO", "filepath class is " & class of filepath)
-			set filepath to POSIX file (filepath)
-			my logger(true, handlername, caller, "INFO", "filepath is now: " & filepath)
+
+		set filepath_posix to ""
+
+		-- Handle Mac alias format (e.g. "Raid6:DVR Tests:")
+		if filepath_text contains ":" and (character 1 of filepath_text) is not "/" then
+			try
+				set posix_attempt to filepath_text
+				set posix_attempt to text 1 through -2 of posix_attempt -- Remove trailing colon
+				set old_delim to AppleScript's text item delimiters
+				set AppleScript's text item delimiters to ":"
+				set path_parts to every text item of posix_attempt
+				set AppleScript's text item delimiters to "/"
+				set posix_attempt to path_parts as text
+				set AppleScript's text item delimiters to old_delim
+				set filepath_posix to "/Volumes/" & posix_attempt
+				my logger(true, handlername, caller, "DEBUG", "Converted alias format to POSIX: " & filepath_posix)
+			on error
+				set filepath_posix to filepath_text
+			end try
+		else if class of filepath is alias then
+			try
+				set filepath_posix to POSIX path of filepath
+				my logger(true, handlername, caller, "DEBUG", "Converted alias to POSIX: " & filepath_posix)
+			on error
+				set filepath_posix to filepath_text
+			end try
+		else
+			set filepath_posix to filepath_text
 		end if
-		
-		tell application "System Events"
-			return (exists disk item filepath)
-		end tell
-		
+
+		do shell script "test -e " & quoted form of filepath_posix
+		return true
+
 	on error errmsg number errnum
-		my logger(true, handlername, caller, "ERROR", "System Events reported (" & errnum & "): " & errmsg)
+		if errnum is 1 then
+			my logger(true, handlername, caller, "DEBUG", "Path does not exist: " & filepath_posix)
+			return false
+		end if
+		my logger(true, handlername, caller, "ERROR", "checkfileexists error (" & errnum & "): " & errmsg)
 		return false
 	end try
 end checkfileexists
@@ -3063,13 +3094,33 @@ on read_data(caller)
 		my logger(true, handlername, caller, "INFO", "Loading config from \"" & POSIX path of hdhr_vcr_config_file & "\"...")
 		repeat with i5 from 1 to length of Show_info
 			try
-				set show_dir of item i5 of Show_info to (show_dir of item i5 of Show_info as alias)
-				set show_temp_dir of item i5 of Show_info to (show_temp_dir of item i5 of Show_info as alias)
+				set show_dir_str to show_dir of item i5 of Show_info as text
+				-- Try to convert to alias if it's a POSIX path, otherwise keep as string if it's Mac alias format
+				if show_dir_str starts with "/" then
+					set show_dir of item i5 of Show_info to (show_dir_str as alias)
+				else if show_dir_str contains ":" then
+					-- Keep Mac alias format strings as-is; checkfileexists will handle conversion
+					set show_dir of item i5 of Show_info to show_dir_str
+				else
+					set show_dir of item i5 of Show_info to (show_dir_str as alias)
+				end if
 			on error errmsg
-				set show_dir of item i5 of Show_info to missing value
-				set show_temp_dir of item i5 of Show_info to show_dir
-				my logger(true, handlername, caller, "ERROR", "" & show_title of item i5 of Show_info & ", has an invalid directory, " & errmsg)
-				exit repeat
+				my logger(true, handlername, caller, "WARN", "show_dir for " & show_title of item i5 of Show_info & " could not be converted: " & errmsg)
+				set show_dir of item i5 of Show_info to show_dir of item i5 of Show_info
+			end try
+
+			try
+				set show_temp_dir_str to show_temp_dir of item i5 of Show_info as text
+				if show_temp_dir_str starts with "/" then
+					set show_temp_dir of item i5 of Show_info to (show_temp_dir_str as alias)
+				else if show_temp_dir_str contains ":" then
+					set show_temp_dir of item i5 of Show_info to show_temp_dir_str
+				else
+					set show_temp_dir of item i5 of Show_info to (show_temp_dir_str as alias)
+				end if
+			on error errmsg
+				my logger(true, handlername, caller, "WARN", "show_temp_dir for " & show_title of item i5 of Show_info & " could not be converted: " & errmsg)
+				set show_temp_dir of item i5 of Show_info to show_temp_dir of item i5 of Show_info
 			end try
 			try
 				set show_fail_count of item i5 of Show_info to 0
