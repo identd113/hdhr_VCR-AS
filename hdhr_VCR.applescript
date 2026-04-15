@@ -241,13 +241,17 @@ on run {}
 		my logger(true, handlername, caller, "INFO", "***** Starting " & name of me & " " & Version_local & " *****")
 		## Lets check for a new version! This will trigger OSX to prompt for confirmation to talk to JSONHelper, the library we use for JSON related matters.
 		my check_version(cmi)
-		-- Load config BEFORE device discovery to ensure GuideHours is properly set from config file
-		my logger(true, handlername, caller, "INFO", "AreWeOnline: " & my AreWeOnline(cmi))
-		if Online_detected is true then
-			my logger(true, handlername, caller, "WARN", "GuideHours: " & GuideHours)
+		-- CRITICAL: Load local config file first (always, no network needed)
+		my logger(true, handlername, caller, "INFO", "Loading configuration from disk...")
+		my read_data(cmi)
+		my logger(true, handlername, caller, "WARN", "GuideHours: " & GuideHours)
+		-- Then check online/HDHR status
+		my logger(true, handlername, caller, "INFO", "Checking online status...")
+		if Online_detected is true and Hdhr_detected is true then
+			my logger(true, handlername, caller, "INFO", "Online and HDHR detected, proceeding with discovery...")
 			my HDHRDeviceDiscovery(cmi, "")
 		else
-			my logger(true, handlername, caller, "ERROR", "online_detected is " & Online_detected)
+			my logger(true, handlername, caller, "WARN", "Online_detected: " & Online_detected & ", Hdhr_detected: " & Hdhr_detected)
 		end if
 		--Prompts for permission for removable media
 		my showPathVerify(cmi, "")
@@ -1602,15 +1606,12 @@ end setup
 
 on AreWeOnline(caller)
 	set handlername to "AreWeOnline"
+	-- Just check online/HDHR status (config is already loaded in run handler)
 	if Online_detected and Hdhr_detected is true then
-		my read_data(my cm(handlername, caller))
-		--FIX new line
-		-- my sync_config(my cm(handlername, caller), true)
-		--set Hdhr_config to {Notify_upnext:Notify_upnext, Notify_recording:Notify_recording, Hdhr_setup_folder:Hdhr_setup_folder, Config_version:Config_version, GuideHours:GuideHours}
-		my logger(true, handlername, caller, "INFO", "GuideHours (var): " & GuideHours of Hdhr_config)
+		my logger(true, handlername, caller, "INFO", "Online and HDHR detected")
 		return true
 	else
-		my logger(true, handlername, caller, "ERROR", "hdhr_detected is " & Hdhr_detected)
+		my logger(true, handlername, caller, "WARN", "Online_detected: " & Online_detected & ", Hdhr_detected: " & Hdhr_detected)
 		return false
 	end if
 end AreWeOnline
