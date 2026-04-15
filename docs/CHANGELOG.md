@@ -3,6 +3,7 @@
 ## 20260414 (Code Cleanup & TODO Resolution)
 
 ### Fixed
+- Fixed corrupted character in time formatting logic (lib L359)—replaced invalid operator byte with proper `>=` syntax. Enables AppleScript compilation.
 - Fixed redundant ImageURL extraction (L2011)—extract once, reuse for both show_logo_url and temp_icon. Eliminates duplicate curl call.
 - Added defensive check for show_id lookup failure during show updates (L2591). Handles edge case where show_id becomes invalid during SeriesID operations.
 
