@@ -499,9 +499,9 @@ on idle
 									my logger(true, handlername, caller, "WARN", "Show " & show_title of item i of Show_info & " unable to revert to show_time_orig, err: " & errmsg)
 								end try
 							end if
-						else if show_is_series of item i of Show_info is false and show_next of item i of Show_info is less than or equal to (cd) and show_active of item i of Show_info is true then
+						else if show_is_series of item i of Show_info is false and show_end of item i of Show_info is less than or equal to (cd) and show_active of item i of Show_info is true then
 							set show_active of item i of Show_info to false
-							my logger(true, handlername, caller, "INFO", "Show: " & show_title of item i of Show_info & " was deactivated, as it is a single, and next airing time has passed")
+							my logger(true, handlername, caller, "INFO", "Show: " & show_title of item i of Show_info & " was deactivated, as it is a single, and recording time has passed")
 							display notification "Show: " & show_title of item i of Show_info & " removed" with title Stop_icon of Icon_record
 						end if
 					end repeat
