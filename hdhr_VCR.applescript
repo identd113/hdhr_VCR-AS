@@ -1487,7 +1487,8 @@ on validate_show_info(caller, show_to_check, should_edit)
 					end if
 				on error errmsg
 					my logger(true, handlername, caller, "ERROR", "Unable to select show directory: " & errmsg)
-					my validate_show_info(caller, show_id of item i of Show_info, false)
+					-- Don't recursively call validate_show_info - it causes infinite loops
+					-- Just continue without changing the directory
 				end try
 				set show_temp_dir of item i of Show_info to show_dir of item i of Show_info
 				my logger(true, handlername, caller, "WARN", "show_dir: " & show_dir of item i of Show_info)
