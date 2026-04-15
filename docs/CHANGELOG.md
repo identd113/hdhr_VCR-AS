@@ -3,8 +3,9 @@
 ## 20260414 (Code Cleanup & TODO Resolution)
 
 ### Fixed
-- **CRITICAL:** Fixed startup order bug—load config (AreWeOnline) BEFORE device discovery. GuideHours was uninitialized when guide fetch ran, causing type conversion errors.
-- **CRITICAL:** Fixed GuideHours logging to use global variable instead of accessing from empty Hdhr_config record when config load fails.
+- **CRITICAL:** Fixed startup order to properly load config UNCONDITIONALLY. Config is a local JSON file and must load before any online/HDHR checks. Sequence: Load config → Set values → Check online → Device discovery.
+- **CRITICAL:** Config now loads regardless of Online_detected or Hdhr_detected status, ensuring GuideHours and all user settings are available from startup.
+- **CRITICAL:** Fixed GuideHours logging to use global variable instead of accessing from empty Hdhr_config record.
 - Fixed corrupted character in time formatting logic (lib L359)—replaced invalid operator byte with proper `>=` syntax. Enables AppleScript compilation.
 - Fixed redundant ImageURL extraction (L2011)—extract once, reuse for both show_logo_url and temp_icon. Eliminates duplicate curl call.
 - Added defensive check for show_id lookup failure during show updates (L2591). Handles edge case where show_id becomes invalid during SeriesID operations.
