@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-04-14
+
+### Fixed
+- Fixed HDHRDeviceDiscovery device detection to correctly handle both single device (object) and multiple devices (array) responses from `/discover.json` endpoint. Changed array detection from `length of` (which failed on objects) to `class of hdhr_response is list` check.【F:hdhr_VCR.applescript†L2296-L2317】
+- Fixed Loglines_max calculation to occur after config is loaded, allowing dynamic scaling based on actual show count. Previously calculated early when Show_info was empty, resulting in undersized log buffers.【F:hdhr_VCR.applescript†L186, L256】
+- Fixed redundant day/time prompts when editing a show to SeriesID mode—now skips prompts when switching to SeriesID(Channel) or SeriesID(All) since time/channel constraints don't apply to dynamic SeriesID recordings.【F:hdhr_VCR.applescript†L1347, L1350】
+
+### Updated
+- Updated handler.md documentation with details on `/discover.json` endpoint behavior and SeriesID channel gating logic.【F:docs/handler.md†L74, L201】
+- Simplified Series recording workflow by removing redundant time/channel prompts. Series recordings now auto-configure to SeriesID mode with all-channel scope since time/channel are dynamic across episodes.【F:hdhr_VCR.applescript†L2027-L2050】
+
+### Added
+- Created deploy.sh script to automate compilation of AppleScript files to both .app and .scpt formats with distribution zip packaging.【F:deploy.sh】
+
+### Removed
+- Removed "Would you like to record based on Time/Channel or SeriesID?" and "This Channel or All Channels?" dialogs from Series add flow—time and channel don't matter for dynamic recording.
+
 ## 250919
 
 ### Added
