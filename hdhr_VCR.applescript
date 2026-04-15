@@ -3176,7 +3176,8 @@ on read_data(caller)
 		my logger(true, handlername, caller, "FATAL", "Unable to read file, err: " & errmsg)
 	end try
 	close access ref_num
-	my validate_show_info(my cm(handlername, caller), "", false)
+	-- Note: validate_show_info is called later during idle loop, not during initial load
+	-- my validate_show_info(my cm(handlername, caller), "", false)
 end read_data
 
 on recordingnow_main(caller)
