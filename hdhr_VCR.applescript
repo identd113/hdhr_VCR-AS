@@ -2496,7 +2496,7 @@ on getHDHR_Guide(caller, hdhr_device)
 			set hdhr_guide_data to my hdhr_api(my cm(handlername, caller), "https://api.hdhomerun.com/api/guide.php?DeviceAuth=" & device_auth & "&Duration=" & GuideHours)
 			set hdhr_guide of item tuner_offset of HDHR_DEVICE_LIST to hdhr_guide_data
 			set hdhr_guide_update of item tuner_offset of HDHR_DEVICE_LIST to cd
-			my logger(true, handlername, caller, "INFO", "Updated Guide for " & hdhr_device & ", for " & GuideHours of Hdhr_config & " hours")
+			my logger(true, handlername, caller, "INFO", "Updated Guide for " & hdhr_device & ", for " & GuideHours & " hours")
 			set progress completed steps to 1
 		end if
 	on error errmsg
