@@ -1580,40 +1580,40 @@ on recordSee2(caller, the_record)
 	end try
 end recordSee2
 
-on choose_folder_with_fallback(caller, prompt_text, default_location)
-	set handlername to "choose_folder_with_fallback"
+on choose_folder_with_fallback(caller, prompt_msg, default_loc)
+	set handlername to "choose_folder_with_fallback_lib"
 	set selected_folder to missing value
-	set fallback_locations to {}
+	set fallback_locs to {}
 
 	-- Build fallback locations in order of preference
 	try
-		set end of fallback_locations to default_location
+		set end of fallback_locs to default_loc
 	end try
 	try
-		set end of fallback_locations to (path to documents folder)
+		set end of fallback_locs to (path to documents folder)
 	end try
 	try
-		set end of fallback_locations to (path to home folder)
+		set end of fallback_locs to (path to home folder)
 	end try
 	try
-		set end of fallback_locations to alias "Volumes:"
+		set end of fallback_locs to alias "Volumes:"
 	end try
 
 	-- Try each location in order
-	repeat with location_item in fallback_locations
+	repeat with loc_item in fallback_locs
 		try
-			set selected_folder to choose folder with prompt prompt_text default location location_item
+			set selected_folder to choose folder with prompt prompt_msg default location loc_item
 			logger(true, handlername, caller, "DEBUG", "Folder selected: " & (selected_folder as text)) of ParentScript
 			return selected_folder
 		on error errmsg
-			logger(true, handlername, caller, "DEBUG", "Failed with location " & (location_item as text) & ", error: " & errmsg) of ParentScript
+			logger(true, handlername, caller, "DEBUG", "Failed with location " & (loc_item as text) & ", error: " & errmsg) of ParentScript
 		end try
 	end repeat
 
 	-- If all attempts failed, return the first fallback location
-	if (length of fallback_locations) > 0 then
+	if (length of fallback_locs) > 0 then
 		logger(true, handlername, caller, "WARN", "All folder selection attempts failed, using default location") of ParentScript
-		return item 1 of fallback_locations
+		return item 1 of fallback_locs
 	else
 		logger(true, handlername, caller, "ERROR", "No valid fallback locations available") of ParentScript
 		return missing value
