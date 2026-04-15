@@ -241,14 +241,14 @@ on run {}
 		my logger(true, handlername, caller, "INFO", "***** Starting " & name of me & " " & Version_local & " *****")
 		## Lets check for a new version! This will trigger OSX to prompt for confirmation to talk to JSONHelper, the library we use for JSON related matters.
 		my check_version(cmi)
+		-- Load config BEFORE device discovery to ensure GuideHours is properly set from config file
+		my logger(true, handlername, caller, "INFO", "AreWeOnline: " & my AreWeOnline(cmi))
 		if Online_detected is true then
 			my logger(true, handlername, caller, "WARN", "GuideHours: " & GuideHours)
-			--my logger(true, handlername, caller, "INFO", "AreWeOnline: " & my AreWeOnline(cmi))
 			my HDHRDeviceDiscovery(cmi, "")
 		else
 			my logger(true, handlername, caller, "ERROR", "online_detected is " & Online_detected)
 		end if
-		my logger(true, handlername, caller, "INFO", "AreWeOnline: " & my AreWeOnline(cmi))
 		--Prompts for permission for removable media
 		my showPathVerify(cmi, "")
 		--my show_info_dump(my cm(handlername, caller), "", false)
