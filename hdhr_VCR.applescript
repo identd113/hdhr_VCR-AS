@@ -1554,6 +1554,16 @@ on validate_show_info(caller, show_to_check, should_edit)
 				my logger(true, handlername, caller, "ERROR", "Error during tuner check (err " & errnum & "): " & errmsg)
 			end try
 		else
+			-- If show_active_changed is true, we just activated a show, so save it
+			if show_active_changed is true then
+				my logger(true, handlername, caller, "DEBUG", "Activation detected, saving show: " & show_title of item i of Show_info)
+				try
+					my save_data(my cm(handlername, caller))
+					my logger(true, handlername, caller, "INFO", "Activation saved successfully")
+				on error errmsg
+					my logger(true, handlername, caller, "ERROR", "Failed to save activation: " & errmsg)
+				end try
+			end if
 			set show_active_changed to false
 		end if
 	end if
