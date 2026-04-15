@@ -1270,7 +1270,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 	set show_active_changed to false
 	if show_to_check is "" then
 		repeat with i2 from 1 to length of Show_info
-			my validate_show_info(cm, show_id of item i2 of Show_info, should_edit)
+			my validate_show_info(caller, show_id of item i2 of Show_info, should_edit)
 		end repeat
 	else
 		set i to my HDHRShowSearch(my cm(handlername, caller), show_to_check)
@@ -1839,8 +1839,8 @@ on main(caller, emulated_button_press)
 				repeat with i3 from 1 to length of temp_show_offsets
 					set temp_show_list_offset to item i3 of temp_show_offsets
 					my logger(true, handlername, caller, "INFO", "Pre-validate for " & show_title of item temp_show_list_offset of Show_info)
-					
-					my validate_show_info(cm, show_id of item temp_show_list_offset of Show_info, true)
+
+					my validate_show_info(caller, show_id of item temp_show_list_offset of Show_info, true)
 					if show_active of item (temp_show_list_offset) of Show_info is true then
 						my update_show(cm, show_id of item temp_show_list_offset of Show_info, true)
 					end if
@@ -2286,7 +2286,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				my logger(true, handlername, caller, "DEBUG", "Adding temp_show_info to end of show_info, count: " & length of Show_info)
 				--I believe show_next is not needed here?
 				set show_next of last item of Show_info to my nextday(cm, show_id of temp_show_info)
-				my validate_show_info(cm, show_id of last item of Show_info, false)
+				my validate_show_info(caller, show_id of last item of Show_info, false)
 				my update_show(cm, show_id of last item of Show_info, false)
 				--	if show_use_seriesid of last item of Show_info is true then 
 				--	end if
