@@ -1580,40 +1580,42 @@ on recordSee2(caller, the_record)
 	end try
 end recordSee2
 
-on choose_folder_with_fallback(caller, prompt_msg, default_loc)
+on choose_folder_with_fallback(caller, prompt_msg, show_loc, default_loc)
 	set handlername to "choose_folder_with_fallback_lib"
 	set selected_folder to missing value
 	set fallback_locs to {}
 
-	-- Build fallback locations in order of preference
+	-- Build fallback locations in order of preference: show-level, default, home
+	try
+		set end of fallback_locs to show_loc
+	end try
 	try
 		set end of fallback_locs to default_loc
 	end try
 	try
-		set end of fallback_locs to (path to documents folder)
-	end try
-	try
 		set end of fallback_locs to (path to home folder)
-	end try
-	try
-		set end of fallback_locs to alias "Volumes:"
 	end try
 
 	-- Try each location in order
 	repeat with loc_item in fallback_locs
 		try
 			set selected_folder to choose folder with prompt prompt_msg default location loc_item
-			logger(true, handlername, caller, "DEBUG", "Folder selected: " & (selected_folder as text)) of ParentScript
-			return selected_folder
+			-- Prevent saving to root (Volumes)
+			if selected_folder is not alias "Volumes:" then
+				logger(true, handlername, caller, "DEBUG", "Folder selected: " & (selected_folder as text)) of ParentScript
+				return selected_folder
+			else
+				logger(true, handlername, caller, "WARN", "Root folder not allowed, retrying with next fallback") of ParentScript
+			end if
 		on error errmsg
 			logger(true, handlername, caller, "DEBUG", "Failed with location " & (loc_item as text) & ", error: " & errmsg) of ParentScript
 		end try
 	end repeat
 
-	-- If all attempts failed, return the first fallback location
+	-- If all attempts failed, use default location (never root)
 	if (length of fallback_locs) > 0 then
 		logger(true, handlername, caller, "WARN", "All folder selection attempts failed, using default location") of ParentScript
-		return item 1 of fallback_locs
+		return item 2 of fallback_locs  -- Skip show-level, use default
 	else
 		logger(true, handlername, caller, "ERROR", "No valid fallback locations available") of ParentScript
 		return missing value
