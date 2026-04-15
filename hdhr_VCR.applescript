@@ -101,6 +101,13 @@ on sync_config(caller, config2var)
 		set Notify_upnext to Notify_upnext of Hdhr_config
 		set GuideHours to GuideHours of Hdhr_config
 		set Hdhr_setup_folder to Hdhr_setup_folder of Hdhr_config
+		-- Load LoggerLevels from config if specified
+		try
+			set Logger_levels to LoggerLevels of Hdhr_config
+			my logger(true, handlername, caller, "INFO", "Logger levels loaded from config")
+		on error
+			my logger(true, handlername, caller, "INFO", "LoggerLevels not in config, using defaults")
+		end try
 	else
 		set Notify_recording of Hdhr_config to Notify_recording
 		set Notify_upnext of Hdhr_config to Notify_upnext
