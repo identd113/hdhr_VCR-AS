@@ -1317,9 +1317,10 @@ on validate_show_info(caller, show_to_check, should_edit)
 				set show_deactivate to (display dialog "Would you like to activate: " & return & "\"" & show_title of item i of Show_info & "\"" & return & return & "Active shows can be edited" buttons {Running_icon of Icon_record & " Run", "Activate"} cancel button 1 default button 2 with title my check_version_dialog(my cm(handlername, caller)) with icon my curl2icon(my cm(handlername, caller), show_logo_url of item i of Show_info))
 				if button returned of show_deactivate is "Activate" then
 					set show_active of item i of Show_info to true
+					set should_edit to true
 					my logger(true, handlername, caller, "INFO", "Reactivated: " & show_title of item i of Show_info)
-					-- Mark as changed so it saves and returns to list
-					set show_active_changed to true
+					my logger(true, handlername, caller, "DEBUG", "About to continue to save activation...")
+					-- DON'T return here - let it continue to save_data
 				else if button returned of show_deactivate contains "Run" then
 					my logger(true, handlername, caller, "INFO", "User clicked " & quote & "Run" & quote)
 					return false
