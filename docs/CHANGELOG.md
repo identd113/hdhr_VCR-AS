@@ -1,5 +1,29 @@
 # Changelog
 
+## 20260414 (Single Show Workflow & Logging Improvements)
+
+### Fixed
+- **CRITICAL:** Fixed error -50 "Multiple items are prohibited" when switching show from Series to Single. Day selection dialog was receiving all 7 days as default but set to allow only single selection. Now passes only first day for Single mode.
+- **CRITICAL:** Fixed error -2763 "No result was returned" after folder selection for Single shows. show_next was not being calculated for Single shows, only for Series. Now calls nextday() for both Single and Series modes.
+- Added comprehensive breadcrumb logging and error catching throughout validate_show_info handler to help identify workflow failures.
+
+### Added
+- **NEW:** Added configurable `LoggerLevels` field to config JSON. Users can now enable DEBUG and TRACE logging without needing a debugger. Set in config: `"LoggerLevels": ["INFO", "WARN", "ERROR", "NEAT", "FATAL", "DEBUG", "TRACE"]`
+- Updated sync_config handler to load LoggerLevels from config file if specified.
+- Added detailed error logging around critical sections:
+  * After folder selection
+  * During show_next calculation
+  * During notification display
+  * During config save
+  * Outer try/catch to capture any silent errors
+
+### Result
+- Single show workflow now completes without error
+- Users can control logging verbosity through config file
+- Much better error diagnostics with breadcrumb logs and error catching
+
+---
+
 ## 20260414 (Code Cleanup & TODO Resolution)
 
 ### Fixed
