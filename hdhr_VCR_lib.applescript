@@ -356,7 +356,7 @@ on short_date(caller, the_date_object, twentyfourtime, show_seconds)
 		
 		-- Hours handling
 		if twentyfourtime is false then
-			if theHour � 12 then
+			if theHour >= 12 then
 				set timeAMPM to " PM"
 				if theHour > 12 then set theHour to theHour - 12
 			else
