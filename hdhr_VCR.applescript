@@ -1532,8 +1532,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 					try
 						my logger(true, handlername, caller, "DEBUG", "About to save_data for show: " & show_title of item i of Show_info)
 						my save_data(my cm(handlername, caller))
-						my logger(true, handlername, caller, "DEBUG", "Show saved successfully - returning to refresh icon list")
-						return true
+						my logger(true, handlername, caller, "DEBUG", "Show saved successfully")
 					on error errmsg
 						my logger(true, handlername, caller, "ERROR", "Failed to save show: " & errmsg)
 					end try
