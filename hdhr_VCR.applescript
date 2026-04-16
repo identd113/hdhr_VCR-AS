@@ -1917,6 +1917,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 		if length of HDHR_DEVICE_LIST is 1 then
 			set hdhr_device to device_id of item 1 of HDHR_DEVICE_LIST
 		else
+			my logger(true, handlername, caller, "WARN", "add_show_info EXIT: No device specified and multiple devices available")
 			return
 		end if
 	end if
@@ -2177,6 +2178,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				
 				set sports_ball_bool to "No"
 				if show_air_date of temp_show_info is false then
+					my logger(true, handlername, caller, "INFO", "add_show_info EXIT: show_air_date is false (day selection cancelled)")
 					return
 					--fall back into the idle() loop 
 				end if
@@ -2188,6 +2190,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 					if hdhrGRID_response is {""} then
 						set show_air_date of temp_show_info to (choose from list Full_week_days default items default_record_day with title my check_version_dialog(cm) OK button name "Next.." cancel button name Running_icon of Icon_record & " Run" with prompt "Select the day you wish to record." & return & "A \"Single\" can only select 1 day." without empty selection allowed)
 						if show_air_date of temp_show_info is false then
+							my logger(true, handlername, caller, "INFO", "add_show_info EXIT: User cancelled day selection (manual single)")
 							return
 						end if
 						my logger(true, handlername, caller, "INFO", "(Manual) show_air_date: " & my stringlistflip(cm, show_air_date of temp_show_info, ",", "string"))
