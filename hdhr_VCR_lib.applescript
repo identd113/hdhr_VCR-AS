@@ -1388,8 +1388,6 @@ on curl2icon(caller, thelink)
 end curl2icon
 
 ----NOT IN USE------
-(*
-
 on showSeek(caller, start_time, end_time, chan, hdhr_device)
 	set handlername to "showSeek_lib"
 	set Show_info to Show_info of ParentScript
@@ -1621,5 +1619,3 @@ on choose_folder_with_fallback(caller, prompt_msg, show_loc, default_loc)
 		return missing value
 	end if
 end choose_folder_with_fallback
-
-*)

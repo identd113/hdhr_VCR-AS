@@ -7,6 +7,7 @@ global Idle_timer
 global Idle_timer_default
 global Idle_timer_dateobj
 global Version_local
+global Version_subversion
 global Version_remote
 global Version_url
 global Online_detected
@@ -124,6 +125,7 @@ on setup_script(caller)
 		set cache_me to (name of me)
 		set Local_env to (name of current application)
 		set Version_local to "20260414"
+		set Version_subversion to (text 1 thru 2 of ("0" & (hours of (current date)) as text) & "." & text 1 thru 2 of ("0" & (minutes of (current date)) as text))
 		set Config_version to 1
 		set temp_info to (system info)
 		set Local_ip to IPv4 address of temp_info
@@ -247,7 +249,7 @@ on run {}
 		return
 	end if
 	if startup_success is true then
-		my logger(true, handlername, caller, "INFO", "***** Starting " & name of me & " " & Version_local & " *****")
+		my logger(true, handlername, caller, "INFO", "***** Starting " & name of me & " " & Version_local & "." & Version_subversion & " *****")
 		my logger(true, handlername, caller, "INFO", "Code version epoch: " & Code_version_epoch)
 		## Lets check for a new version! This will trigger OSX to prompt for confirmation to talk to JSONHelper, the library we use for JSON related matters.
 		my check_version(cmi)
@@ -1356,10 +1358,10 @@ on validate_show_info(caller, show_to_check, should_edit)
 						set temp_default_button to 1
 					end if
 					-- Allow changing between DateTime/SeriesID(Channel)/SeriesID(All) modes
-					set series_type to button returned of (display dialog ("What kind of series?" & return & quote & "DateTime" & quote & " Exact time & channel" & return & quote & "SeriesID(Channel)" & quote & " All SeriesID on one channel" & return & quote & "SeriesID(All)" & quote & " All SeriesID on all channels" & quote) buttons {"DateTime", "SeriesID(Channel)", "SeriesID(All)"} default button temp_default_button with title my check_version_dialog(my cm(handlername, caller)) with icon my curl2icon(my cm(handlername, caller), show_logo_url of item i of Show_info))
+					set series_type to button returned of (display dialog "What kind of series?" buttons {"Date/Time", "SeriesID(Channel)", "SeriesID(All)"} default button temp_default_button with title my check_version_dialog(my cm(handlername, caller)) with icon my curl2icon(my cm(handlername, caller), show_logo_url of item i of Show_info))
 
 					-- Set state based on series type selection
-					if series_type contains "DateTime" then
+					if series_type contains "Date/Time" then
 						-- DateTime Series: is_series=true, use_seriesid=false, use_seriesid_all=false
 						set show_use_seriesid of item i of Show_info to false
 						set show_use_seriesid_all of item i of Show_info to false
@@ -1487,7 +1489,6 @@ on validate_show_info(caller, show_to_check, should_edit)
 					end if
 				on error errmsg
 					my logger(true, handlername, caller, "ERROR", "Unable to select show directory: " & errmsg)
-					my validate_show_info(my cm(handlername, caller), show_id of item i of Show_info, false)
 				end try
 				set show_temp_dir of item i of Show_info to show_dir of item i of Show_info
 				my logger(true, handlername, caller, "WARN", "show_dir: " & show_dir of item i of Show_info)
@@ -2132,8 +2133,18 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 						
 						if button returned of temp_show_info_series contains "Series" then
 							set show_is_series of temp_show_info to true
-							set show_use_seriesid of temp_show_info to true
-							set show_use_seriesid_all of temp_show_info to true
+							-- Ask what kind of series
+							set series_type to button returned of (display dialog "What kind of series?" buttons {"Date/Time", "SeriesID(Channel)", "SeriesID(All)"} default button 1 with title my check_version_dialog(caller) with icon temp_icon)
+							if series_type contains "Date/Time" then
+								set show_use_seriesid of temp_show_info to false
+								set show_use_seriesid_all of temp_show_info to false
+							else if series_type contains "SeriesID(Channel)" then
+								set show_use_seriesid of temp_show_info to true
+								set show_use_seriesid_all of temp_show_info to false
+							else if series_type contains "SeriesID(All)" then
+								set show_use_seriesid of temp_show_info to true
+								set show_use_seriesid_all of temp_show_info to true
+							end if
 						else if button returned of temp_show_info_series contains "Single" then
 							set show_is_series of temp_show_info to false
 						end if
@@ -2213,11 +2224,13 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				set progress additional description to my stringlistflip(cm, temp_show_progress, return, "string")
 				set progress completed steps to 6
 				my logger(true, handlername, caller, "INFO", "(Auto) Transcode: " & show_transcode of temp_show_info)
+				my logger(true, handlername, caller, "DEBUG", "After transcode, about to check folder selection. temp_show_dir is: " & temp_show_dir)
 				set progress description to "Choose Folder..."
 				set Temp_dir to alias "Volumes:"
 				set update_folder_result to true
 				set failed_showdir to {}
 				if temp_show_dir is missing value then
+					my logger(true, handlername, caller, "DEBUG", "temp_show_dir is missing, showing folder dialog")
 					my logger(true, handlername, caller, "TRACE", "Track1")
 					repeat until Temp_dir is not alias "Volumes:" and update_folder_result is true --fix throws error if cancelled
 						my logger(true, handlername, caller, "TRACE", "Track2")
@@ -2253,6 +2266,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 						set failed_showdir to show_dir of temp_show_info
 					end repeat
 				else
+					my logger(true, handlername, caller, "DEBUG", "temp_show_dir is NOT missing, skipping folder dialog. Using: " & temp_show_dir)
 					set show_dir of temp_show_info to temp_show_dir
 				end if
 				set end of temp_show_progress to "Where: " & POSIX path of show_dir of temp_show_info
@@ -2279,7 +2293,6 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				set progress completed steps to 7
 				if hdhr_skip_multiple_bool is true then
 					set temp_show_air_date to show_air_date of temp_show_info
-					set temp_show_dir to show_dir of temp_show_info
 					set temp_show_transcode to show_transcode of temp_show_info
 					set temp_is_series to show_is_series of temp_show_info
 					set temp_show_use_seriesid to show_use_seriesid of temp_show_info
