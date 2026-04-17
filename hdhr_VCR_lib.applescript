@@ -14,7 +14,7 @@ end cm
 on load_hdhrVCR_vars()
 	set handlername to "load_hdhrVCR_vars_lib"
 	-- We need to receive states from the hdhr_vcr here
-	set vers_lib to "20260103"
+	set vers_lib to "20260417"
 	return vers_lib
 end load_hdhrVCR_vars
 

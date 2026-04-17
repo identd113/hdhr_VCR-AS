@@ -80,6 +80,7 @@ on setup_lib(caller)
 	set Lib_script to load script loaded_script_alias
 	set Lib_script_version to load_hdhrVCR_vars() of Lib_script
 	set ParentScript of Lib_script to me
+	my logger(true, handlername, caller, "INFO", "Library loaded: " & loaded_script_name & " v" & Lib_script_version)
 	return true
 end setup_lib
 
