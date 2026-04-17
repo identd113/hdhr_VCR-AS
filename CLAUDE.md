@@ -310,12 +310,6 @@ Shows are ONE of 4 states, determined by `is_series`, `use_seriesid`, `use_serie
 
 > **📖 See:** [APPLE_SCRIPT_STYLE.md](docs/APPLE_SCRIPT_STYLE.md) for code conventions and [TESTING.md](docs/TESTING.md) for test procedures.
 
-**Code Style:**
-- Lowercase handler names with underscores
-- Global variables: CamelCase
-- Local variables: lowercase
-- Extensive logging with levels (INFO, WARN, ERROR, DEBUG)
-
 **Error Handling:**
 - try/on error blocks throughout
 - All API calls have timeout/retry logic

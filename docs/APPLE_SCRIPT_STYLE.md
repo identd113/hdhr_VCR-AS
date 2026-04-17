@@ -9,6 +9,17 @@ These conventions capture how the existing scripts are structured. Follow them f
 - Keep handler declarations flush left: `on handlerName(...)` on one line followed by the body on the next line.
 - Leave a blank line between handlers and between logical sections inside a long handler.
 
+## Comments
+- **Single-line comments:** Use `--` or `#` for whole-line or end-of-line comments (e.g., `-- Load config first` or `set x to 5 -- initialize variable`)
+- **Block comments:** Use `(* *)` for multi-line comments spanning multiple lines (e.g., `(* This is a longer explanation spanning multiple lines *)`)
+- **Nested comments:** Comment delimiters are intelligent and can be nested, allowing you to comment out sections that already contain comments
+- **Commented-out code:** When commenting out handler code, rename it with `_inactive` suffix (e.g., `seriesScanUpdate_inactive`) to clearly indicate it's unused and may be reactivated
+
+## Naming Conventions
+- **Handler names:** camelCase (e.g., `recordStart`, `validateShowInfo`, `seriesScanRun`)
+- **Global variables:** Start with uppercase, rest lowercase with underscores (e.g., `Idle_timer_default`, `Max_disk_percentage`, `Guide_hours`)
+- **Local variables:** lowercase with underscores (e.g., `show_title`, `record_path`, `temp_tuner_signal`)
+
 ## Handler Structure
 - Define `handlername` at the beginning of every handler. The literal string should match the handler’s purpose (e.g., `set handlername to "setup_logging"`).
 - Reuse shared handlers instead of duplicating logic; most string and list helpers already live in `hdhr_VCR_lib.applescript`.

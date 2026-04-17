@@ -12,12 +12,13 @@ pkill -f "hdhr_VCR.app" || true
 sleep 1
 
 echo "Compiling main app..."
+echo "  Source:      $REPO_DIR/hdhr_VCR.applescript"
+echo "  Destination: $DEPLOY_DIR/hdhr_VCR.app"
 osacompile -o "$DEPLOY_DIR/hdhr_VCR.app" "$REPO_DIR/hdhr_VCR.applescript"
 
 echo "Compiling library script..."
-osacompile -o "$DEPLOY_DIR/hdhr_VCR_lib.scpt" "$REPO_DIR/hdhr_VCR_lib.applescript"
-
-echo "Copying library to Documents folder..."
-cp "$DEPLOY_DIR/hdhr_VCR_lib.scpt" "$DOCS_DIR/hdhr_VCR_lib.scpt"
+echo "  Source:      $REPO_DIR/hdhr_VCR_lib.applescript"
+echo "  Destination: $DOCS_DIR/hdhr_VCR_lib.scpt"
+osacompile -o "$DOCS_DIR/hdhr_VCR_lib.scpt" "$REPO_DIR/hdhr_VCR_lib.applescript"
 
 echo "Deployed successfully"
