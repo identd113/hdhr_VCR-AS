@@ -297,7 +297,7 @@ on idle
 	if Idle_timer is not Idle_timer_default then
 		my logger(true, handlername, caller, "INFO", "START Idle_timer: " & Idle_timer)
 	end if
-	if "TRACE" is in Logger_levels then
+	if "BARS" is in Logger_levels then
 		set progress description to "Start Idle Loop"
 		set progress total steps to 2
 		set progress completed steps to 1
@@ -524,7 +524,7 @@ on idle
 			set show_recorded_today of item i of Show_info to false
 		end repeat
 	end if
-	if "TRACE" is in Logger_levels then
+	if "BARS" is in Logger_levels then
 		set progress description to "END Idle Loop"
 		set progress completed steps to 2
 		delay 0.5
