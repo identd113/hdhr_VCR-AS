@@ -1475,15 +1475,26 @@ on validate_show_info(caller, show_to_check, should_edit)
 				end if
 			end if
 			
-			--fix show_air_date 			
+			--fix show_air_date
 			if show_dir of item i of Show_info is in {missing value, {}, ""} or (class of (show_temp_dir of item i of Show_info) as text) is not "alias" or should_edit is true then
 				try
+					-- Build fallback chain: show's own dir, last show dir, volume root, /Volumes/
+					set folder_fallbacks to {}
 					try
-						set show_dir_temp to choose_folder_with_fallback(my cm(handlername, caller), "Select shows Directory", show_dir of item i of Show_info, Hdhr_setup_folder as alias) of LibScript
-					on error errmsg
-						my logger(true, handlername, caller, "WARN", "First attempt failed: " & errmsg)
-						set show_dir_temp to choose_folder_with_fallback(my cm(handlername, caller), "The show: " & return & show_title of item i of Show_info & return & " has an invalid directory. Please choose another", Hdhr_setup_folder as alias, Hdhr_setup_folder as alias) of LibScript
+						set end of folder_fallbacks to show_dir of item i of Show_info as alias  -- tier 2: show's own dir (edit case)
 					end try
+					try
+						set last_dir to show_dir of last item of Show_info
+						set end of folder_fallbacks to last_dir as alias  -- tier 1: last show's folder
+						-- Extract volume name: "Raid6:DVR Tests:" → "Raid6"
+						set vol_name to text 1 thru ((offset of ":" in (last_dir as text)) - 1) of (last_dir as text)
+						set end of folder_fallbacks to alias ("Volumes:" & vol_name & ":")  -- tier 3: volume root
+					on error
+						-- No prior shows, skip
+					end try
+					set end of folder_fallbacks to alias "Volumes:"  -- tier 4: /Volumes/
+
+					set show_dir_temp to choose_folder_with_fallback(my cm(handlername, caller), "Select shows Directory for " & show_title of item i of Show_info, folder_fallbacks) of LibScript
 					if show_dir_temp is not missing value then
 						set show_dir of item i of Show_info to show_dir_temp
 					end if
@@ -1608,9 +1619,9 @@ on setup(caller)
 				end try
 				
 				try
-					set Temp_dir to alias "Volumes:"
-					repeat until Temp_dir is not alias "Volumes:"
-						set hdhr_setup_folder_temp to choose_folder_with_fallback(my cm(handlername, caller), "Select default shows directory", Temp_dir, Temp_dir) of LibScript
+					repeat until Hdhr_setup_folder is not missing value and Hdhr_setup_folder is not "Volumes:"
+						set folder_fallbacks to {alias "Volumes:"}
+						set hdhr_setup_folder_temp to choose_folder_with_fallback(my cm(handlername, caller), "Select default shows directory", folder_fallbacks) of LibScript
 						if hdhr_setup_folder_temp is not missing value and hdhr_setup_folder_temp is not alias "Volumes:" then
 							set Hdhr_setup_folder to hdhr_setup_folder_temp as text
 							exit repeat
@@ -2228,46 +2239,42 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				set progress completed steps to 6
 				my logger(true, handlername, caller, "INFO", "(Auto) Transcode: " & show_transcode of temp_show_info)
 				my logger(true, handlername, caller, "DEBUG", "After transcode, about to check folder selection. temp_show_dir is: " & temp_show_dir)
+				my logger(true, handlername, caller, "INFO", "add_show_info: Reached folder selection point")
 				set progress description to "Choose Folder..."
-				set Temp_dir to alias "Volumes:"
-				set update_folder_result to true
-				set failed_showdir to {}
 				if temp_show_dir is missing value then
 					my logger(true, handlername, caller, "DEBUG", "temp_show_dir is missing, showing folder dialog")
-					my logger(true, handlername, caller, "TRACE", "Track1")
-					repeat until Temp_dir is not alias "Volumes:" and update_folder_result is true --fix throws error if cancelled
-						my logger(true, handlername, caller, "TRACE", "Track2")
-						try
-							set Temp_dir to show_dir of last item of Show_info
-						on error errmsg
-							my logger(true, handlername, caller, "TRACE", "Track3")
-							set Temp_dir to alias "Volumes:"
-						end try
-						my logger(true, handlername, caller, "TRACE", "Track4")
-						try
-							my logger(true, handlername, caller, "TRACE", "Track5")
-							if update_folder_result is true then
-								my logger(true, handlername, caller, "TRACE", "Track6")
-								set show_dir of temp_show_info to choose_folder_with_fallback(my cm(handlername, caller), "Select Show location", Temp_dir, Temp_dir) of LibScript
-							else if update_folder_result is false then
-								my logger(true, handlername, caller, "TRACE", "Track7")
-								set show_dir of temp_show_info to choose_folder_with_fallback(my cm(handlername, caller), "Unable to write to location:" & return & (failed_showdir as text) & return & "Select another location", Temp_dir, Temp_dir) of LibScript
-							end if
-							if show_dir of temp_show_info is missing value then
-								my logger(true, handlername, caller, "WARN", "No folder selected, using default")
-								set show_dir of temp_show_info to Temp_dir
-							end if
-						on error errmsg
-							my logger(true, handlername, caller, "TRACE", "Track8")
-							my logger(true, handlername, caller, "ERROR", "Unable to select show location, errmsg: " & errmsg)
-							set show_dir of temp_show_info to Temp_dir
-						end try
-						if show_dir of temp_show_info is not Temp_dir then
-							set Temp_dir to show_dir of temp_show_info
+					-- Build fallback chain: last show dir, volume root, /Volumes/
+					set folder_fallbacks to {}
+					try
+						set last_dir to show_dir of last item of Show_info
+						set end of folder_fallbacks to last_dir as alias  -- tier 1: last show's folder
+						-- Extract volume name: "Raid6:DVR Tests:" → "Raid6"
+						set vol_name to text 1 thru ((offset of ":" in (last_dir as text)) - 1) of (last_dir as text)
+						set end of folder_fallbacks to alias ("Volumes:" & vol_name & ":")  -- tier 3: volume root
+					on error
+						my logger(true, handlername, caller, "DEBUG", "No prior shows, skipping last-show fallback")
+					end try
+					set end of folder_fallbacks to alias "Volumes:"  -- tier 4: /Volumes/
+
+					set update_folder_result to true
+					set failed_showdir to {}
+					repeat until update_folder_result is true
+						if update_folder_result is true then
+							set prompt_text to "Select Show location"
+						else
+							set prompt_text to "Unable to write to location:" & return & (failed_showdir as text) & return & "Select another location"
+						end if
+						set show_dir of temp_show_info to choose_folder_with_fallback(cm, prompt_text, folder_fallbacks) of LibScript
+						if show_dir of temp_show_info is missing value then
+							my logger(true, handlername, caller, "INFO", "add_show_info EXIT: User cancelled folder selection")
+							exit repeat
 						end if
 						set update_folder_result to my update_folder(cm, show_dir of temp_show_info)
 						set failed_showdir to show_dir of temp_show_info
 					end repeat
+					if show_dir of temp_show_info is missing value then
+						exit repeat
+					end if
 				else
 					my logger(true, handlername, caller, "DEBUG", "temp_show_dir is NOT missing, skipping folder dialog. Using: " & temp_show_dir)
 					set show_dir of temp_show_info to temp_show_dir

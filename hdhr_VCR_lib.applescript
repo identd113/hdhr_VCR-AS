@@ -1578,44 +1578,35 @@ on recordSee2(caller, the_record)
 	end try
 end recordSee2
 
-on choose_folder_with_fallback(caller, prompt_msg, show_loc, default_loc)
+on choose_folder_with_fallback(caller, prompt_msg, fallback_locs)
 	set handlername to "choose_folder_with_fallback_lib"
-	set selected_folder to missing value
-	set fallback_locs to {}
+	set best_default to alias "Volumes:"
 
-	-- Build fallback locations in order of preference: show-level, default, home
-	try
-		set end of fallback_locs to show_loc
-	end try
-	try
-		set end of fallback_locs to default_loc
-	end try
-	try
-		set end of fallback_locs to (path to home folder)
-	end try
-
-	-- Try each location in order
+	-- Find first valid default location from fallback list
 	repeat with loc_item in fallback_locs
 		try
-			set selected_folder to choose folder with prompt prompt_msg default location loc_item
-			-- Prevent saving to root (Volumes)
-			if selected_folder is not alias "Volumes:" then
-				logger(true, handlername, caller, "DEBUG", "Folder selected: " & (selected_folder as text)) of ParentScript
-				return selected_folder
-			else
-				logger(true, handlername, caller, "WARN", "Root folder not allowed, retrying with next fallback") of ParentScript
+			if loc_item is not missing value and loc_item is not alias "Volumes:" then
+				set best_default to loc_item as alias
+				logger(true, handlername, caller, "DEBUG", "Using default location: " & (best_default as text)) of ParentScript
+				exit repeat
 			end if
-		on error errmsg
-			logger(true, handlername, caller, "DEBUG", "Failed with location " & (loc_item as text) & ", error: " & errmsg) of ParentScript
+		on error
+			-- Skip invalid locations
 		end try
 	end repeat
 
-	-- If all attempts failed, use default location (never root)
-	if (length of fallback_locs) > 0 then
-		logger(true, handlername, caller, "WARN", "All folder selection attempts failed, using default location") of ParentScript
-		return item 2 of fallback_locs  -- Skip show-level, use default
-	else
-		logger(true, handlername, caller, "ERROR", "No valid fallback locations available") of ParentScript
+	-- Show one dialog with best default found
+	try
+		set selected_folder to choose folder with prompt prompt_msg default location best_default
+		-- Reject root folder
+		if selected_folder is alias "Volumes:" then
+			logger(true, handlername, caller, "WARN", "User selected root folder, not allowed") of ParentScript
+			return missing value
+		end if
+		logger(true, handlername, caller, "DEBUG", "Folder selected: " & (selected_folder as text)) of ParentScript
+		return selected_folder
+	on error errmsg
+		logger(true, handlername, caller, "INFO", "User cancelled folder selection: " & errmsg) of ParentScript
 		return missing value
-	end if
+	end try
 end choose_folder_with_fallback
