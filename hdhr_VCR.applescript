@@ -3351,98 +3351,11 @@ on showid2PID(caller, show_id, kill_pid, logging)
 	end if
 end showid2PID
 
-##########    These are handlers loaded from the Library, we do specific things in them    ##########
-on add_record_url(caller, the_channel, the_device)
-	set handlername to "add_record_url"
-	return add_record_url(my cm(handlername, caller), the_channel, the_device) of LibScript
-end add_record_url
-
-on epoch2show_time(caller, epoch)
-	set handlername to "epoch2show_time"
-	return epoch2show_time(my cm(handlername, caller), epoch) of LibScript
-end epoch2show_time
-
+##########    Handlers with custom logic (not pure wrappers)    ##########
 on datetime2epoch(caller, the_date_object)
 	set handlername to "datetime2epoch"
 	return getTfromN(the_date_object - (epoch("") of LibScript)) of LibScript
 end datetime2epoch
-
-on epoch2datetime(caller, epochseconds)
-	set handlername to "epoch2datetime"
-	return epoch2datetime(my cm(handlername, caller), epochseconds) of LibScript
-end epoch2datetime
-
-on stringlistflip(caller, thearg, delim, returned)
-	set handlername to "stringlistflip"
-	return stringlistflip(my cm(handlername, caller), thearg, delim, returned) of LibScript
-end stringlistflip
-
-on epoch(cd)
-	set handlername to "epoch"
-	return epoch(cd) of LibScript
-end epoch
-
-(*
-on replace_chars(thestring, target, replacement)
-	set handlername to "replace_chars"
-	return replace_chars(thestring, target, replacement) of LibScript
-end replace_chars
-*)
-
-on fixDate(caller, theDate)
-	set handlername to "fixDate"
-	return fixDate(my cm(handlername, caller), theDate) of LibScript
-end fixDate
-
-on ms2time(caller, totalMS, time_duration, level_precision)
-	set handlername to "ms2time"
-	return ms2time(my cm(handlername, caller), totalMS, time_duration, level_precision) of LibScript of LibScript
-end ms2time
-
-on short_date(caller, the_date_object, twentyfourtime, show_seconds)
-	set handlername to "short_date"
-	return short_date(my cm(handlername, caller), the_date_object, twentyfourtime, show_seconds) of LibScript
-end short_date
-
-on padnum(caller, thenum, splitdot)
-	set handlername to "padnum"
-	return padnum(my cm(handlername, caller), thenum, splitdot) of LibScript
-end padnum
-
-on is_number(caller, number_string)
-	set handlername to "is_number"
-	return is_number(my cm(handlername, caller), number_string) of LibScript
-end is_number
-
-on getTfromN(this_number)
-	set handlername to "getTfromN"
-	return getTfromN(this_number) of LibScript
-end getTfromN
-
-on HDHRShowSearch(caller, the_show_id)
-	set handlername to "HDHRShowSearch"
-	return HDHRShowSearch(my cm(handlername, caller), the_show_id) of LibScript of LibScript
-end HDHRShowSearch
-
-on time_set(caller, adate_object, time_shift)
-	set handlername to "time_set"
-	return time_set(my cm(handlername, caller), adate_object, time_shift) of LibScript
-end time_set
-
-on update_folder(caller, update_path)
-	set handlername to "update_folder"
-	return update_folder(my cm(handlername, caller), update_path) of LibScript
-end update_folder
-
-on show_name_fix(caller, show_id, show_object)
-	set handlername to "show_name_fix"
-	return show_name_fix(my cm(handlername, caller), show_id, show_object) of LibScript
-end show_name_fix
-
-on curl2icon(caller, thelink)
-	set handlername to "curl2icon"
-	return curl2icon(my cm(handlername, caller), thelink) of LibScript
-end curl2icon
 
 on logger(logtofile, the_handler, caller, loglevel, message)
 	set handlername to "logger"
