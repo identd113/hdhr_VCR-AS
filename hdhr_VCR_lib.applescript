@@ -1414,30 +1414,30 @@ end showSeek
 
 on get_show_state2(caller, hdhr_tuner, channelcheck, start_time, end_time) --not in use
 	set handlername to "get_show_state_lib"
-	--my logger(true, handlername, caller, "INFO", my stringlistflip(my cm(handlername, caller), my showSeek(my cm(handlername, caller), "", "", channelcheck, hdhr_tuner), ", ", "string"))
+	--logger(true, handlername, caller, "INFO", stringlistflip(cm(handlername, caller), showSeek(cm(handlername, caller), "", "", channelcheck, hdhr_tuner), ", ", "string")) of ParentScript
 	--We need to only return the 1 result
-	my logger(true, handlername, caller, "DEBUG", (hdhr_tuner & " | " & channelcheck))
+	logger(true, handlername, caller, "DEBUG", (hdhr_tuner & " | " & channelcheck)) of ParentScript
 	copy (current date) to cd
 	repeat with i from 1 to length of Show_info
 		set show_record_id to show_id of item i of Show_info
 		--  if hdhr_tuner is hdhr_record of item i of Show_info and show_active of item i of Show_info is true and channelcheck is show_channel of item i of Show_info then
 		if hdhr_tuner is hdhr_record of item i of Show_info and channelcheck is show_channel of item i of Show_info then
-			my logger(true, handlername, caller, "TRACE", "show_start: " & class of (show_next of item i of Show_info) & ", start_time: " & class of (start_time))
-			
+			logger(true, handlername, caller, "TRACE", "show_start: " & class of (show_next of item i of Show_info) & ", start_time: " & class of (start_time)) of ParentScript
+
 			if show_recording of item i of Show_info is true then
 				if cd is greater than or equal to start_time and cd is less than or equal to end_time then
-					my logger(true, handlername & i, caller, "INFO", "Marked as recording: " & show_title of item i of Show_info)
-					my logger(true, handlername & i, caller, "DEBUG", "REC show_record_id: " & show_record_id & ", offset:" & i)
+					logger(true, handlername & i, caller, "INFO", "Marked as recording: " & show_title of item i of Show_info) of ParentScript
+					logger(true, handlername & i, caller, "DEBUG", "REC show_record_id: " & show_record_id & ", offset:" & i) of ParentScript
 					return {show_stat:"record", the_show_id:show_record_id, status_icon:Record_icon of Icon_record}
 				end if
 			else
 				try
 					if my aroundDate(my cm(handlername, caller), start_time, show_next of item i of Show_info, 120) of ParentScript is true then
-						my logger(true, handlername & i, caller, "INFO", "Marked as upnext:    " & show_title of item i of Show_info & ", channel " & channelcheck)
-						my logger(true, handlername & i, caller, "DEBUG", "UPNEXT show_record_id: " & show_record_id & ", offset " & i)
+						logger(true, handlername & i, caller, "INFO", "Marked as upnext:    " & show_title of item i of Show_info & ", channel " & channelcheck) of ParentScript
+						logger(true, handlername & i, caller, "DEBUG", "UPNEXT show_record_id: " & show_record_id & ", offset " & i) of ParentScript
 						if show_active of item i of Show_info is true then
 							if cd is greater than or equal to start_time and cd is less than or equal to end_time then
-								my logger(true, handlername & i, caller, "INFO", "Marked as NOT recording: " & show_title of item i of Show_info)
+								logger(true, handlername & i, caller, "INFO", "Marked as NOT recording: " & show_title of item i of Show_info) of ParentScript
 								return {show_stat:"norecord", the_show_id:show_record_id, status_icon:Warning_icon of Icon_record}
 							else if start_time - cd is less than or equal to 1 * hours then
 								return {show_stat:"upnext0", the_show_id:show_record_id, status_icon:Film_icon of Icon_record}
@@ -1450,7 +1450,7 @@ on get_show_state2(caller, hdhr_tuner, channelcheck, start_time, end_time) --not
 						--end if
 					end if
 				on error errmsg
-					my logger(true, handlername, caller, "ERROR", "Oops, " & errmsg)
+					logger(true, handlername, caller, "ERROR", "Oops, " & errmsg) of ParentScript
 				end try
 			end if
 		end if
@@ -1463,43 +1463,43 @@ on nextday2(caller, the_show_id)
 	copy (current date) to cd_object
 	set nextup to {}
 	set show_offset to my HDHRShowSearch(my cm(handlername, caller), the_show_id)
-	
+
 	repeat with i from -1 to 7
 		if ((weekday of (cd_object + i * days)) as text) is in (show_air_date of item show_offset of Show_info) then
 			if cd_object is less than (my time_set(my cm(handlername, caller), (cd_object + i * days), (show_time of item show_offset of Show_info))) + ((show_length of item show_offset of Show_info) * minutes) then
-				my logger(true, handlername, caller, "DEBUG", "1nextup: " & nextup)
-				my logger(true, handlername, caller, "DEBUG", "cd_object: " & cd_object)
-				my logger(true, handlername, caller, "DEBUG", "i: " & i)
+				logger(true, handlername, caller, "DEBUG", "1nextup: " & nextup) of ParentScript
+				logger(true, handlername, caller, "DEBUG", "cd_object: " & cd_object) of ParentScript
+				logger(true, handlername, caller, "DEBUG", "i: " & i) of ParentScript
 				set nextup to my time_set(my cm(handlername, caller), (cd_object + i * days), show_time of item show_offset of Show_info)
 				exit repeat
 			end if
 		end if
 	end repeat
-	
+
 	try
 		if nextup is missing value then
-			my logger(true, handlername, caller, "WARN", "nextup0 is missing value")
+			logger(true, handlername, caller, "WARN", "nextup0 is missing value") of ParentScript
 		end if
 	on error errmsg
-		my logger(true, handlername, caller, "WARN", "errmsg1: " & errmsg)
+		logger(true, handlername, caller, "WARN", "errmsg1: " & errmsg) of ParentScript
 	end try
-	
+
 	try
 		set record_check_pre to ((nextup) - 1 * weeks)
 		set record_check_post to (record_check_pre) + ((show_length of item show_offset of Show_info) * minutes)
 		if (cd_object) is greater than record_check_pre and (cd_object) is less than record_check_post then
-			my logger(true, handlername, caller, "WARN", "We are between record_check_pre and record_check_post")
+			logger(true, handlername, caller, "WARN", "We are between record_check_pre and record_check_post") of ParentScript
 			set show_next of item show_offset of Show_info to record_check_pre
 		end if
 	on error errmsg
-		my logger(true, handlername, caller, "WARN", "0errmsg: " & errmsg)
+		logger(true, handlername, caller, "WARN", "0errmsg: " & errmsg) of ParentScript
 	end try
-	
+
 	--FIX we need to check for show_use_seriesid here.  If we are using series id, we might not have a good way to mark this show.  We might need to select the next showing, and when that showing is over, check to see if a next show is on the schedule.
 	if show_end of item show_offset of Show_info is not nextup + ((show_length of item show_offset of Show_info) * minutes) then
 		set show_end of item show_offset of Show_info to nextup + ((show_length of item show_offset of Show_info) * minutes)
-		my logger(true, handlername, caller, "INFO", "Show end of \"" & show_title of item show_offset of Show_info & "\" set to: " & nextup + ((show_length of item show_offset of Show_info) * minutes))
-		my logger(true, handlername, caller, "DEBUG", "WORK Show end class: " & class of (show_end of item show_offset of Show_info))
+		logger(true, handlername, caller, "INFO", "Show end of \"" & show_title of item show_offset of Show_info & "\" set to: " & nextup + ((show_length of item show_offset of Show_info) * minutes)) of ParentScript
+		logger(true, handlername, caller, "DEBUG", "WORK Show end class: " & class of (show_end of item show_offset of Show_info)) of ParentScript
 	end if
 	return nextup
 end nextday2
@@ -1610,3 +1610,49 @@ on choose_folder_with_fallback(caller, prompt_msg, fallback_locs)
 		return missing value
 	end try
 end choose_folder_with_fallback
+
+on choose_folder_with_fallback_v2(caller, prompt_msg, fallback_locs)
+	set handlername to "choose_folder_with_fallback_v2_lib"
+	set total_locs to length of fallback_locs
+	logger(true, handlername, caller, "DEBUG", "Trying " & total_locs & " fallback locations") of ParentScript
+
+	set current_index to 0
+	repeat with fallback_loc in fallback_locs
+		set current_index to current_index + 1
+		-- Validate fallback location before showing dialog
+		try
+			set test_alias to fallback_loc as alias
+		on error errmsg number errnum
+			logger(true, handlername, caller, "DEBUG", "Skipping invalid fallback location (" & errnum & "): " & errmsg) of ParentScript
+			exit repeat
+		end try
+
+		-- Valid location found, show dialog with path info
+		set loc_path to fallback_loc as text
+		set tier_names to {"Configured Default", "Last Show", "Volume Root", "⁄Volumes Root"}
+		set tier_name to item current_index of tier_names
+		set enhanced_prompt to prompt_msg & return & return & "[" & current_index & "⁄" & total_locs & " - " & tier_name & "] " & loc_path
+
+		try
+			set selected_folder to choose folder with prompt enhanced_prompt default location fallback_loc
+			-- Reject root folder
+			if selected_folder is alias "Volumes:" then
+				logger(true, handlername, caller, "WARN", "User selected root folder, not allowed") of ParentScript
+				exit repeat
+			else
+				logger(true, handlername, caller, "DEBUG", "Folder selected: " & (selected_folder as text)) of ParentScript
+				return selected_folder
+			end if
+		on error errmsg number errnum
+			if errnum is -128 then
+				logger(true, handlername, caller, "INFO", "User cancelled from tier " & current_index & " (" & tier_name & "), trying next fallback") of ParentScript
+				exit repeat
+			else
+				logger(true, handlername, caller, "DEBUG", "Dialog error (" & errnum & "): " & errmsg) of ParentScript
+				exit repeat
+			end if
+		end try
+	end repeat
+
+	return missing value
+end choose_folder_with_fallback_v2
