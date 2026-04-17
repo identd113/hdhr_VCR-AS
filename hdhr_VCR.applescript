@@ -407,12 +407,12 @@ on idle
 										my idle_change(cm, 1, (show_end of item i of Show_info) - (cd))
 									end if
 									if notify_recording_time of item i of Show_info is less than (cd) or notify_recording_time of item i of Show_info is missing value then
-										display notification "Ends " & my short_date(cm, show_end of item i of Show_info, false, false) & " (" & (my ms2time("idle(19)", (show_end of item i of Show_info) - (cd), "s", 3)) & ") " with title Record_icon of Icon_record & " Recording in progress (" & hdhr_record of item i of Show_info & ")" subtitle quote & show_title of item i of Show_info & quote & " on " & show_channel of item i of Show_info & " (" & my channel2name(cm, show_channel of item i of Show_info as text, hdhr_record of item i of Show_info) & ")"
+										display notification "Ends " & my short_date(cm, show_end of item i of Show_info, false, false) & " (" & (ms2time("idle(19)", (show_end of item i of Show_info) - (cd), "s", 3)) & ") " with title Record_icon of Icon_record & " Recording in progress (" & hdhr_record of item i of Show_info & ")" subtitle quote & show_title of item i of Show_info & quote & " on " & show_channel of item i of Show_info & " (" & my channel2name(cm, show_channel of item i of Show_info as text, hdhr_record of item i of Show_info) & ")"
 										set notify_recording_time of item i of Show_info to (cd) + (Notify_recording * minutes)
-										my logger(true, handlername, caller, "INFO", "Recording in progress for " & quote & (show_title of item i of Show_info & quote & " on " & show_channel of item i of Show_info & ", ends in " & my ms2time("idle_rip(19.1)", (show_end of item i of Show_info) - (cd), "s", 3)) & ", Next Update: " & my fixDate(cm, time string of (notify_recording_time of item i of Show_info)))
+										my logger(true, handlername, caller, "INFO", "Recording in progress for " & quote & (show_title of item i of Show_info & quote & " on " & show_channel of item i of Show_info & ", ends in " & ms2time("idle_rip(19.1)", (show_end of item i of Show_info) - (cd), "s", 3)) & ", Next Update: " & my fixDate(cm, time string of (notify_recording_time of item i of Show_info)))
 										
 										my tuner_inuse(cm, hdhr_record of item i of Show_info)
-										my update_folder(cm, show_dir of item i of Show_info)
+										update_folder(cm, show_dir of item i of Show_info) of LibScript
 										--set notify_recording_time of item i of Show_info to (cd) + (Notify_recording * minutes)
 									end if
 									set check_showid_recording to item 2 of my showid2PID(cm, show_id of item i of Show_info, false, false)
@@ -425,7 +425,7 @@ on idle
 								end if
 							else --show time has not passed.
 								if (notify_upnext_time of item i of Show_info is less than (cd) or notify_upnext_time of item i of Show_info is missing value) and (show_next of item i of Show_info) - (cd) is less than or equal to 1 * hours and show_recording of item i of Show_info is false then
-									display notification "Starts: " & my short_date(cm, show_next of item i of Show_info, false, false) & " (" & my ms2time(cm, ((show_next of item i of Show_info) - (cd)), "s", 3) & ")" with title Film_icon of Icon_record & " Next Up on (" & hdhr_record of item i of Show_info & ")" subtitle quote & show_title of item i of Show_info & quote & " on " & show_channel of item i of Show_info & " (" & my channel2name(cm, show_channel of item i of Show_info, hdhr_record of item i of Show_info) & ")"
+									display notification "Starts: " & my short_date(cm, show_next of item i of Show_info, false, false) & " (" & ms2time(cm, ((show_next of item i of Show_info) - (cd)), "s", 3) & ")" with title Film_icon of Icon_record & " Next Up on (" & hdhr_record of item i of Show_info & ")" subtitle quote & show_title of item i of Show_info & quote & " on " & show_channel of item i of Show_info & " (" & my channel2name(cm, show_channel of item i of Show_info, hdhr_record of item i of Show_info) & ")"
 									my logger(true, handlername, caller, "INFO", "Next Up: " & quote & show_title of item i of Show_info & quote & " on " & hdhr_record of item i of Show_info)
 									set notify_upnext_time of item i of Show_info to (cd) + (Notify_upnext * minutes)
 								end if
@@ -442,7 +442,7 @@ on idle
 								-- FIX The show may not be done recording, so this may not be sticky.  If we could verify that the PID is gone, then we can attempt to update the file.
 								set temp_OriginalAirdate to {}
 								try
-									set temp_OriginalAirdate to my getTfromN(OriginalAirdate of temp_guide_data)
+									set temp_OriginalAirdate to getTfromN(OriginalAirdate of temp_guide_data) of LibScript
 									set show_time_OriginalAirdate of item i of Show_info to temp_OriginalAirdate
 								on error errmsg
 									my logger(true, handlername, caller, "WARN", "OriginalAirdate does not exist for " & quote & show_title of item i of Show_info & quote)
@@ -450,7 +450,7 @@ on idle
 								try
 									if (temp_OriginalAirdate) is not in {"", {}} then
 										--if (OriginalAirdate of temp_guide_data) is not {} then
-										set temp_dateobject to my epoch2datetime(cm, temp_OriginalAirdate)
+										set temp_dateobject to epoch2datetime(cm, temp_OriginalAirdate) of LibScript
 										my logger(true, handlername, caller, "INFO", "Epoch time converted to dateobject")
 										try
 											if show_recording_path of item i of Show_info is not in {missing value, {}, ""} then
@@ -574,12 +574,12 @@ on quit {}
 		if hdhr_quit_record is true then
 			set systemShutdown to isSystemShutdown(my cm(handlername, caller)) of LibScript
 			my logger(true, handlername, caller, "INFO", "systemShutdown: " & systemShutdown)
-			my logger(true, handlername, caller, "INFO", "The following shows are marked as currently recording: " & my stringlistflip("quit()", hdhr_quit_record_titles, ",", "string"))
+			my logger(true, handlername, caller, "INFO", "The following shows are marked as currently recording: " & stringlistflip("quit()", hdhr_quit_record_titles, ",", "string"))
 			if systemShutdown is false then
 				try
 					activate me
 				end try
-				set quit_response to button returned of (display dialog "Do you want to cancel these recordings already in progress?" & return & return & my stringlistflip(my cm(handlername, caller), hdhr_quit_record_titles, return, "string") buttons {"Go Back", "Yes", "No"} default button 3 with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout with icon caution)
+				set quit_response to button returned of (display dialog "Do you want to cancel these recordings already in progress?" & return & return & stringlistflip(my cm(handlername, caller), hdhr_quit_record_titles, return, "string") buttons {"Go Back", "Yes", "No"} default button 3 with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout with icon caution)
 				my logger(true, handlername, caller, "INFO", "quit() user choice for killing shows: " & quit_response)
 			else
 				my logger(true, handlername, caller, "INFO", "" & Shutdown_reason & " detected, killing all recordings, and saving config file")
@@ -631,14 +631,14 @@ on hdhrGRID(caller, hdhr_device, hdhr_channel)
 		my logger(true, handlername, caller, "ERROR", "Unable to get a length of hdhrGRID_temp")
 	end try
 	repeat with i from 1 to length of Guide of hdhrGRID_temp
-		set temp_name to my show_name_fix(my cm(handlername, caller), "", item i of Guide of hdhrGRID_temp)
+		set temp_name to show_name_fix(my cm(handlername, caller), "", item i of Guide of hdhrGRID_temp) of LibScript
 		if fixEpisodeTitle of temp_name is not "" then
 			set temp_title to (fixTitle of temp_name & " " & fixEpisodeNum of temp_name & " " & quote & fixEpisodeTitle of temp_name & quote)
 		else
 			set temp_title to (fixTitle of temp_name & " " & fixEpisodeNum of temp_name)
 		end if
-		set temp_start to my epoch2datetime(my cm(handlername, caller), my getTfromN(StartTime of item i of Guide of hdhrGRID_temp))
-		set temp_end to my epoch2datetime(my cm(handlername, caller), my getTfromN(EndTime of item i of Guide of hdhrGRID_temp))
+		set temp_start to epoch2datetime(my cm(handlername, caller), getTfromN(StartTime of item i of Guide of hdhrGRID_temp) of LibScript) of LibScript
+		set temp_end to epoch2datetime(my cm(handlername, caller), getTfromN(EndTime of item i of Guide of hdhrGRID_temp) of LibScript) of LibScript
 		set show_status to my get_show_state(my cm(handlername, caller), hdhr_device, hdhr_channel, temp_start, temp_end)
 		set end of Show_status_list to show_status
 		set temp_status_icon to status_icon of show_status
@@ -648,9 +648,9 @@ on hdhrGRID(caller, hdhr_device, hdhr_channel)
 				set temp_status_icon to temp_status_icon & temp_series_icon
 			end if
 		end if
-		set end of hdhrGRID_sort to temp_status_icon & " " & my padnum(my cm(handlername, caller), word 2 of my short_date(my cm(handlername, caller), temp_start, false, false), true) & "-" & my padnum(my cm(handlername, caller), word 2 of my short_date(my cm(handlername, caller), temp_end, false, false), true) & " " & temp_title
+		set end of hdhrGRID_sort to temp_status_icon & " " & padnum(my cm(handlername, caller), word 2 of short_date(my cm(handlername, caller), temp_start, false, false) of LibScript, true) of LibScript & "-" & padnum(my cm(handlername, caller), word 2 of short_date(my cm(handlername, caller), temp_end, false, false) of LibScript, true) of LibScript & " " & temp_title
 	end repeat
-	set hdhrGRID_selected to choose from list hdhrGRID_sort with prompt ("Channel " & hdhr_channel & " (" & GuideName of hdhrGRID_temp & ")" & return & "Current Time: " & word 2 of my short_date(my cm(handlername, caller), (current date), false, false) & return & return & Record_icon of Icon_record & " Recording  " & Warning_icon of Icon_record & " Warning  " & Film_icon of Icon_record & " <1h  " & Up_icon of Icon_record & " <4h  " & Uncheck_icon of Icon_record & " Inactive" & return & Single_icon of Icon_record & " Single  " & Series_icon of Icon_record & " Series  " & Series3_icon of Icon_record & " SeriesID  " & Plus_icon of Icon_record & " Multiple") cancel button name "Manual Add" OK button name "Next.." with title my check_version_dialog(caller) default items item 1 of hdhrGRID_sort with multiple selections allowed
+	set hdhrGRID_selected to choose from list hdhrGRID_sort with prompt ("Channel " & hdhr_channel & " (" & GuideName of hdhrGRID_temp & ")" & return & "Current Time: " & word 2 of short_date(my cm(handlername, caller), (current date), false, false) & return & return & Record_icon of Icon_record & " Recording  " & Warning_icon of Icon_record & " Warning  " & Film_icon of Icon_record & " <1h  " & Up_icon of Icon_record & " <4h  " & Uncheck_icon of Icon_record & " Inactive" & return & Single_icon of Icon_record & " Single  " & Series_icon of Icon_record & " Series  " & Series3_icon of Icon_record & " SeriesID  " & Plus_icon of Icon_record & " Multiple") cancel button name "Manual Add" OK button name "Next.." with title my check_version_dialog(caller) default items item 1 of hdhrGRID_sort with multiple selections allowed
 
 	if hdhrGRID_selected is false then
 		my logger(true, handlername, caller, "INFO", "User exited")
@@ -693,7 +693,7 @@ on hdhrGRID(caller, hdhr_device, hdhr_channel)
 		my logger(true, handlername, caller, "WARN", "No guide rows selected after processing")
 		return false
 	end if
-	if my epoch2datetime(my cm(handlername, caller), EndTime of item 1 of list_position_response) is less than (current date) then
+	if epoch2datetime(my cm(handlername, caller), EndTime of item 1 of list_position_response) of LibScript is less than (current date) then
 		my logger(true, handlername, caller, "WARN", "The show time has already passed, returning...")
 		display notification "The show has already passed, refreshing tuner...."
 		my HDHRDeviceDiscovery(my cm(handlername, caller), hdhr_device)
@@ -739,7 +739,7 @@ on tuner_ready_time(caller, hdhr_model)
 				end if
 			end repeat
 		end if
-		my logger(true, handlername, caller, "INFO", "Next Tuner Available in " & my ms2time(my cm(handlername, caller), lowest_number, "s", 3))
+		my logger(true, handlername, caller, "INFO", "Next Tuner Available in " & ms2time(my cm(handlername, caller), lowest_number, "s", 3))
 		return lowest_number
 	end if
 	return 0
@@ -852,7 +852,7 @@ on tuner_mismatch(caller, device_id)
 		else if temp_shows_recording is less than tuneractive of tuner_status2_result then
 			set tuner_inuse_return to my tuner_inuse(my cm(handlername, caller), device_id)
 			try
-				my logger(true, handlername, caller, "WARN", "There are more tuners in use then were expected, list of other IPs: " & my stringlistflip(my cm(handlername, caller), tuner_inuse_return, ", ", "string"))
+				my logger(true, handlername, caller, "WARN", "There are more tuners in use then were expected, list of other IPs: " & stringlistflip(my cm(handlername, caller), tuner_inuse_return, ", ", "string"))
 			on error errmsg
 				my logger(true, handlername, caller, "ERROR", "err, " & errmsg)
 			end try
@@ -981,7 +981,7 @@ on show_info_dump(caller, show_id_lookup, userdisplay)
 		end repeat
 		return
 	end if
-	set i to my HDHRShowSearch(my cm(handlername, caller), show_id_lookup)
+	set i to HDHRShowSearch(my cm(handlername, caller), show_id_lookup) of LibScript
 	if Local_env is not in Debugger_apps then
 		my logger(true, handlername, caller, "TRACE", "show " & i & ", show_title: " & show_title of item i of Show_info & ", show_time: " & show_time of item i of Show_info & ", show_length: " & show_length of item i of Show_info & ", show_air_date: " & show_air_date of item i of Show_info & ", show_transcode: " & show_transcode of item i of Show_info & ", show_temp_dir: " & show_temp_dir of item i of Show_info & ", show_dir: " & show_dir of item i of Show_info & ", show_channel: " & show_channel of item i of Show_info & ", show_active: " & show_active of item i of Show_info & ", show_id: " & show_id of item i of Show_info & ", show_recording: " & show_recording of item i of Show_info & ", show_last: " & show_last of item i of Show_info & ", show_next: " & show_next of item i of Show_info & ", show_end: " & show_end of item i of Show_info & ", notify_recording_time: " & notify_recording_time of item i of Show_info & ", hdhr_record: " & hdhr_record of item i of Show_info & ", show_is_series: " & show_is_series of item i of Show_info)
 	end if
@@ -1217,7 +1217,7 @@ on nextday(caller, the_show_id)
 	-- nextup will hold the specific next airing time for this show
 	set nextup to {}
 	-- Get the 1-based index of the show in Show_info based on the_show_id
-	set show_offset to my HDHRShowSearch(my cm(handlername, caller), the_show_id)
+	set show_offset to HDHRShowSearch(my cm(handlername, caller), the_show_id) of LibScript
 	-- Loop from -1 day to +7 days to find a valid airing date (handles overnight edge cases)
 	
 	--repeat with from yesterdays days, thru today day for next week
@@ -1225,12 +1225,12 @@ on nextday(caller, the_show_id)
 	repeat with i from -1 to 7
 		if ((weekday of (cd_object + i * days)) as text) is in (show_air_date of item show_offset of Show_info) then
 			-- Confirm that we haven't already passed the end of that airing
-			if cd_object is less than (my time_set(my cm(handlername, caller), (cd_object + i * days), (show_time of item show_offset of Show_info))) + ((show_length of item show_offset of Show_info) * minutes) then
+			if cd_object is less than (time_set(my cm(handlername, caller), (cd_object + i * days), (show_time of item show_offset of Show_info)) of LibScript) + ((show_length of item show_offset of Show_info) * minutes) then
 				my logger(true, handlername, caller, "DEBUG", "1nextup: " & nextup)
 				my logger(true, handlername, caller, "DEBUG", "cd_object: " & cd_object)
 				my logger(true, handlername, caller, "DEBUG", "i: " & i)
 				-- This is the next airing date/time
-				set nextup to my time_set(my cm(handlername, caller), (cd_object + i * days), show_time of item show_offset of Show_info)
+				set nextup to time_set(my cm(handlername, caller), (cd_object + i * days), show_time of item show_offset of Show_info) of LibScript
 				-- Stop looping once we find the first match
 				exit repeat
 			end if
@@ -1258,7 +1258,7 @@ on nextday(caller, the_show_id)
 	
 	if show_end of item show_offset of Show_info is not nextup + ((show_length of item show_offset of Show_info) * minutes) then
 		set show_end of item show_offset of Show_info to nextup + ((show_length of item show_offset of Show_info) * minutes)
-		my logger(true, handlername, caller, "INFO", "Show end of " & quote & show_title of item show_offset of Show_info & quote & " set to: " & my fixDate(my cm(handlername, caller), (nextup + ((show_length of item show_offset of Show_info) * minutes))))
+		my logger(true, handlername, caller, "INFO", "Show end of " & quote & show_title of item show_offset of Show_info & quote & " set to: " & fixDate(my cm(handlername, caller), (nextup + ((show_length of item show_offset of Show_info) * minutes))) of LibScript))
 		my logger(true, handlername, caller, "DEBUG", "WORK Show end class: " & class of (show_end of item show_offset of Show_info))
 	else
 		my logger(true, handlername, caller, "INFO", "MATCHED Show end of " & quote & show_title of item show_offset of Show_info & quote & " set to: " & (nextup + ((show_length of item show_offset of Show_info) * minutes)))
@@ -1278,12 +1278,12 @@ on validate_show_info(caller, show_to_check, should_edit)
 			my validate_show_info(caller, show_id of item i2 of Show_info, should_edit)
 		end repeat
 	else
-		set i to my HDHRShowSearch(my cm(handlername, caller), show_to_check)
+		set i to HDHRShowSearch(my cm(handlername, caller), show_to_check) of LibScript
 		my logger(true, handlername, caller, "TRACE", "Running validate on " & quote & show_title of item i of Show_info & quote & ", should_edit: " & should_edit)
 		if should_edit is true then
 			if show_active of item i of Show_info is true then
 				if (show_fail_count of item i of Show_info) is greater than or equal to Fail_count then
-					set show_deactivate to (display dialog "This show has failed more than " & Fail_count & " times" & return & "Would you like to reset the current failed count, last error:" & return & show_fail_reason of item i of Show_info buttons {Running_icon of Icon_record & " Run", "Reset"} cancel button 1 default button 2 with title my check_version_dialog(my cm(handlername, caller)) with icon my curl2icon(my cm(handlername, caller), show_logo_url of item i of Show_info))
+					set show_deactivate to (display dialog "This show has failed more than " & Fail_count & " times" & return & "Would you like to reset the current failed count, last error:" & return & show_fail_reason of item i of Show_info buttons {Running_icon of Icon_record & " Run", "Reset"} cancel button 1 default button 2 with title my check_version_dialog(my cm(handlername, caller)) with icon curl2icon(my cm(handlername, caller), show_logo_url of item i of Show_info) of LibScript)
 					if button returned of show_deactivate is "Reset" then
 						set show_fail_count of item i of Show_info to 0
 						set show_fail_reason of item i of Show_info to ""
@@ -1295,7 +1295,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 				end if
 				try
 					if (show_fail_count of item i of Show_info) is less than Fail_count then
-						set show_deactivate to (display dialog "Would you like to deactivate: " & return & quote & show_title of item i of Show_info & quote & return & return & "Deactivated shows will be removed on the next save/load" & return & "Next Showing: " & my short_date(my cm(handlername, caller), show_next of item i of Show_info, true, false) buttons {Running_icon of Icon_record & "Run", "Deactivate", Edit_icon of Icon_record & " Edit.."} cancel button 1 default button 3 with title my check_version_dialog(my cm(handlername, caller)) with icon my curl2icon(my cm(handlername, caller), show_logo_url of item i of Show_info))
+						set show_deactivate to (display dialog "Would you like to deactivate: " & return & quote & show_title of item i of Show_info & quote & return & return & "Deactivated shows will be removed on the next save/load" & return & "Next Showing: " & short_date(my cm(handlername, caller), show_next of item i of Show_info, true, false) buttons {Running_icon of Icon_record & "Run", "Deactivate", Edit_icon of Icon_record & " Edit.."} cancel button 1 default button 3 with title my check_version_dialog(my cm(handlername, caller)) with icon curl2icon(my cm(handlername, caller), show_logo_url of item i of Show_info) of LibScript)
 					end if
 				on error number -128
 					my logger(true, handlername, caller, "WARN", "User clicked " & quote & "Run" & quote)
@@ -1316,7 +1316,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 				
 			else --if show_active of item i of Show_info is false then
 				
-				set show_deactivate to (display dialog "Would you like to activate: " & return & "\"" & show_title of item i of Show_info & "\"" & return & return & "Active shows can be edited" buttons {Running_icon of Icon_record & " Run", "Activate"} cancel button 1 default button 2 with title my check_version_dialog(my cm(handlername, caller)) with icon my curl2icon(my cm(handlername, caller), show_logo_url of item i of Show_info))
+				set show_deactivate to (display dialog "Would you like to activate: " & return & "\"" & show_title of item i of Show_info & "\"" & return & return & "Active shows can be edited" buttons {Running_icon of Icon_record & " Run", "Activate"} cancel button 1 default button 2 with title my check_version_dialog(my cm(handlername, caller)) with icon curl2icon(my cm(handlername, caller), show_logo_url of item i of Show_info) of LibScript)
 				if button returned of show_deactivate is "Activate" then
 					set show_active of item i of Show_info to true
 					set show_active_changed to true
@@ -1340,7 +1340,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 					set temp_default_button to 2
 				end if
 
-				set show_title_temp to display dialog "What is the title of this show, and is it a series??" & return & "Next Showing: " & my short_date(my cm(handlername, caller), show_next of item i of Show_info, true, false) & return & "SeriesID: " & show_seriesid of item i of Show_info buttons {Running_icon of Icon_record & " Run", Series_icon of Icon_record & " Series", Single_icon of Icon_record & " Single"} default button temp_default_button cancel button 1 default answer show_title of item i of Show_info with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout
+				set show_title_temp to display dialog "What is the title of this show, and is it a series??" & return & "Next Showing: " & short_date(my cm(handlername, caller), show_next of item i of Show_info, true, false) & return & "SeriesID: " & show_seriesid of item i of Show_info buttons {Running_icon of Icon_record & " Run", Series_icon of Icon_record & " Series", Single_icon of Icon_record & " Single"} default button temp_default_button cancel button 1 default answer show_title of item i of Show_info with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout
 				--fix add options to change series types
 				set show_title of item i of Show_info to stringToUtf8(my cm(handlername, caller), text returned of show_title_temp) of LibScript
 
@@ -1358,7 +1358,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 						set temp_default_button to 1
 					end if
 					-- Allow changing between DateTime/SeriesID(Channel)/SeriesID(All) modes
-					set series_type to button returned of (display dialog "What kind of series?" buttons {"Date/Time", "SeriesID(Channel)", "SeriesID(All)"} default button temp_default_button with title my check_version_dialog(my cm(handlername, caller)) with icon my curl2icon(my cm(handlername, caller), show_logo_url of item i of Show_info))
+					set series_type to button returned of (display dialog "What kind of series?" buttons {"Date/Time", "SeriesID(Channel)", "SeriesID(All)"} default button temp_default_button with title my check_version_dialog(my cm(handlername, caller)) with icon curl2icon(my cm(handlername, caller), show_logo_url of item i of Show_info) of LibScript)
 
 					-- Set state based on series type selection
 					if series_type contains "Date/Time" then
@@ -1429,7 +1429,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 
 			-- CHANNEL SELECTION
 			-- Ask (DateTime/Single/SeriesID(Channel)), Skip (SeriesID(All))
-			if show_state is not "SeriesID(All)" and (show_channel of item i of Show_info is missing value or my is_number(my cm(handlername, caller), show_channel of item i of Show_info) is false) then
+			if show_state is not "SeriesID(All)" and (show_channel of item i of Show_info is missing value or is_number(my cm(handlername, caller), show_channel of item i of Show_info) of LibScript is false) then
 
 				set temp_tuner to hdhr_record of item i of Show_info
 				set tuner_offset to my HDHRDeviceSearch(my cm(handlername, caller), temp_tuner)
@@ -1455,7 +1455,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 			-- TIME SELECTION
 			-- Ask (DateTime/Single), Skip (SeriesID modes)
 			if show_state is "DateTime" or show_state is "Single" then
-				if show_time of item i of Show_info is missing value or (show_time of item i of Show_info as number) is greater than or equal to 24 or my is_number(my cm(handlername, caller), show_time of item i of Show_info) is false or should_edit is true then
+				if show_time of item i of Show_info is missing value or (show_time of item i of Show_info as number) is greater than or equal to 24 or is_number(my cm(handlername, caller), show_time of item i of Show_info) of LibScript is false or should_edit is true then
 
 					try
 						set show_time of item i of Show_info to text returned of (display dialog "What time does this show air? " & return & "(0-24, use decimals, ie 9.5 for 9:30)" default answer show_time of item i of Show_info buttons {Running_icon of Icon_record & " Run", "Next.."} with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout default button 2 cancel button 1) as number
@@ -1470,7 +1470,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 			-- LENGTH SELECTION
 			-- Ask (DateTime/Single), Skip (SeriesID modes)
 			if show_state is "DateTime" or show_state is "Single" then
-				if show_length of item i of Show_info is missing value or my is_number(my cm(handlername, caller), show_length of item i of Show_info) is false or show_length of item i of Show_info is less than or equal to 0 or should_edit is true then
+				if show_length of item i of Show_info is missing value or is_number(my cm(handlername, caller), show_length of item i of Show_info) of LibScript is false or show_length of item i of Show_info is less than or equal to 0 or should_edit is true then
 					set show_length of item i of Show_info to text returned of (display dialog "How long is this show? (minutes)" default answer show_length of item i of Show_info with title my check_version_dialog(my cm(handlername, caller)) buttons {Running_icon of Icon_record & " Run", "Next.."} default button 2 cancel button 1 giving up after Dialog_timeout)
 				end if
 			end if
@@ -1698,7 +1698,7 @@ on main(caller, emulated_button_press)
 	set show_info_length to length of Show_info
 	if show_info_length is greater than 0 then
 		repeat with i from 1 to show_info_length
-			if show_last of item i of Show_info is not my epoch(cd) and show_is_series of item i of Show_info is false then
+			if show_last of item i of Show_info is not epoch(cd) of LibScript and show_is_series of item i of Show_info is false then
 				set show_active of item i of Show_info to false
 			end if
 		end repeat
@@ -1706,10 +1706,10 @@ on main(caller, emulated_button_press)
 	set show_list_empty to false
 	set next_show_main_temp to my next_shows(cm)
 	my logger(true, handlername, caller, "DEBUG", "Tracking non open00")
-	set next_show_main to my stringlistflip(cm, item 2 of next_show_main_temp, return, "string")
+	set next_show_main to stringlistflip(cm, item 2 of next_show_main_temp, return, "string")
 	set next_show_main_time to my short_date(cm, item 1 of next_show_main_temp, false, false)
 	set next_show_main_time_real to item 1 of next_show_main_temp
-	set error_shows to my stringlistflip(cm, item 3 of next_show_main_temp, return, "string")
+	set error_shows to stringlistflip(cm, item 3 of next_show_main_temp, return, "string")
 	my logger(true, handlername, caller, "DEBUG", "Tracking non open01")
 	if emulated_button_press is not in {"Add", "Shows"} then
 		my logger(true, handlername, caller, "INFO", "Emulated_button_press is " & emulated_button_press)
@@ -1719,11 +1719,11 @@ on main(caller, emulated_button_press)
 			end try
 			if show_list_empty is true then
 				my logger(true, handlername, caller, "TRACE", "Tracking non open2")
-				set title_response to (display dialog "Would you like to add a show?" & return & return & "Tuner(s): " & return & my stringlistflip(cm, my tuner_overview(cm), return, "string") buttons {Tv_icon of Icon_record & " Shows..", Plus_icon of Icon_record & " Add..", Running_icon of Icon_record & " Run"} with title my check_version_dialog(cm) giving up after (Dialog_timeout * 0.5) with icon my curl2icon(cm, "https://raw.githubusercontent.com/identd113/hdhr_VCR-AS/master/app.jpg") default button 2)
+				set title_response to (display dialog "Would you like to add a show?" & return & return & "Tuner(s): " & return & stringlistflip(cm, my tuner_overview(cm), return, "string") buttons {Tv_icon of Icon_record & " Shows..", Plus_icon of Icon_record & " Add..", Running_icon of Icon_record & " Run"} with title my check_version_dialog(cm) giving up after (Dialog_timeout * 0.5) with icon curl2icon(cm, "https://raw.githubusercontent.com/identd113/hdhr_VCR-AS/master/app.jpg") of LibScript default button 2)
 				my logger(true, handlername, caller, "INFO", "EMPTY LIST")
 			else
 				my logger(true, handlername, caller, "TRACE", "Tracking non open3")
-				set title_response to (display dialog "Would you like to add a show?" & return & return & "Tuner(s): " & return & my stringlistflip(cm, my tuner_overview(cm), return, "string") & return & return & my recordingnow_main(cm) & return & error_shows & return & return & Up_icon of Icon_record & " Next Show: " & next_show_main_time & " (in " & my ms2time(cm, (next_show_main_time_real) - (current date), "s", 2) & ")" & return & next_show_main buttons {Tv_icon of Icon_record & " Shows..", Plus_icon of Icon_record & " Add..", Running_icon of Icon_record & " Run"} with title my check_version_dialog(cm) giving up after (Dialog_timeout * 0.5) with icon my curl2icon(cm, "https://raw.githubusercontent.com/identd113/hdhr_VCR-AS/master/app.jpg") default button 2)
+				set title_response to (display dialog "Would you like to add a show?" & return & return & "Tuner(s): " & return & stringlistflip(cm, my tuner_overview(cm), return, "string") & return & return & my recordingnow_main(cm) & return & error_shows & return & return & Up_icon of Icon_record & " Next Show: " & next_show_main_time & " (in " & ms2time(cm, (next_show_main_time_real) - (current date), "s", 2) & ")" & return & next_show_main buttons {Tv_icon of Icon_record & " Shows..", Plus_icon of Icon_record & " Add..", Running_icon of Icon_record & " Run"} with title my check_version_dialog(cm) giving up after (Dialog_timeout * 0.5) with icon curl2icon(cm, "https://raw.githubusercontent.com/identd113/hdhr_VCR-AS/master/app.jpg") of LibScript default button 2)
 				my logger(true, handlername, caller, "INFO", "SHOW LIST")
 			end if
 		on error errmsg
@@ -1787,7 +1787,7 @@ on main(caller, emulated_button_press)
 			--set progress completed steps to i
 			--set progress additional description to show_title of item i of Show_info
 			set show_channel_badges to my channel_lineup_badges(cm, hdhr_record of item i of Show_info, show_channel of item i of Show_info)
-			set temp_show_line to " " & (show_title of item i of Show_info & " on " & show_channel of item i of Show_info & show_channel_badges & " at " & show_time of item i of Show_info & " for " & show_length of item i of Show_info & " minutes on " & my stringlistflip("main", show_air_date of item i of Show_info, ", ", "string"))
+			set temp_show_line to " " & (show_title of item i of Show_info & " on " & show_channel of item i of Show_info & show_channel_badges & " at " & show_time of item i of Show_info & " for " & show_length of item i of Show_info & " minutes on " & stringlistflip("main", show_air_date of item i of Show_info, ", ", "string"))
 			
 			-- Right icon = recording style (single/series variants), or cancel if inactive.
 			if show_active of item i of Show_info is false then
@@ -1921,7 +1921,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 	set tuner_status_result to my tuner_status(cm, hdhr_device)
 	set tuner_status_icon to "Tuner: " & hdhr_device
 	if tunermax of tuner_status_result is tuneractive of tuner_status_result then
-		set tuner_status_icon to hdhr_device & " has no available tuners" & return & "Next timeout: " & my ms2time(cm, my tuner_ready_time(cm, hdhr_device), "s", 3)
+		set tuner_status_icon to hdhr_device & " has no available tuners" & return & "Next timeout: " & ms2time(cm, my tuner_ready_time(cm, hdhr_device), "s", 3)
 	end if
 	set tuner_offset to my HDHRDeviceSearch(cm, hdhr_device)
 	set show_channel to missing value
@@ -1950,7 +1950,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 			-- User selected channel; fetch guide data for selected channel to show episode options
 			set show_channel_temp to word 1 of item 1 of hdhrGRID_list_response
 			set end of temp_show_progress to "Channel: " & show_channel_temp & " (" & my channel2name(cm, show_channel_temp, hdhr_device) & ")"
-			set progress additional description to my stringlistflip(cm, temp_show_progress, return, "string")
+			set progress additional description to stringlistflip(cm, temp_show_progress, return, "string")
 			my logger(true, handlername, caller, "DEBUG", "Before hdhrGRID_response")
 			set hdhrGRID_response to my hdhrGRID(cm, hdhr_device, show_channel_temp)
 			my logger(true, handlername, caller, "DEBUG", "After hdhrGRID_response")
@@ -1980,7 +1980,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				set progress total steps to 7
 				set progress completed steps to 0
 				set temp_show_progress to {}
-				set temp_show_info to {show_title:missing value, show_time:missing value, show_length:missing value, show_air_date:missing value, show_transcode:missing value, show_temp_dir:missing value, show_dir:missing value, show_channel:show_channel_temp, show_active:true, show_id:(do shell script "uuidgen | tr -d '-'") as text, show_recording:false, show_last:my epoch(cd), show_next:missing value, show_end:missing value, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:hdhr_device, show_is_series:false, show_seriesid:"", show_tags:{}, show_time_orig:missing value, show_is_sport:false, show_recorded_today:false, show_recording_path:"", show_logo_url:"", show_url:"", show_fail_count:0, show_use_seriesid:false, show_use_seriesid_all:false, show_fail_reason:"", show_time_OriginalAirdate:""}
+				set temp_show_info to {show_title:missing value, show_time:missing value, show_length:missing value, show_air_date:missing value, show_transcode:missing value, show_temp_dir:missing value, show_dir:missing value, show_channel:show_channel_temp, show_active:true, show_id:(do shell script "uuidgen | tr -d '-'") as text, show_recording:false, show_last:epoch(cd) of LibScript, show_next:missing value, show_end:missing value, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:hdhr_device, show_is_series:false, show_seriesid:"", show_tags:{}, show_time_orig:missing value, show_is_sport:false, show_recorded_today:false, show_recording_path:"", show_logo_url:"", show_url:"", show_fail_count:0, show_use_seriesid:false, show_use_seriesid_all:false, show_fail_reason:"", show_time_OriginalAirdate:""}
 				if length of hdhrGRID_response is 1 and hdhrGRID_response is {""} then
 					my logger(true, handlername, caller, "INFO", "(Manual) Adding show for " & hdhr_device)
 					try
@@ -1993,7 +1993,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 					end try
 					set show_title of temp_show_info to text returned of show_title_temp
 					set end of temp_show_progress to "Title: " & show_title of temp_show_info
-					set progress additional description to my stringlistflip(cm, temp_show_progress, return, "string")
+					set progress additional description to stringlistflip(cm, temp_show_progress, return, "string")
 					my logger(true, handlername, caller, "INFO", "(Manual) Show name: " & show_title of temp_show_info)
 					set progress completed steps to 1
 					--show_is_series
@@ -2006,10 +2006,10 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 						return
 					end if
 					set end of temp_show_progress to "Series: " & show_is_series of temp_show_info
-					set progress additional description to my stringlistflip(cm, temp_show_progress, return, "string")
+					set progress additional description to stringlistflip(cm, temp_show_progress, return, "string")
 					set progress completed steps to 2
 					my logger(true, handlername, caller, "INFO", "(Manual) show_is_series: " & show_is_series of temp_show_info)
-					repeat until my is_number(cm, show_time of temp_show_info) and show_time of temp_show_info is greater than or equal to 0 and show_time of temp_show_info is less than 24
+					repeat until is_number(cm, show_time of temp_show_info) of LibScript and show_time of temp_show_info is greater than or equal to 0 and show_time of temp_show_info is less than 24
 						set Time_slide to 0
 						set show_time_temp to (display dialog "What time does this show air? " & return & "(0-24, use decimals, ie 16.75 for 4:45 PM)" default answer hours of (cd) buttons {Running_icon of Icon_record & " Run", "Next.."} with title my check_version_dialog(caller) giving up after Dialog_timeout default button 2 cancel button 1)
 						if (text returned of show_time_temp as number) is less than hours of (cd) then
@@ -2022,22 +2022,22 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 						
 					end repeat
 					set end of temp_show_progress to "Air time: " & show_time of temp_show_info
-					set progress additional description to my stringlistflip(cm, temp_show_progress, return, "string")
+					set progress additional description to stringlistflip(cm, temp_show_progress, return, "string")
 					set progress completed steps to 3
 					my logger(true, handlername, caller, "INFO", "(Manual) show time: " & show_time of temp_show_info)
-					repeat until my is_number(cm, show_length of temp_show_info) and show_length of temp_show_info is greater than or equal to 1
+					repeat until is_number(cm, show_length of temp_show_info) of LibScript and show_length of temp_show_info is greater than or equal to 1
 						set show_length of temp_show_info to text returned of (display dialog "How long is this show? (minutes)" default answer "30" with title my check_version_dialog(cm) buttons {Running_icon of Icon_record & " Run", "Next.."} default button 2 cancel button 1 giving up after Dialog_timeout)
 					end repeat
 					
 					set end of temp_show_progress to "Length: " & show_length of temp_show_info
-					set progress additional description to my stringlistflip(cm, temp_show_progress, return, "string")
+					set progress additional description to stringlistflip(cm, temp_show_progress, return, "string")
 					set progress completed steps to 4
 					my logger(true, handlername, caller, "INFO", "(Manual) show length: " & show_length of temp_show_info)
 				else
 					
-					set hdhr_response_channel_title to fixall of my show_name_fix(cm, "", item i3 of hdhrGRID_response)
+					set hdhr_response_channel_title to fixall of show_name_fix(cm, "", item i3 of hdhrGRID_response) of LibScript
 					try
-						set default_record_day to (weekday of my epoch2datetime(cm, (my getTfromN(StartTime of item i3 of hdhrGRID_response)))) as text
+						set default_record_day to (weekday of epoch2datetime(cm, (getTfromN(StartTime of item i3 of hdhrGRID_response) of LibScript)) of LibScript) as text
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", "default_record_day failed, errmsg: " & errmsg)
 						set default_record_day to weekday of (cd) as text
@@ -2045,7 +2045,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 					
 					set show_title of temp_show_info to hdhr_response_channel_title
 					set end of temp_show_progress to "Title: " & hdhr_response_channel_title
-					set progress additional description to my stringlistflip(cm, temp_show_progress, return, "string")
+					set progress additional description to stringlistflip(cm, temp_show_progress, return, "string")
 					set progress completed steps to 1
 					my logger(true, handlername, caller, "INFO", "(Auto) show name: " & show_title of temp_show_info)
 					
@@ -2058,16 +2058,16 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 						set show_length of temp_show_info to 30
 					end try
 					set end of temp_show_progress to "Length: " & show_length of temp_show_info
-					set progress additional description to my stringlistflip(cm, temp_show_progress, return, "string")
+					set progress additional description to stringlistflip(cm, temp_show_progress, return, "string")
 					set progress completed steps to 2
 					my logger(true, handlername, caller, "INFO", "(Auto) show length: " & show_length of temp_show_info)
 					
 					--auto show_time 
-					set show_time of temp_show_info to my epoch2show_time(cm, my getTfromN(StartTime of item i3 of hdhrGRID_response))
+					set show_time of temp_show_info to epoch2show_time(cm, getTfromN(StartTime of item i3 of hdhrGRID_response) of LibScript) of LibScript
 					set show_time_orig of temp_show_info to show_time of temp_show_info
 					my logger(true, handlername, caller, "INFO", "(Auto) show time: " & (show_time of temp_show_info as text))
 					set end of temp_show_progress to "Air time: " & show_time of temp_show_info
-					set progress additional description to my stringlistflip(cm, temp_show_progress, return, "string")
+					set progress additional description to stringlistflip(cm, temp_show_progress, return, "string")
 					set progress completed steps to 3
 					try
 						set synopsis_temp to Synopsis of item i3 of hdhrGRID_response
@@ -2088,7 +2088,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 
 					try
 						if imageurl_temp is not "" then
-							set temp_icon to my curl2icon(cm, imageurl_temp)
+							set temp_icon to curl2icon(cm, imageurl_temp) of LibScript
 						else
 							set temp_icon to caution
 						end if
@@ -2098,7 +2098,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 					end try
 					
 					try
-						set show_url of temp_show_info to my add_record_url(cm, show_channel_temp, hdhr_device)
+						set show_url of temp_show_info to add_record_url(cm, show_channel_temp, hdhr_device) of LibScript
 						my logger(true, handlername, caller, "INFO", "Added show_url: " & show_url of temp_show_info)
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", "Unable to pull show_url, errmsg: " & errmsg)
@@ -2121,7 +2121,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 					end try
 					
 					try
-						set tags_text to my stringlistflip(cm, show_tags of temp_show_info, ", ", "string")
+						set tags_text to stringlistflip(cm, show_tags of temp_show_info, ", ", "string")
 					on error errmsg
 						set tags_text to "ERROR"
 						my logger(true, handlername, caller, "ERROR", errmsg)
@@ -2134,7 +2134,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 					
 					try
 						set show_originalairdate to OriginalAirdate of item i3 of hdhrGRID_response
-						set show_originalairdate_real to my short_date(cm, my epoch2datetime(cm, show_originalairdate), false, false)
+						set show_originalairdate_real to short_date(cm, epoch2datetime(cm, show_originalairdate) of LibScript, false, false) of LibScript
 					on error errmsg
 						set show_originalairdate_real to "Unknown"
 					end try
@@ -2142,7 +2142,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 					try
 						-- We need to note if the show start time was yesterday, and adjust as needed.
 						
-						set temp_show_info_series to (display dialog "Is this a single or a series recording? " & return & return & "Title: " & show_title of temp_show_info & return & "Type: " & tags_text & return & "SeriesID: " & seriesid_temp & return & return & "Synopsis: " & synopsis_temp & return & return & "Start: " & time string of my time_set(cm, cd, show_time of temp_show_info) & return & "Length: " & my ms2time(cm, ((show_length of temp_show_info) * 60), "s", 2) & return & "OriginalAirdate: " & show_originalairdate_real buttons {Running_icon of Icon_record & " Run", Series_icon of Icon_record & " Series", Single_icon of Icon_record & " Single"} default button temp_default_button cancel button 1 with title my check_version_dialog(caller) giving up after Dialog_timeout with icon temp_icon)
+						set temp_show_info_series to (display dialog "Is this a single or a series recording? " & return & return & "Title: " & show_title of temp_show_info & return & "Type: " & tags_text & return & "SeriesID: " & seriesid_temp & return & return & "Synopsis: " & synopsis_temp & return & return & "Start: " & time string of time_set(cm, cd, show_time of temp_show_info) of LibScript & return & "Length: " & ms2time(cm, ((show_length of temp_show_info) * 60), "s", 2) & return & "OriginalAirdate: " & show_originalairdate_real buttons {Running_icon of Icon_record & " Run", Series_icon of Icon_record & " Series", Single_icon of Icon_record & " Single"} default button temp_default_button cancel button 1 with title my check_version_dialog(caller) giving up after Dialog_timeout with icon temp_icon)
 						
 						if button returned of temp_show_info_series contains "Series" then
 							set show_is_series of temp_show_info to true
@@ -2163,7 +2163,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 						end if
 						
 						set end of temp_show_progress to "Series: " & show_is_series of temp_show_info
-						set progress additional description to my stringlistflip(cm, temp_show_progress, return, "string")
+						set progress additional description to stringlistflip(cm, temp_show_progress, return, "string")
 						set progress completed steps to 4
 						my logger(true, handlername, caller, "INFO", "(Auto) show_is_series: " & show_is_series of temp_show_info)
 					on error errmsg
@@ -2176,7 +2176,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				
 				if temp_show_air_date is missing value then
 					try
-						if (weekday of my epoch2datetime(cm, (my getTfromN(StartTime of item i3 of hdhrGRID_response)))) as text is not (weekday of (cd) as text) then
+						if (weekday of epoch2datetime(cm, (getTfromN(StartTime of item i3 of hdhrGRID_response) of LibScript)) of LibScript) as text is not (weekday of (cd) as text) then
 							set Time_slide to 1
 						end if
 					on error errmsg
@@ -2197,7 +2197,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				--if temp_show_use_seriesid is misisng value then
 				if show_is_series of temp_show_info is true and show_use_seriesid of temp_show_info is false then
 					set show_air_date of temp_show_info to (choose from list Full_week_days default items default_record_day with title my check_version_dialog(cm) OK button name "Next.." cancel button name Running_icon of Icon_record & " Run" with prompt "Select the days you wish to record." & return & "A \"Series\" can select multiple days" with multiple selections allowed without empty selection allowed)
-					my logger(true, handlername, caller, "INFO", "(Manual) show_air_date: " & my stringlistflip(cm, show_air_date of temp_show_info, ",", "string"))
+					my logger(true, handlername, caller, "INFO", "(Manual) show_air_date: " & stringlistflip(cm, show_air_date of temp_show_info, ",", "string"))
 				else
 					if hdhrGRID_response is {""} then
 						set show_air_date of temp_show_info to (choose from list Full_week_days default items default_record_day with title my check_version_dialog(cm) OK button name "Next.." cancel button name Running_icon of Icon_record & " Run" with prompt "Select the day you wish to record." & return & "A \"Single\" can only select 1 day." without empty selection allowed)
@@ -2205,17 +2205,17 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 							my logger(true, handlername, caller, "INFO", "add_show_info EXIT: User cancelled day selection (manual single)")
 							return
 						end if
-						my logger(true, handlername, caller, "INFO", "(Manual) show_air_date: " & my stringlistflip(cm, show_air_date of temp_show_info, ",", "string"))
+						my logger(true, handlername, caller, "INFO", "(Manual) show_air_date: " & stringlistflip(cm, show_air_date of temp_show_info, ",", "string"))
 					else
-						set show_air_date of temp_show_info to (weekday of (my epoch2datetime(cm, (my getTfromN(StartTime of item i3 of hdhrGRID_response)))) as text) as list
+						set show_air_date of temp_show_info to (weekday of (epoch2datetime(cm, (getTfromN(StartTime of item i3 of hdhrGRID_response) of LibScript)) of LibScript) as text) as list
 						my logger(true, handlername, caller, "INFO", "(Auto) show_air_date: " & show_air_date of temp_show_info)
 					end if
 				end if
 				if show_is_series of temp_show_info is true and show_use_seriesid of temp_show_info is true then
 					set show_air_date of temp_show_info to Full_week_days
 				end if
-				set end of temp_show_progress to "When: " & my stringlistflip(cm, show_air_date of temp_show_info, ", ", "string")
-				set progress additional description to my stringlistflip(cm, temp_show_progress, return, "string")
+				set end of temp_show_progress to "When: " & stringlistflip(cm, show_air_date of temp_show_info, ", ", "string")
+				set progress additional description to stringlistflip(cm, temp_show_progress, return, "string")
 				set progress completed steps to 5
 				
 				if does_transcode of item tuner_offset of Hdhr_device_list is 1 then
@@ -2236,7 +2236,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 					set show_transcode of temp_show_info to "None"
 				end if
 				set end of temp_show_progress to "Transcode: " & show_transcode of temp_show_info
-				set progress additional description to my stringlistflip(cm, temp_show_progress, return, "string")
+				set progress additional description to stringlistflip(cm, temp_show_progress, return, "string")
 				set progress completed steps to 6
 				my logger(true, handlername, caller, "INFO", "(Auto) Transcode: " & show_transcode of temp_show_info)
 				my logger(true, handlername, caller, "DEBUG", "After transcode, about to check folder selection. temp_show_dir is: " & temp_show_dir)
@@ -2266,7 +2266,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 
 					-- Write-permission check; re-prompt at /Volumes if chosen folder isn't writable
 					if show_dir of temp_show_info is not missing value then
-						if my update_folder(cm, show_dir of temp_show_info) is false then
+						if update_folder(cm, show_dir of temp_show_info) of LibScript is false then
 							my logger(true, handlername, caller, "WARN", "Chosen folder not writable, re-prompting")
 							try
 								set show_dir of temp_show_info to choose folder with prompt "Unable to write to that location. Select another:" default location alias "Volumes:"
@@ -2302,7 +2302,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				end if
 				--commit the temp_show_info to show_info 
 				set end of Show_info to temp_show_info
-				set progress additional description to my stringlistflip(cm, temp_show_progress, return, "string")
+				set progress additional description to stringlistflip(cm, temp_show_progress, return, "string")
 				set progress completed steps to 7
 				if hdhr_skip_multiple_bool is true then
 					set temp_show_air_date to show_air_date of temp_show_info
@@ -2337,8 +2337,8 @@ end add_show_info
 on record_start(caller, the_show_id, opt_show_length, force_update)
 	set handlername to "record_start"
 	-- FIX We need to return a true/false if this is successful.  We may be able to do this with showid2PID
-	set i to my HDHRShowSearch(my cm(handlername, caller), the_show_id)
-	set temp_show_end to my short_date(my cm(handlername, caller), show_end of item i of Show_info, true, false)
+	set i to HDHRShowSearch(my cm(handlername, caller), the_show_id) of LibScript
+	set temp_show_end to short_date(my cm(handlername, caller), show_end of item i of Show_info, true, false)
 	set hdhr_device to hdhr_record of item i of Show_info
 	set tuner_offset to my HDHRDeviceSearch(my cm(handlername, caller), hdhr_device)
 	set fileext to ".mkv"
@@ -2359,7 +2359,7 @@ on record_start(caller, the_show_id, opt_show_length, force_update)
 	set checkDiskSpace_path to item 1 of checkDiskSpace_temp
 	
 	if show_fail_count of item i of Show_info is less than Fail_count then
-		my update_folder(my cm(handlername, caller), show_dir of item i of Show_info)
+		update_folder(my cm(handlername, caller), show_dir of item i of Show_info) of LibScript
 		my update_show(my cm(handlername, caller), the_show_id, force_update)
 		try
 			set show_fail_count of item i of Show_info to ((show_fail_count of item i of Show_info) + 1)
@@ -2370,12 +2370,12 @@ on record_start(caller, the_show_id, opt_show_length, force_update)
 					set fileext to ".m2ts"
 				end if
 				if Local_env is not in Debugger_apps then
-					set temp_save_path to (POSIX path of (show_temp_dir of item i of Show_info) & show_title of item i of Show_info & "_" & show_channel of item i of Show_info & "_" & my short_date(my cm(handlername, caller), current date, true, true) & fileext)
+					set temp_save_path to (POSIX path of (show_temp_dir of item i of Show_info) & show_title of item i of Show_info & "_" & show_channel of item i of Show_info & "_" & short_date(my cm(handlername, caller), current date, true, true) & fileext)
 					my logger(true, handlername, caller, "INFO", "caffeinate -i curl --connect-timeout 10 -H 'show_id:" & show_id of item i of Show_info & "' -H \"show_end:" & temp_show_end & "\" -H 'appname:" & name of me & "' '" & show_url of item i of Show_info & "?duration=" & (temp_show_length) & "&transcode=" & show_transcode of item i of Show_info & "' -o \"" & temp_save_path & "\"> /dev/null 2>&1 &")
 					do shell script "caffeinate -i curl --connect-timeout 10 -H 'show_id:" & show_id of item i of Show_info & "' -H \"show_end:" & temp_show_end & "\" -H 'appname:" & name of me & "' '" & show_url of item i of Show_info & "?duration=" & (temp_show_length) & "&transcode=" & show_transcode of item i of Show_info & "' -o \"" & temp_save_path & "\"> /dev/null 2>&1 &"
 					set show_recording of item i of Show_info to true
 					set show_recording_path of item i of Show_info to temp_save_path
-					my logger(true, handlername, caller, "INFO", ("\"" & show_title of item i of Show_info & "\" started recording for " & my ms2time(my cm(handlername, caller), temp_show_length, "s", 3) & " with transcode profile, " & show_transcode of item i of Show_info))
+					my logger(true, handlername, caller, "INFO", ("\"" & show_title of item i of Show_info & "\" started recording for " & ms2time(my cm(handlername, caller), temp_show_length, "s", 3) & " with transcode profile, " & show_transcode of item i of Show_info))
 				else
 					my logger(true, handlername, caller, "INFO", "Record function surpressed in DEV")
 				end if
@@ -2460,7 +2460,7 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 				try
 					set tuner_transcode_temp to ModelNumber of hdhr_device_discovery
 
-					if item 1 of my stringlistflip(my cm(handlername, caller), (ModelNumber of hdhr_device_discovery), "-", "list") is "HDTC" then
+					if item 1 of stringlistflip(my cm(handlername, caller), (ModelNumber of hdhr_device_discovery), "-", "list") is "HDTC" then
 						set tuner_transcode_temp to 1
 					else
 						set tuner_transcode_temp to 0
@@ -2631,8 +2631,8 @@ on channel_guide(caller, hdhr_device, hdhr_channel, hdhr_time)
 			set Time_slide to 1
 		end if
 		set hdhr_proposed_time to my datetime2epoch(my cm(handlername, caller), (date (date string of ((cd) + Time_slide * days))) + hdhr_time * hours - (time to GMT)) as number
-		set hdhr_proposed_time to my getTfromN(hdhr_proposed_time)
-		my logger(true, handlername, caller, "DEBUG", "hdhr_proposed_time2: " & my epoch2show_time(my cm(handlername, caller), hdhr_proposed_time))
+		set hdhr_proposed_time to getTfromN(hdhr_proposed_time) of LibScript
+		my logger(true, handlername, caller, "DEBUG", "hdhr_proposed_time2: " & epoch2show_time(my cm(handlername, caller), hdhr_proposed_time) of LibScript)
 	end if
 	if Hdhr_device_list is not in {missing value, {}, 0, ""} then
 		repeat with i from 1 to length of hdhr_guide of item tuner_offset of Hdhr_device_list
@@ -2655,7 +2655,7 @@ on channel_guide(caller, hdhr_device, hdhr_channel, hdhr_time)
 			return temp_guide_data as record
 		end if
 		repeat with i2 from 1 to length of Guide of temp_guide_data
-			if (hdhr_proposed_time) is greater than or equal to my getTfromN(StartTime of item i2 of Guide of temp_guide_data) and (hdhr_proposed_time) is less than my getTfromN(EndTime of item i2 of Guide of temp_guide_data) then
+			if (hdhr_proposed_time) is greater than or equal to getTfromN(StartTime of item i2 of Guide of temp_guide_data) of LibScript and (hdhr_proposed_time) is less than getTfromN(EndTime of item i2 of Guide of temp_guide_data) of LibScript then
 				try
 					return item i2 of Guide of temp_guide_data
 				on error
@@ -2675,10 +2675,10 @@ on update_show(caller, the_show_id, force_update)
 	my logger(true, handlername, caller, "INFO", "showid: " & the_show_id & ", force: " & force_update)
 	if the_show_id is "" then
 		repeat with i2 from 1 to length of Show_info
-			my update_show("update_show" & my padnum("update_show", i2, false) & "(" & caller & ")", show_id of item i2 of Show_info, false)
+			my update_show("update_show" & padnum("update_show", i2, false) of LibScript & "(" & caller & ")", show_id of item i2 of Show_info, false)
 		end repeat
 	else
-		set show_offset to my HDHRShowSearch(my cm(handlername, caller), the_show_id)
+		set show_offset to HDHRShowSearch(my cm(handlername, caller), the_show_id) of LibScript
 		-- NOTE: Edge case—if show_id changes (e.g., SeriesID migration), this lookup may fail. Verify ID stability.
 		if show_offset is 0 then
 			my logger(true, handlername, caller, "WARN", "Unable to find show with ID: " & the_show_id)
@@ -2697,7 +2697,7 @@ on update_show(caller, the_show_id, force_update)
 			on error errmsg
 				my logger(true, handlername, caller, "ERROR", "ERROR: " & errmsg)
 			end try
-			set hdhr_response_channel_title to fixall of my show_name_fix(my cm(handlername, caller), show_id of item show_offset of Show_info, hdhr_response_channel)
+			set hdhr_response_channel_title to fixall of show_name_fix(my cm(handlername, caller), show_id of item show_offset of Show_info, hdhr_response_channel) of LibScript
 			if show_title of item show_offset of Show_info is not equal to hdhr_response_channel_title then
 				my logger(true, handlername, caller, "INFO", "Title changed from " & quote & show_title of item show_offset of Show_info & quote & " to " & quote & hdhr_response_channel_title & quote)
 				set show_title of item show_offset of Show_info to hdhr_response_channel_title
@@ -2708,7 +2708,7 @@ on update_show(caller, the_show_id, force_update)
 					try
 						set hdhr_response_OriginalAirdate to OriginalAirdate of hdhr_response_channel
 					on error errmsg
-						set hdhr_response_OriginalAirdate to my epoch(cd)
+						set hdhr_response_OriginalAirdate to epoch(cd) of LibScript
 						my logger(true, handlername, caller, "DEBUG", "Show did not contain an OriginalAirdate , " & errmsg)
 					end try
 					--set hdhr_response_channel_title to fixall of my show_name_fix(my cm(handlername, caller), show_id of item show_offset of Show_info, hdhr_response_channel)
@@ -2754,11 +2754,11 @@ on update_show(caller, the_show_id, force_update)
 					
 					set progress completed steps to 5
 					try
-						set temp_show_time to my epoch2show_time(my cm(handlername, caller), my getTfromN((StartTime of hdhr_response_channel)))
+						set temp_show_time to epoch2show_time(my cm(handlername, caller), getTfromN((StartTime of hdhr_response_channel)) of LibScript) of LibScript
 						
 						if (temp_show_time as number) is not equal to (show_time of item show_offset of Show_info as number) then
 							my logger(true, handlername, caller, "INFO", "Show time changed from " & show_time of item show_offset of Show_info & " to " & temp_show_time)
-							set show_time of item show_offset of Show_info to my epoch2show_time("hdhrGRID(8)", my getTfromN((StartTime of hdhr_response_channel)))
+							set show_time of item show_offset of Show_info to epoch2show_time("hdhrGRID(8)", getTfromN((StartTime of hdhr_response_channel)) of LibScript) of LibScript
 							
 							set show_next of item show_offset of Show_info to my nextday(my cm(handlername, caller), show_id of item show_offset of Show_info)
 							--We may be to run next_day logic  
@@ -2779,7 +2779,7 @@ on update_show(caller, the_show_id, force_update)
 					try
 						if show_url of item show_offset of Show_info is in {"", "?", false, "false"} then
 							my logger(true, handlername, caller, "WARN", "show_url is invalid, updating...")
-							set show_url of item show_offset of Show_info to my add_record_url(my cm(handlername, caller), show_channel of item show_offset of Show_info, hdhr_record of item show_offset of Show_info)
+							set show_url of item show_offset of Show_info to add_record_url(my cm(handlername, caller), show_channel of item show_offset of Show_info, hdhr_record of item show_offset of Show_info) of LibScript
 						end if
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", "Unable to update show_url of " & show_title of item show_offset of Show_info & ", errmsg: " & errmsg)
@@ -2800,7 +2800,7 @@ on update_show(caller, the_show_id, force_update)
 				set progress completed steps to 8
 			end if
 		else
-			my logger(true, handlername, caller, "DEBUG", "Did not update the show " & show_title of item show_offset of Show_info & ", next_show in " & my ms2time("update_show1", ((show_next of item show_offset of Show_info) - (current date)), "s", 4))
+			my logger(true, handlername, caller, "DEBUG", "Did not update the show " & show_title of item show_offset of Show_info & ", next_show in " & ms2time("update_show1", ((show_next of item show_offset of Show_info) - (current date)), "s", 4))
 		end if
 	end if
 end update_show
@@ -2844,7 +2844,7 @@ on save_data(caller)
 					end try
 					
 					try
-						set show_time_OriginalAirdate of item i5 of temp_show_info to my fixDate(my cm(handlername, caller), (show_time_OriginalAirdate of item i5 of temp_show_info))
+						set show_time_OriginalAirdate of item i5 of temp_show_info to fixDate(my cm(handlername, caller), (show_time_OriginalAirdate of item i5 of temp_show_info)) of LibScript
 					on error errmsg
 						set item i5 of temp_show_info to item i5 of temp_show_info & {show_time_OriginalAirdate:""}
 						my logger(true, handlername, caller, "INFO", "Added show_time_OriginalAirdate to " & quote & show_title of item i5 of temp_show_info & quote)
@@ -2895,21 +2895,21 @@ on save_data(caller)
 					end try
 					
 					try
-						set show_last of item i5 of temp_show_info to my fixDate(my cm(handlername, caller), (show_last of item i5 of temp_show_info))
+						set show_last of item i5 of temp_show_info to fixDate(my cm(handlername, caller), (show_last of item i5 of temp_show_info)) of LibScript
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", errmsg)
 						set item i5 of temp_show_info to item i5 of temp_show_info & {show_last:""}
 						my logger(true, handlername, caller, "INFO", "Added show_last to " & quote & show_title of item i5 of temp_show_info & quote)
 					end try
 					try
-						set show_next of item i5 of temp_show_info to my fixDate(my cm(handlername, caller), (show_next of item i5 of temp_show_info))
+						set show_next of item i5 of temp_show_info to fixDate(my cm(handlername, caller), (show_next of item i5 of temp_show_info))
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", errmsg)
 						set item i5 of temp_show_info to item i5 of temp_show_info & {show_next:""}
 						my logger(true, handlername, caller, "INFO", "Added show_next to " & quote & show_title of item i5 of temp_show_info & quote)
 					end try
 					try
-						set show_end of item i5 of temp_show_info to my fixDate(my cm(handlername, caller), (show_end of item i5 of temp_show_info))
+						set show_end of item i5 of temp_show_info to fixDate(my cm(handlername, caller), (show_end of item i5 of temp_show_info))
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", errmsg)
 						set item i5 of temp_show_info to item i5 of temp_show_info & {show_end:""}
@@ -2917,7 +2917,7 @@ on save_data(caller)
 					end try
 					
 					try
-						set notify_recording_time of item i5 of temp_show_info to my fixDate(my cm(handlername, caller), (notify_recording_time of item i5 of temp_show_info))
+						set notify_recording_time of item i5 of temp_show_info to fixDate(my cm(handlername, caller), (notify_recording_time of item i5 of temp_show_info))
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", errmsg)
 						set item i5 of temp_show_info to item i5 of temp_show_info & {notify_recording_time:""}
@@ -2925,7 +2925,7 @@ on save_data(caller)
 					end try
 					
 					try
-						set notify_upnext_time of item i5 of temp_show_info to my fixDate(my cm(handlername, caller), (notify_upnext_time of item i5 of temp_show_info))
+						set notify_upnext_time of item i5 of temp_show_info to fixDate(my cm(handlername, caller), (notify_upnext_time of item i5 of temp_show_info))
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", errmsg)
 						set item i5 of temp_show_info to item i5 of temp_show_info & {notify_upnext_time:""}
@@ -3044,7 +3044,7 @@ on showPathVerify(caller, show_id)
 			my showPathVerify(my cm(handlername, caller), show_id of item i3 of Show_info)
 		end repeat
 	else
-		set show_offset to my HDHRShowSearch(my cm(handlername, caller), show_id)
+		set show_offset to HDHRShowSearch(my cm(handlername, caller), show_id)
 		try
 			if my checkfileexists(my cm(handlername, caller), show_dir of item show_offset of Show_info) is false then
 				my logger(true, handlername, caller, "WARN", "The show, " & show_title of item show_offset of Show_info & " has a invalid save directory")
@@ -3217,7 +3217,7 @@ on recordingnow_main(caller)
 	if length of Show_info is greater than 0 then
 		repeat with i from 1 to length of Show_info
 			if show_recording of item i of Show_info is true then
-				set recording_end to my ms2time(my cm(handlername, caller), (show_end of item i of Show_info) - (cd), "s", 3)
+				set recording_end to ms2time(my cm(handlername, caller), (show_end of item i of Show_info) - (cd), "s", 3)
 				if show_is_series of item i of Show_info is true then
 					if length of show_air_date of item i of Show_info is 1 then
 						set end of recording_now_final to (Series1_icon of Icon_record & " " & show_title of item i of Show_info & " on " & show_channel of item i of Show_info & " (" & recording_end & " left)")
@@ -3236,7 +3236,7 @@ on recordingnow_main(caller)
 		if recording_now_final is {} then
 			return ("No Shows Recording")
 		end if
-		return (Record_icon of Icon_record & " Recording" & return & my stringlistflip(my cm(handlername, caller), recording_now_final, return, "string")) as text
+		return (Record_icon of Icon_record & " Recording" & return & stringlistflip(my cm(handlername, caller), recording_now_final, return, "string")) as text
 	else
 		my logger(true, handlername, caller, "INFO", "No Shows")
 		return ("Recording: None")
@@ -3268,7 +3268,7 @@ on next_shows(caller)
 			set soonest_show to ((show_next of item i of Show_info) - (cd))
 		end if
 		if ((show_next of item i of Show_info) - (cd)) is less than 0 and show_recording of item i of Show_info is false and show_active of item i of Show_info is true then
-			set recording_end to my ms2time(my cm(handlername, caller), (show_end of item i of Show_info) - (cd), "s", 3)
+			set recording_end to ms2time(my cm(handlername, caller), (show_end of item i of Show_info) - (cd), "s", 3)
 			set time_left to ((show_next of item i of Show_info) - (cd))
 			set end of error_show_list to Warning_icon of Icon_record & " " & show_title of item i of Show_info & " on channel " & show_channel of item i of Show_info & " (" & recording_end & " left)"
 		end if
@@ -3278,14 +3278,14 @@ on next_shows(caller)
 		set next_shows_final to {}
 		repeat with i2 from 1 to length of Show_info
 			try
-				set temp_show_end to items 2 thru end of my stringlistflip(my cm(handlername, caller), my short_date(my cm(handlername, caller), show_end of item i2 of Show_info, false, false), " ", "list")
+				set temp_show_end to items 2 thru end of stringlistflip(my cm(handlername, caller), short_date(my cm(handlername, caller), show_end of item i2 of Show_info, false, false), " ", "list")
 			on error errmsg
 				my logger(true, handlername, caller, "WARN", "Error when calculating show_end")
 				set temp_show_end to {"ERROR", "ERROR", "ERROR", "ERROR"}
 			end try
 			if show_next of item i2 of Show_info is soonest_show_time and show_active of item i2 of Show_info is true then
 				
-				my short_date(my cm(handlername, caller), show_end of item i of Show_info, false, false)
+				short_date(my cm(handlername, caller), show_end of item i of Show_info, false, false)
 				if show_is_series of item i2 of Show_info is true then
 					if length of show_air_date of item i2 of Show_info is 1 then
 						set end of next_shows_final to (Series1_icon of Icon_record & " " & show_title of item i2 of Show_info & " on channel " & show_channel of item i2 of Show_info & " until " & temp_show_end)
@@ -3319,7 +3319,7 @@ on showid2PID(caller, show_id, kill_pid, logging)
 			my showid2PID(my cm(handlername, caller), show_id of item i of Show_info, kill_pid, logging)
 		end repeat
 	else
-		set show_offset to my HDHRShowSearch(my cm(handlername, caller), show_id)
+		set show_offset to HDHRShowSearch(my cm(handlername, caller), show_id)
 		if show_offset is greater than 0 then
 			try
 				my logger(true, handlername, caller, "TRACE", "ps -Aa|grep " & show_id & "|grep -v 'grep\\|caffeinate'")
@@ -3328,7 +3328,7 @@ on showid2PID(caller, show_id, kill_pid, logging)
 				my logger(true, handlername, caller, "DEBUG", show_title of item show_offset of Show_info & ", err: " & errmsg)
 				return {show_id, {}}
 			end try
-			set showid2PID_data_parsed to my stringlistflip(my cm(handlername, caller), showid2PID_result, return, "list")
+			set showid2PID_data_parsed to stringlistflip(my cm(handlername, caller), showid2PID_result, return, "list")
 			if length of showid2PID_data_parsed is greater than 0 then
 				repeat with i from 1 to length of showid2PID_data_parsed
 					set end of showid2PID_perline to word 1 of item i of showid2PID_data_parsed
@@ -3396,7 +3396,7 @@ end fixDate
 
 on ms2time(caller, totalMS, time_duration, level_precision)
 	set handlername to "ms2time"
-	return ms2time(my cm(handlername, caller), totalMS, time_duration, level_precision) of LibScript
+	return ms2time(my cm(handlername, caller), totalMS, time_duration, level_precision) of LibScript of LibScript
 end ms2time
 
 on short_date(caller, the_date_object, twentyfourtime, show_seconds)
@@ -3421,7 +3421,7 @@ end getTfromN
 
 on HDHRShowSearch(caller, the_show_id)
 	set handlername to "HDHRShowSearch"
-	return HDHRShowSearch(my cm(handlername, caller), the_show_id) of LibScript
+	return HDHRShowSearch(my cm(handlername, caller), the_show_id) of LibScript of LibScript
 end HDHRShowSearch
 
 on time_set(caller, adate_object, time_shift)
@@ -3449,7 +3449,7 @@ on logger(logtofile, the_handler, caller, loglevel, message)
 	set caller to (caller) as text
 	if loglevel is in Logger_levels then
 		set queued_log_lines to {}
-		set end of queued_log_lines to my short_date(my cm(handlername, caller), current date, true, true) & " " & Local_env & " " & loglevel & " " & the_handler & "(" & caller & ")" & " " & message
+		set end of queued_log_lines to short_date(my cm(handlername, caller), current date, true, true) & " " & Local_env & " " & loglevel & " " & the_handler & "(" & caller & ")" & " " & message
 		if loglevel is in Logger_levels then
 			try
 				set logfile to open for access file ((Log_dir) & (Logfilename) as text) with write permission
@@ -3485,13 +3485,13 @@ on existing_shows(caller)
 		set showid2PID_result to {}
 		return
 	end try
-	set showid2PID_result_list to my stringlistflip(my cm(handlername, caller), showid2PID_result, return, "list")
+	set showid2PID_result_list to stringlistflip(my cm(handlername, caller), showid2PID_result, return, "list")
 	if length of showid2PID_result_list is greater than 0 then
 		try
 			repeat with i from 1 to length of showid2PID_result_list
-				set showid2PID_result_list_perline to my stringlistflip(my cm(handlername, caller), item i of showid2PID_result_list, {" -H ", "show_id:"}, "list")
+				set showid2PID_result_list_perline to stringlistflip(my cm(handlername, caller), item i of showid2PID_result_list, {" -H ", "show_id:"}, "list")
 				set temp_show_id to item 3 of showid2PID_result_list_perline
-				set show_offset to my HDHRShowSearch(my cm(handlername, caller), temp_show_id)
+				set show_offset to HDHRShowSearch(my cm(handlername, caller), temp_show_id)
 				if show_offset is not 0 then
 					if show_recording of item show_offset of Show_info is false then
 						set show_recording of item show_offset of Show_info to true
