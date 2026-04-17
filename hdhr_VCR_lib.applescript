@@ -23,7 +23,7 @@ on checkDiskSpace(caller, the_path)
 	try
 		set checkDiskSpace_return to do shell script "df -k '" & the_path & "'"
 		set checkDiskSpace_temp1 to item 2 of my stringlistflip(my cm(handlername, caller), checkDiskSpace_return, return, "list")
-		set checkDiskSpace_temp2 to my emptylist(my cm(handlername, caller), stringlistflip(my cm(handlername, caller), checkDiskSpace_temp1, space, "list"))
+		set checkDiskSpace_temp2 to my emptylist(my cm(handlername, caller), my stringlistflip(my cm(handlername, caller), checkDiskSpace_temp1, space, "list"))
 		return {the_path, first word of item 5 of checkDiskSpace_temp2 as number, first word of item 4 of checkDiskSpace_temp2 as number}
 	on error errmsg
 		return {the_path, 0, errmsg}
@@ -440,7 +440,7 @@ on padnum(caller, thenum, splitdot)
 				set end of the_result to (item i of thenum) as text
 			end if
 		end repeat
-		return stringlistflip(my cm(handlername, caller), the_result, ".", "string")
+		return my stringlistflip(my cm(handlername, caller), the_result, ".", "string")
 	on error errmsg
 		return {handlername, errmsg}
 	end try
@@ -926,7 +926,7 @@ on seriesScanAdd(caller, show_id)
 			--We need to loop shows, and filter out shows that use seriesid
 			repeat with i from 1 to length of Show_info
 				if show_use_seriesid of item i of Show_info is true then
-					seriesScanAdd(my cm(handlername & "int", caller), show_id of item i of Show_info)
+					my seriesScanAdd(my cm(handlername & "int", caller), show_id of item i of Show_info)
 				end if
 			end repeat
 		else
@@ -974,7 +974,7 @@ on seriesScanRun(caller, execute)
 			else
 				if show_use_seriesid of item show_offset of Show_info is true then
 					logger(true, handlername, caller, "TRACE", "Found series at offset " & show_offset & ", updating show_id: " & show_id) of ParentScript
-					seriesScanUpdate(my cm(handlername, caller), show_id)
+					my seriesScanUpdate(my cm(handlername, caller), show_id)
 				else
 					logger(true, handlername, caller, "WARN", "show_id: " & show_id & " is not a show_use_seriesid series, skipping update") of ParentScript
 				end if
@@ -1543,7 +1543,7 @@ on seriesScanList(caller, show_id, updateRecord)
 			repeat with i from 1 to length of RefreshSeriesID_list
 				set show_offset to my HDHRShowSearch(my cm(handlername, caller), item i of RefreshSeriesID_list)
 				if show_is_series of item show_offset of Show_info is true then
-					seriesScanUpdate(my cm(handlername, caller), item i of RefreshSeriesID_list)
+					my seriesScanUpdate(my cm(handlername, caller), item i of RefreshSeriesID_list)
 				end if
 			end repeat
 			set RefreshSeriesID_list to {}
@@ -1560,7 +1560,7 @@ on seriesScanRefresh(caller, show_id)
 	if show_id is "" then
 		repeat with i from 1 to length of Show_info
 			if show_use_seriesid of item i of Show_info is true and show_recording of item i of Show_info is false and show_active of item i of Show_info is true then
-				seriesScanUpdate(my cm(handlername, caller), show_id of item i of Show_info)
+				my seriesScanUpdate(my cm(handlername, caller), show_id of item i of Show_info)
 			end if
 		end repeat
 		return true
