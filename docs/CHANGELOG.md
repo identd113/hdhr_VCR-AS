@@ -10,6 +10,14 @@
 ## 20260417 (Audit Fixes & Code Cleanup)
 
 ### Fixed
+- Fixed 6 bare handler calls in library missing `my` keyword: `stringlistflip` (×2), `seriesScanAdd` (×1), `seriesScanUpdate` (×3). These should explicitly target the current script object.
+- Fixed all `RefreshSeriesID_list` variable accesses in library to use correct name matching main script declaration.
+
+---
+
+## 20260417 (Audit Fixes & Code Cleanup - Part 1)
+
+### Fixed
 - **CRITICAL:** Fixed `RefreshSeriesID_list` vs `RefreshderiesiD_list` name mismatch between main script and library. These were genuinely different variable names, so `seriesScanAdd` was writing to a property that `idle` never read — series scan scheduling had never fired. Renamed all occurrences in `hdhr_VCR_lib.applescript` to match main.
 - **CRITICAL:** Fixed SeriesID next-episode calculation in idle loop. When a show's scheduled time passed without recording, all series types were incorrectly treated the same. DateTime series now recalculates `show_next` via `nextday()`; SeriesID shows now call `seriesScanAdd()` to queue a guide scan for the next episode.
 - Fixed extra closing parenthesis syntax error (`fixDate(...) of LibScript))` → `of LibScript)`).
