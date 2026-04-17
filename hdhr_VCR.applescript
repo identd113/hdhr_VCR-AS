@@ -50,7 +50,7 @@ global Errloc
 global Max_disk_percentage
 global Full_week_days
 global Code_version_epoch
-global Refreshderiesi_d_list
+global RefreshSeriesID_list
 global Idle_loop
 global Guide_hours
 
@@ -150,7 +150,7 @@ on setup_globals(caller)
 	set handlername to "setup_globals"
 	try
 		set Full_week_days to {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
-		set Refreshderiesi_d_list to {}
+		set RefreshSeriesID_list to {}
 		set Fail_count to 3
 		set Hdhr_device_list to {}
 		set Show_info to {}
@@ -354,15 +354,18 @@ on idle
 									if show_end of item i of Show_info is less than or equal to (cd) then
 										my logger(true, handlername, caller, "INFO", show_title of item i of Show_info & " ends at " & show_end of item i of Show_info)
 										if show_is_series of item i of Show_info is true then
-											set show_next of item i of Show_info to my nextday(cm, show_id of item i of Show_info)
-											set show_fail_count of item i of Show_info to 0
-											set show_fail_reason of item i of Show_info to ""
-											seriesScanAdd(cm, show_id of item i of Show_info) of LibScript
+												if show_use_seriesid of item i of Show_info is false then
+													set show_next of item i of Show_info to my nextday(cm, show_id of item i of Show_info)
+												else
+													seriesScanAdd(cm, show_id of item i of Show_info) of LibScript
+												end if
+												set show_fail_count of item i of Show_info to 0
+												set show_fail_reason of item i of Show_info to ""
 											
 											--my seriesScanUpdate(cm, show_id of item i of Show_info, true)
 											my logger(true, handlername, caller, "WARN", show_title of item i of Show_info & " is a series, but passed, next " & short_date(cm, show_next of item i of Show_info, false, false) of LibScript)
 											exit repeat
-										else if show_is_sport of item i of Show_info is false then
+										else
 											set show_active of item i of Show_info to false
 											my logger(true, handlername, caller, "WARN", show_title of item i of Show_info & " is a single, and passed, so it was deactivated")
 											exit repeat
@@ -481,17 +484,13 @@ on idle
 										seriesScanAdd(cm, show_id of item i of Show_info) of LibScript
 									end if
 								else
-									if show_is_sport of item i of Show_info is false then
 										set show_active of item i of Show_info to false
 										set show_fail_count of item i of Show_info to 0
 										set show_fail_reason of item i of Show_info to ""
 										
 										my logger(true, handlername, caller, "INFO", "Recording Complete for " & quote & (show_title of item i of Show_info & quote & " on " & show_channel of item i of Show_info & " and marked inactive"))
 										display notification "Show marked inactive" with title Stop_icon of Icon_record & " Recording Complete" subtitle (quote & show_title of item i of Show_info & quote & " on " & show_channel of item i of Show_info & " (" & my channel2name(cm, show_channel of item i of Show_info as text, hdhr_record of item i of Show_info) & ")")
-									else
-										my logger(true, handlername, caller, "INFO", show_title of item i of Show_info & " is a sport, and we are in bonus time")
 									end if
-								end if
 								try
 									if show_time_orig of item i of Show_info is not in {missing value, "missing value"} and (show_time of item i of Show_info as number) is not (show_time_orig of item i of Show_info as number) and show_active of item i of Show_info is true and show_use_seriesid of item i of Show_info is false then
 										my logger(true, handlername, caller, "INFO", "Show: " & show_title of item i of Show_info & " reverted to " & show_time_orig of item i of Show_info & ", was " & show_time of item i of Show_info)
@@ -529,7 +528,7 @@ on idle
 		set progress completed steps to 2
 		delay 0.5
 	end if
-	if length of Refreshderiesi_d_list is not 0 then
+	if length of RefreshSeriesID_list is not 0 then
 		seriesScanRun(cm, true) of LibScript
 	end if
 	if First_open is true then
@@ -1258,7 +1257,7 @@ on nextday(caller, the_show_id)
 	
 	if show_end of item show_offset of Show_info is not nextup + ((show_length of item show_offset of Show_info) * minutes) then
 		set show_end of item show_offset of Show_info to nextup + ((show_length of item show_offset of Show_info) * minutes)
-		my logger(true, handlername, caller, "INFO", "Show end of " & quote & show_title of item show_offset of Show_info & quote & " set to: " & fixDate(my cm(handlername, caller), (nextup + ((show_length of item show_offset of Show_info) * minutes))) of LibScript))
+		my logger(true, handlername, caller, "INFO", "Show end of " & quote & show_title of item show_offset of Show_info & quote & " set to: " & fixDate(my cm(handlername, caller), (nextup + ((show_length of item show_offset of Show_info) * minutes))) of LibScript)
 		my logger(true, handlername, caller, "DEBUG", "WORK Show end class: " & class of (show_end of item show_offset of Show_info))
 	else
 		my logger(true, handlername, caller, "INFO", "MATCHED Show end of " & quote & show_title of item show_offset of Show_info & quote & " set to: " & (nextup + ((show_length of item show_offset of Show_info) * minutes)))
@@ -1346,6 +1345,12 @@ on validate_show_info(caller, show_to_check, should_edit)
 
 				my logger(true, handlername, caller, "INFO", "Show Title prompt: " & text returned of show_title_temp & ", button_pressed: " & button returned of show_title_temp)
 
+				-- Check if user clicked "Run" (cancel); if so, return false
+				if button returned of show_title_temp contains "Run" then
+					my logger(true, handlername, caller, "INFO", "User clicked " & quote & "Run" & quote & " in edit dialog, exiting")
+					return false
+				end if
+
 				-- ENFORCE 4-STATE CONVENTION
 				if button returned of show_title_temp contains "Series" then
 					set show_is_series of item i of Show_info to true
@@ -1404,6 +1409,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 
 			-- DAYS SELECTION
 			if show_state is "SeriesID(All)" or show_state is "SeriesID(Channel)" then
+				-- SeriesID shows record any day the guide provides an episode; guide scanning handles channel filtering
 				set show_air_date of item i of Show_info to Full_week_days
 			else if show_air_date of item i of Show_info is missing value or length of (show_air_date of item i of Show_info) is 0 or should_edit is true or class of (show_air_date of item i of Show_info) is not list then
 				if show_state is "DateTime" then
@@ -1452,6 +1458,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 				set show_channel of item i of Show_info to channel_temp
 			end if
 
+
 			-- TIME SELECTION
 			-- Ask (DateTime/Single), Skip (SeriesID modes)
 			if show_state is "DateTime" or show_state is "Single" then
@@ -1497,6 +1504,21 @@ on validate_show_info(caller, show_to_check, should_edit)
 					set show_dir_temp to choose_folder_with_fallback(my cm(handlername, caller), "Select shows Directory for " & show_title of item i of Show_info, folder_fallbacks) of LibScript
 					if show_dir_temp is not missing value then
 						set show_dir of item i of Show_info to show_dir_temp
+						-- Validate folder is writable
+						if update_folder(my cm(handlername, caller), show_dir_temp) of LibScript is false then
+							my logger(true, handlername, caller, "ERROR", "Selected folder is not writable: " & (show_dir_temp as text))
+							display dialog "Error: The selected folder is not writable. Please ensure you have write permissions." buttons {"OK"} default button 1 with icon caution with title my check_version_dialog(my cm(handlername, caller))
+							set show_dir of item i of Show_info to missing value
+						else
+							-- Validate disk space
+							set disk_check to checkDiskSpace(my cm(handlername, caller), (POSIX path of show_dir_temp)) of LibScript
+							set disk_percent to item 2 of disk_check
+							set disk_available_kb to item 3 of disk_check
+							if disk_percent is greater than or equal to Max_disk_percentage then
+								my logger(true, handlername, caller, "WARN", "Selected folder is " & disk_percent & "% full (max: " & Max_disk_percentage & "%)")
+								display dialog "Warning: The selected folder is " & disk_percent & "% full. At least " & Max_disk_percentage & "% free space is required." buttons {"OK"} default button 1 with icon caution with title my check_version_dialog(my cm(handlername, caller))
+							end if
+						end if
 					end if
 				on error errmsg
 					my logger(true, handlername, caller, "ERROR", "Unable to select show directory: " & errmsg)
@@ -2042,7 +2064,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 						my logger(true, handlername, caller, "WARN", "default_record_day failed, errmsg: " & errmsg)
 						set default_record_day to weekday of (cd) as text
 					end try
-					
+
 					set show_title of temp_show_info to hdhr_response_channel_title
 					set end of temp_show_progress to "Title: " & hdhr_response_channel_title
 					set progress additional description to stringlistflip(cm, temp_show_progress, return, "string") of LibScript
@@ -2321,6 +2343,13 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				--	end if
 				seriesScanAdd(cm, show_id of last item of Show_info) of LibScript
 				my save_data(cm)
+				-- Validate SeriesID show setup
+				if show_use_seriesid of last item of Show_info is true then
+					my logger(true, handlername, caller, "INFO", "SeriesID show queued for guide scanning: " & show_title of last item of Show_info)
+					if show_seriesid of last item of Show_info is "" then
+						my logger(true, handlername, caller, "WARN", "SeriesID is empty; will be populated on next idle cycle")
+					end if
+				end if
 				display notification with title Add_icon of Icon_record & " Show Added! (" & hdhr_device & ")" subtitle "" & quote & show_title of last item of Show_info & quote & " at " & show_time of last item of Show_info
 				set progress description to "This show has been added!"
 				set end of temp_show_progress to return & "Show: " & quote & show_title of last item of Show_info & quote & " at " & show_time of last item of Show_info
@@ -2742,12 +2771,10 @@ on update_show(caller, the_show_id, force_update)
 					--	end if
 					set progress completed steps to 4
 					try
-						if show_is_sport of item show_offset of Show_info is false then
-							if (show_length of item show_offset of Show_info as number) is not equal to (((EndTime of hdhr_response_channel) - (StartTime of hdhr_response_channel)) div 60 as number) then
-								my logger(true, handlername, caller, "INFO", "Show length changed to " & ((EndTime of hdhr_response_channel) - (StartTime of hdhr_response_channel)) div 60 & " minutes")
-							end if
-							set show_length of item show_offset of Show_info to ((EndTime of hdhr_response_channel) - (StartTime of hdhr_response_channel)) div 60
+						if (show_length of item show_offset of Show_info as number) is not equal to (((EndTime of hdhr_response_channel) - (StartTime of hdhr_response_channel)) div 60 as number) then
+							my logger(true, handlername, caller, "INFO", "Show length changed to " & ((EndTime of hdhr_response_channel) - (StartTime of hdhr_response_channel)) div 60 & " minutes")
 						end if
+						set show_length of item show_offset of Show_info to ((EndTime of hdhr_response_channel) - (StartTime of hdhr_response_channel)) div 60
 					on error errmsg
 						my logger(true, handlername, caller, "Unable to set length of " & show_title of item show_offset of Show_info & ", errmsg: " & errmsg)
 					end try

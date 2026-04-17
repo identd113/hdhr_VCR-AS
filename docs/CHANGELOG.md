@@ -1,5 +1,30 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **NEW:** Added `BARS` logging level to gate progress bar display in the idle loop. Available in `Logger_levels_all` but not enabled by default. Enable in config: `"LoggerLevels": ["INFO", "WARN", "ERROR", "NEAT", "FATAL", "BARS"]` (or include with DEBUG/TRACE)
+
+---
+
+## 20260417 (Audit Fixes & Code Cleanup)
+
+### Fixed
+- **CRITICAL:** Fixed `RefreshSeriesID_list` vs `RefreshderiesiD_list` name mismatch between main script and library. These were genuinely different variable names, so `seriesScanAdd` was writing to a property that `idle` never read — series scan scheduling had never fired. Renamed all occurrences in `hdhr_VCR_lib.applescript` to match main.
+- **CRITICAL:** Fixed SeriesID next-episode calculation in idle loop. When a show's scheduled time passed without recording, all series types were incorrectly treated the same. DateTime series now recalculates `show_next` via `nextday()`; SeriesID shows now call `seriesScanAdd()` to queue a guide scan for the next episode.
+- Fixed extra closing parenthesis syntax error (`fixDate(...) of LibScript))` → `of LibScript)`).
+- Fixed typo in global variable name: `Refreshderiesi_d_list` → `RefreshSeriesID_list`.
+- Fixed `my get_show_state()` in library incorrectly using `my` instead of `get_show_state() of ParentScript`.
+- Fixed `validate_show_info` not handling "Run" button click on the title dialog — now returns `false` immediately instead of continuing with stale state.
+
+### Changed
+- **SeriesID shows (both Channel and All) now always set `show_air_date` to all 7 days.** The guide scanner handles channel filtering; `show_air_date` should not restrict which days a SeriesID episode can be picked up.
+- **Folder selection validation added:** After folder is selected, verifies it is writable (`update_folder()`) and has sufficient disk space (`checkDiskSpace()`). Alerts user if either check fails.
+- **SeriesID show add validation:** After `seriesScanAdd()` queues a new SeriesID show, logs confirmation and warns if `show_seriesid` is still empty (will populate on next idle cycle).
+- **Removed dead `show_is_sport` conditional code:** Field is retained in config and show records, but conditional branches that could never be true have been removed from the idle loop and `validate_show_info`.
+
+---
+
 ## 20260414 (Single Show Workflow & Logging Improvements)
 
 ### Fixed
