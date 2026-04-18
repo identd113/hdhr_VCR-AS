@@ -324,7 +324,7 @@ on idle
 									my HDHRDeviceDiscovery(cm, device_id of item i2 of Hdhr_device_list)
 								end timeout
 								seriesScanAdd(cm, "") of LibScript
-								my save_data(cm)
+								-- Removed periodic save — now only save on explicit triggers (add/deactivate/quit)
 							on error errmsg
 								my logger(true, handlername, caller, "ERROR", "Unable to update HDHRDeviceDiscovery, errmsg " & errmsg)
 							end try
@@ -365,8 +365,10 @@ on idle
 										if show_is_series of item i of Show_info is true then
 												if show_use_seriesid of item i of Show_info is false then
 													set show_next of item i of Show_info to my nextday(cm, show_id of item i of Show_info)
+													my save_data(cm)
 												else
 													seriesScanAdd(cm, show_id of item i of Show_info) of LibScript
+													my save_data(cm)
 												end if
 												set show_fail_count of item i of Show_info to 0
 												set show_fail_reason of item i of Show_info to ""
@@ -3007,8 +3009,10 @@ on save_data(caller)
 			end repeat
 			set temp_show_info to emptylist(my cm(handlername, caller), temp_show_info) of LibScript
 			-- Serialize all shows to JSON-safe types before writing
+			my logger(true, handlername, caller, "INFO", "About to serialize " & length of temp_show_info & " shows")
 			repeat with i5 from 1 to length of temp_show_info
 				if item i5 of temp_show_info is not "" then
+					my logger(true, handlername, caller, "DEBUG", "Serializing show " & i5 & ": " & show_title of item i5 of temp_show_info)
 					set item i5 of temp_show_info to serialize_show(my cm(handlername, caller), item i5 of temp_show_info) of LibScript
 				end if
 			end repeat

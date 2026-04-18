@@ -534,10 +534,12 @@ end epoch2show_time
 on serialize_show(caller, show_rec)
 	set handlername to "serialize_show"
 	set s to show_rec
+	logger(true, handlername, caller, "DEBUG", "Converting show: " & show_title of s) of ParentScript
 
 	try
 		if (class of (show_last of s)) is date then
 			set show_last of s to my datetime2epoch(caller, show_last of s)
+			logger(true, handlername, caller, "TRACE", "  show_last converted to epoch: " & show_last of s) of ParentScript
 		else
 			set show_last of s to 0
 		end if
