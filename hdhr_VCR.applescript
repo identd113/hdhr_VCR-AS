@@ -407,9 +407,17 @@ on idle
 												my logger(true, handlername, caller, "WARN", "Tuner " & hdhr_record of item i of Show_info & " " & quote & show_title of item i of Show_info & quote & " was unavailable, delaying for " & Idle_timer & " seconds; " & show_fail_count of item i of Show_info & "/" & Fail_count)
 											else
 												if (show_fail_count of item i of Show_info) is Fail_count then
-													my logger(true, handlername, caller, "ERROR", "This show has failed to record (" & hdhr_record of item i of Show_info & "), " & quote & show_fail_reason of item i of Show_info & quote)
-													set show_fail_count of item i of Show_info to (show_fail_count of item i of Show_info) + 1
-													display notification "This show has failed to record" & "(" & hdhr_record of item i of Show_info & ")" & return & show_title of item i of Show_info subtitle Eject_icon of Icon_record
+													set tuner_available_now to my tuner_status(cm, hdhr_record of item i of Show_info)
+													if tunermax of tuner_available_now is greater than tuneractive of tuner_available_now then
+														my logger(true, handlername, caller, "WARN", "Tuner now available for " & quote & show_title of item i of Show_info & quote & ", resetting fail count and retrying")
+														set show_fail_count of item i of Show_info to 0
+														set show_fail_reason of item i of Show_info to ""
+														display notification "Tuner now available, retrying" with title Recordsoon_icon of Icon_record subtitle show_title of item i of Show_info
+													else
+														my logger(true, handlername, caller, "ERROR", "This show has failed to record (" & hdhr_record of item i of Show_info & "), " & quote & show_fail_reason of item i of Show_info & quote)
+														set show_fail_count of item i of Show_info to (show_fail_count of item i of Show_info) + 1
+														display notification "This show has failed to record" & "(" & hdhr_record of item i of Show_info & ")" & return & show_title of item i of Show_info subtitle Eject_icon of Icon_record
+													end if
 												end if
 											end if
 										end if
