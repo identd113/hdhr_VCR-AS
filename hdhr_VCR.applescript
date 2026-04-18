@@ -526,7 +526,7 @@ on idle
 	on error errmsg
 		my logger(true, handlername, caller, "ERROR", errmsg)
 	end try
-	if check_after_midnight(cm) of Lib_script is true then
+	if check_after_midnight(cm) of LibScript is true then
 		repeat with i from 1 to length of Show_info
 			set show_recorded_today of item i of Show_info to false
 		end repeat
@@ -950,7 +950,7 @@ on get_show_state(caller, hdhr_tuner, channelcheck, start_time, end_time)
 					end if
 				else
 					try
-						if aroundDate(my cm(handlername, caller), start_time, show_next of item i of Show_info, 120) of Lib_script is true then
+						if aroundDate(my cm(handlername, caller), start_time, show_next of item i of Show_info, 120) of LibScript is true then
 							my logger(true, handlername & i, caller, "INFO", "Marked as upnext:    " & show_title of item i of Show_info & ", channel " & channelcheck)
 							my logger(true, handlername & i, caller, "DEBUG", "UPNEXT show_record_id: " & show_record_id & ", offset " & i)
 							if show_active of item i of Show_info is true then
