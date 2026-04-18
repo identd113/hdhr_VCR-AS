@@ -3190,9 +3190,21 @@ on read_data(caller)
 				set show_fail_count of item i5 of Show_info to 0
 				set show_fail_reason of item i5 of Show_info to ""
 			end try
-			set show_last of item i5 of Show_info to date (show_last of item i5 of Show_info as text)
-			set show_next of item i5 of Show_info to date (show_next of item i5 of Show_info as text)
-			set show_end of item i5 of Show_info to date (show_end of item i5 of Show_info as text)
+			try
+				set show_last of item i5 of Show_info to date (show_last of item i5 of Show_info as text)
+			on error
+				set show_last of item i5 of Show_info to (current date)
+			end try
+			try
+				set show_next of item i5 of Show_info to date (show_next of item i5 of Show_info as text)
+			on error
+				set show_next of item i5 of Show_info to (current date)
+			end try
+			try
+				set show_end of item i5 of Show_info to date (show_end of item i5 of Show_info as text)
+			on error
+				set show_end of item i5 of Show_info to (current date)
+			end try
 			set show_channel of item i5 of Show_info to (show_channel of item i5 of Show_info as text)
 			try
 				if notify_recording_time of item i5 of Show_info is "missing value" then
