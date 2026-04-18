@@ -218,6 +218,7 @@ on run {}
 	set Log_dir to alias ((path to library folder from user domain) & "Logs" as text)
 	set First_open to true
 	copy (current date) to Idle_timer_dateobj
+	set Lib_script_version to "0"
 	set progress description to "Loading hdhr_VCR_lib..."
 	if my setup_lib(cmi) is true then
 		set progress description to "Setting up script..."
@@ -1001,7 +1002,7 @@ on check_version(caller)
 			set Check_version_retry_count to 0
 			set Version_remote to hdhr_version of item 1 of versions of version_response
 			set Online_detected to true
-			my logger(true, handlername, caller, "INFO", "Current Version: " & Version_local & ", Remote Version: " & Version_remote & ", Lib Version: " & LibScript_version)
+			my logger(true, handlername, caller, "INFO", "Current Version: " & Version_local & ", Remote Version: " & Version_remote & ", Lib Version: " & Lib_script_version)
 			if Version_remote is greater than Version_local then
 				my logger(true, handlername, caller, "INFO", "Changelog: " & changelog of item 1 of versions of version_response)
 			end if
