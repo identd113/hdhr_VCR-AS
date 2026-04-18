@@ -87,7 +87,7 @@ on setup_icons(caller)
 	set handlername to "setup_icons"
 	set Base_icon_path to POSIX path of (path to home folder) & "Library/Caches/hdhr_VCR/" as text
 	try
-		set Icon_record to {Warning_icon:character id {9888, 65039}, Play_icon:character id 9654, Record_icon:character id 128308, Recordsoon_icon:character id 11093, Tv_icon:character id 128250, Plus_icon:character id 10133, Single_icon:character id {49, 65039, 8419}, Series_icon:character id 128257, Series1_icon:character id 128258, Edit_icon:character id {9999, 65039}, Soon_icon:character id 128284, Disk_icon:character id 128190, Update_icon:character id 8682, Stop_icon:character id 9726, Up_icon:character id 128316, Up1_icon:character id 128314, Up2_icon:character id 9195, Check_icon:character id 9989, Uncheck_icon:character id 10060, Futureshow_icon:character id {9197, 65039}, Calendar2_icon:character id 128198, Hourglass_icon:character id 9203, Film_icon:character id 127910, Back_icon:character id 8592, Done_icon:character id 9989, Running_icon:character id {127939, 8205, 9794, 65039}, Add_icon:character id 127381, Series3_icon:character id 128256, Star_icon:character id 9733, Eject_icon:character id 9167}
+		set Icon_record to {Warning_icon:character id {9888, 65039}, Play_icon:character id 9654, Record_icon:character id 128308, Recordsoon_icon:character id 11093, Tv_icon:character id 128250, Plus_icon:character id 10133, Single_icon:character id {49, 65039, 8419}, Series_icon:character id 128256, Series1_icon:character id 128258, Edit_icon:character id {9999, 65039}, Soon_icon:character id 128284, Disk_icon:character id 128190, Update_icon:character id 8682, Stop_icon:character id 9726, Up_icon:character id 128316, Up1_icon:character id 128314, Up2_icon:character id 9195, Check_icon:character id 9989, Uncheck_icon:character id 10060, Futureshow_icon:character id {9197, 65039}, Calendar2_icon:character id 128198, Hourglass_icon:character id 9203, Film_icon:character id 127910, Back_icon:character id 8592, Done_icon:character id 9989, Running_icon:character id {127939, 8205, 9794, 65039}, Add_icon:character id 127381, Series3_icon:character id 128257, Star_icon:character id 9733, Eject_icon:character id 9167}
 		set Icon_list to {Warning_icon of Icon_record, Play_icon of Icon_record, Record_icon of Icon_record, Recordsoon_icon of Icon_record, Tv_icon of Icon_record, Plus_icon of Icon_record, Single_icon of Icon_record, Series_icon of Icon_record, Series1_icon of Icon_record, Edit_icon of Icon_record, Soon_icon of Icon_record, Disk_icon of Icon_record, Update_icon of Icon_record, Stop_icon of Icon_record, Up_icon of Icon_record, Up1_icon of Icon_record, Up2_icon of Icon_record, Check_icon of Icon_record, Uncheck_icon of Icon_record, Futureshow_icon of Icon_record, Calendar2_icon of Icon_record, Hourglass_icon of Icon_record, Film_icon of Icon_record, Back_icon of Icon_record, Done_icon of Icon_record, Running_icon of Icon_record, Add_icon of Icon_record, Series3_icon of Icon_record, Star_icon of Icon_record, Eject_icon of Icon_record}
 	on error errmsg
 		return false
@@ -1347,7 +1347,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 					set temp_default_button to 2
 				end if
 
-				set show_title_temp to display dialog "What is the title of this show, and is it a series??" & return & "Next Showing: " & short_date(my cm(handlername, caller), show_next of item i of Show_info, true, false) of LibScript & return & "SeriesID: " & show_seriesid of item i of Show_info buttons {Running_icon of Icon_record & " Run", Series_icon of Icon_record & " Series", Single_icon of Icon_record & " Single"} default button temp_default_button cancel button 1 default answer show_title of item i of Show_info with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout
+				set show_title_temp to display dialog "What is the title of this show, and is it a series??" & return & "Next Showing: " & short_date(my cm(handlername, caller), show_next of item i of Show_info, true, false) of LibScript & return & "SeriesID: " & show_seriesid of item i of Show_info buttons {Running_icon of Icon_record & " Run", Series_icon of Icon_record & " Date/Time", Single_icon of Icon_record & " Single"} default button temp_default_button cancel button 1 default answer show_title of item i of Show_info with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout
 				--fix add options to change series types
 				set show_title of item i of Show_info to stringToUtf8(my cm(handlername, caller), text returned of show_title_temp) of LibScript
 
@@ -1371,10 +1371,10 @@ on validate_show_info(caller, show_to_check, should_edit)
 						set temp_default_button to 1
 					end if
 					-- Allow changing between DateTime/SeriesID(Channel)/SeriesID(All) modes
-					set series_type to button returned of (display dialog "What kind of series?" buttons {Series_icon of Icon_record & " Series", Series1_icon of Icon_record & " SeriesID(Channel)", Series3_icon of Icon_record & " SeriesID(All)"} default button temp_default_button with title my check_version_dialog(my cm(handlername, caller)) with icon curl2icon(my cm(handlername, caller), show_logo_url of item i of Show_info) of LibScript)
+					set series_type to button returned of (display dialog "What kind of series?" buttons {Series_icon of Icon_record & " Date/Time", Series1_icon of Icon_record & " SeriesID(Channel)", Series3_icon of Icon_record & " SeriesID(All)"} default button temp_default_button with title my check_version_dialog(my cm(handlername, caller)) with icon curl2icon(my cm(handlername, caller), show_logo_url of item i of Show_info) of LibScript)
 
 					-- Set state based on series type selection
-					if series_type contains "Series" and series_type does not contain "SeriesID" then
+					if series_type contains "Date/Time" then
 						-- DateTime Series: is_series=true, use_seriesid=false, use_seriesid_all=false
 						set show_use_seriesid of item i of Show_info to false
 						set show_use_seriesid_all of item i of Show_info to false
@@ -1875,7 +1875,7 @@ on main(caller, emulated_button_press)
 			end if
 		end repeat
 		if length of show_list is not 0 then
-			set temp_show_list to (choose from list show_list with title my check_version_dialog(caller) with prompt "" & length of show_list & " shows to edit:" & return & "Right icon (show type): " & Single_icon of Icon_record & " Single  " & Series1_icon of Icon_record & " SeriesID(Channel)  " & Series_icon of Icon_record & " Series  " & Series3_icon of Icon_record & " SeriesID(All)  " & Uncheck_icon of Icon_record & " Inactive/Cancel" & return & "Left icon (next airing): " & Record_icon of Icon_record & " Recording  " & Warning_icon of Icon_record & " Error  " & Film_icon of Icon_record & " <1h  " & Up_icon of Icon_record & " <4h  " & Up2_icon of Icon_record & " >4h  " & Futureshow_icon of Icon_record & " Future day  " & Check_icon of Icon_record & " Recorded today" OK button name Edit_icon of Icon_record & " Edit.." cancel button name Running_icon of Icon_record & " Run" default items item 1 of show_list with multiple selections allowed without empty selection allowed)
+			set temp_show_list to (choose from list show_list with title my check_version_dialog(caller) with prompt "" & length of show_list & " shows to edit:" & return & "Right icon (show type): " & Single_icon of Icon_record & " Single  " & Series1_icon of Icon_record & " SeriesID(Channel)  " & Series_icon of Icon_record & " Date/Time  " & Series3_icon of Icon_record & " SeriesID(All)  " & Uncheck_icon of Icon_record & " Inactive/Cancel" & return & "Left icon (next airing): " & Record_icon of Icon_record & " Recording  " & Warning_icon of Icon_record & " Error  " & Film_icon of Icon_record & " <1h  " & Up_icon of Icon_record & " <4h  " & Up2_icon of Icon_record & " >4h  " & Futureshow_icon of Icon_record & " Future day  " & Check_icon of Icon_record & " Recorded today" OK button name Edit_icon of Icon_record & " Edit.." cancel button name Running_icon of Icon_record & " Run" default items item 1 of show_list with multiple selections allowed without empty selection allowed)
 			if temp_show_list is not false then
 				set temp_show_offsets to my resolve_selected_offsets(cm, temp_show_list, show_list)
 				if length of temp_show_offsets is 0 then
@@ -2014,7 +2014,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				if length of hdhrGRID_response is 1 and hdhrGRID_response is {""} then
 					my logger(true, handlername, caller, "INFO", "(Manual) Adding show for " & hdhr_device)
 					try
-						set show_title_temp to display dialog "What is the title of this show, and is it a series?" buttons {Running_icon of Icon_record & " Run", Series_icon of Icon_record & " Series", Single_icon of Icon_record & " Single"} cancel button 1 default button 3 default answer "" with title my check_version_dialog(caller) giving up after Dialog_timeout
+						set show_title_temp to display dialog "What is the title of this show, and is it a series?" buttons {Running_icon of Icon_record & " Run", Series_icon of Icon_record & " Date/Time", Single_icon of Icon_record & " Single"} cancel button 1 default button 3 default answer "" with title my check_version_dialog(caller) giving up after Dialog_timeout
 					on error errmsg number errnum
 						if errnum is -128 then
 							my logger(true, handlername, caller, "INFO", "User exited")
@@ -2172,13 +2172,13 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 					try
 						-- We need to note if the show start time was yesterday, and adjust as needed.
 						
-						set temp_show_info_series to (display dialog "Is this a single or a series recording? " & return & return & "Title: " & show_title of temp_show_info & return & "Type: " & tags_text & return & "SeriesID: " & seriesid_temp & return & return & "Synopsis: " & synopsis_temp & return & return & "Start: " & time string of time_set(cm, cd, show_time of temp_show_info) of LibScript & return & "Length: " & ms2time(cm, ((show_length of temp_show_info) * 60), "s", 2) of LibScript & return & "OriginalAirdate: " & show_originalairdate_real buttons {Running_icon of Icon_record & " Run", Series_icon of Icon_record & " Series", Single_icon of Icon_record & " Single"} default button temp_default_button cancel button 1 with title my check_version_dialog(caller) giving up after Dialog_timeout with icon temp_icon)
+						set temp_show_info_series to (display dialog "Is this a single or a series recording? " & return & return & "Title: " & show_title of temp_show_info & return & "Type: " & tags_text & return & "SeriesID: " & seriesid_temp & return & return & "Synopsis: " & synopsis_temp & return & return & "Start: " & time string of time_set(cm, cd, show_time of temp_show_info) of LibScript & return & "Length: " & ms2time(cm, ((show_length of temp_show_info) * 60), "s", 2) of LibScript & return & "OriginalAirdate: " & show_originalairdate_real buttons {Running_icon of Icon_record & " Run", Series_icon of Icon_record & " Date/Time", Single_icon of Icon_record & " Single"} default button temp_default_button cancel button 1 with title my check_version_dialog(caller) giving up after Dialog_timeout with icon temp_icon)
 						
 						if button returned of temp_show_info_series contains "Series" then
 							set show_is_series of temp_show_info to true
 							-- Ask what kind of series
-							set series_type to button returned of (display dialog "What kind of series?" buttons {Series_icon of Icon_record & " Series", Series1_icon of Icon_record & " SeriesID(Channel)", Series3_icon of Icon_record & " SeriesID(All)"} default button 1 with title my check_version_dialog(caller) with icon temp_icon)
-							if series_type contains "Series" and series_type does not contain "SeriesID" then
+							set series_type to button returned of (display dialog "What kind of series?" buttons {Series_icon of Icon_record & " Date/Time", Series1_icon of Icon_record & " SeriesID(Channel)", Series3_icon of Icon_record & " SeriesID(All)"} default button 1 with title my check_version_dialog(caller) with icon temp_icon)
+							if series_type contains "Date/Time" then
 								set show_use_seriesid of temp_show_info to false
 								set show_use_seriesid_all of temp_show_info to false
 							else if series_type contains "SeriesID(Channel)" then
