@@ -608,7 +608,7 @@ on deserialize_show(caller, show_rec)
 	try
 		set ep to show_last of s
 		if ep is 0 or ep is "" or ep is missing value then
-			set show_last of s to (current date)
+			set show_last of s to date "January 1, 1970 00:00:00"
 		else
 			if class of ep is text then
 				try
@@ -631,7 +631,7 @@ on deserialize_show(caller, show_rec)
 	try
 		set ep to show_next of s
 		if ep is 0 or ep is "" or ep is missing value then
-			set show_next of s to (current date)
+			set show_next of s to date "January 1, 1970 00:00:00"
 		else
 			if class of ep is text then
 				try
@@ -654,7 +654,7 @@ on deserialize_show(caller, show_rec)
 	try
 		set ep to show_end of s
 		if ep is 0 or ep is "" or ep is missing value then
-			set show_end of s to (current date)
+			set show_end of s to date "January 1, 1970 00:00:00"
 		else
 			if class of ep is text then
 				try
