@@ -343,7 +343,8 @@ on idle
 			if length of Show_info is greater than 0 and length of Hdhr_device_list is greater than 0 then
 				repeat with i from 1 to length of Show_info
 					repeat 1 times
-						if show_active of item i of Show_info is true then
+						try
+							if show_active of item i of Show_info is true then
 							if show_next of item i of Show_info is less than or equal to cd_object then
 								if show_recording of item i of Show_info is false then
 									
@@ -513,6 +514,9 @@ on idle
 							my logger(true, handlername, caller, "INFO", "Show: " & show_title of item i of Show_info & " was deactivated, as it is a single, and recording time has passed")
 							display notification "Show: " & show_title of item i of Show_info & " removed" with title Stop_icon of Icon_record
 						end if
+						on error errmsg
+							my logger(true, handlername, caller, "ERROR", "Idle loop error for show " & show_title of item i of Show_info & " (" & show_id of item i of Show_info & "): " & errmsg)
+						end try
 					end repeat
 				end repeat
 			else
@@ -1347,7 +1351,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 					set temp_default_button to 2
 				end if
 
-				set show_title_temp to display dialog "What is the title of this show, and is it a series??" & return & "Next Showing: " & short_date(my cm(handlername, caller), show_next of item i of Show_info, true, false) of LibScript & return & "SeriesID: " & show_seriesid of item i of Show_info buttons {Running_icon of Icon_record & " Run", Series_icon of Icon_record & " Date/Time", Single_icon of Icon_record & " Single"} default button temp_default_button cancel button 1 default answer show_title of item i of Show_info with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout
+				set show_title_temp to display dialog "What is the title of this show, and is it a series??" & return & "Next Showing: " & short_date(my cm(handlername, caller), show_next of item i of Show_info, true, false) of LibScript & return & "SeriesID: " & show_seriesid of item i of Show_info buttons {Running_icon of Icon_record & " Run", Series_icon of Icon_record & " Series", Single_icon of Icon_record & " Single"} default button temp_default_button cancel button 1 default answer show_title of item i of Show_info with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout
 				--fix add options to change series types
 				set show_title of item i of Show_info to stringToUtf8(my cm(handlername, caller), text returned of show_title_temp) of LibScript
 
@@ -2014,7 +2018,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				if length of hdhrGRID_response is 1 and hdhrGRID_response is {""} then
 					my logger(true, handlername, caller, "INFO", "(Manual) Adding show for " & hdhr_device)
 					try
-						set show_title_temp to display dialog "What is the title of this show, and is it a series?" buttons {Running_icon of Icon_record & " Run", Series_icon of Icon_record & " Date/Time", Single_icon of Icon_record & " Single"} cancel button 1 default button 3 default answer "" with title my check_version_dialog(caller) giving up after Dialog_timeout
+						set show_title_temp to display dialog "What is the title of this show, and is it a series?" buttons {Running_icon of Icon_record & " Run", Series_icon of Icon_record & " Series", Single_icon of Icon_record & " Single"} cancel button 1 default button 3 default answer "" with title my check_version_dialog(caller) giving up after Dialog_timeout
 					on error errmsg number errnum
 						if errnum is -128 then
 							my logger(true, handlername, caller, "INFO", "User exited")
@@ -2172,7 +2176,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 					try
 						-- We need to note if the show start time was yesterday, and adjust as needed.
 						
-						set temp_show_info_series to (display dialog "Is this a single or a series recording? " & return & return & "Title: " & show_title of temp_show_info & return & "Type: " & tags_text & return & "SeriesID: " & seriesid_temp & return & return & "Synopsis: " & synopsis_temp & return & return & "Start: " & time string of time_set(cm, cd, show_time of temp_show_info) of LibScript & return & "Length: " & ms2time(cm, ((show_length of temp_show_info) * 60), "s", 2) of LibScript & return & "OriginalAirdate: " & show_originalairdate_real buttons {Running_icon of Icon_record & " Run", Series_icon of Icon_record & " Date/Time", Single_icon of Icon_record & " Single"} default button temp_default_button cancel button 1 with title my check_version_dialog(caller) giving up after Dialog_timeout with icon temp_icon)
+						set temp_show_info_series to (display dialog "Is this a single or a series recording? " & return & return & "Title: " & show_title of temp_show_info & return & "Type: " & tags_text & return & "SeriesID: " & seriesid_temp & return & return & "Synopsis: " & synopsis_temp & return & return & "Start: " & time string of time_set(cm, cd, show_time of temp_show_info) of LibScript & return & "Length: " & ms2time(cm, ((show_length of temp_show_info) * 60), "s", 2) of LibScript & return & "OriginalAirdate: " & show_originalairdate_real buttons {Running_icon of Icon_record & " Run", Series_icon of Icon_record & " Series", Single_icon of Icon_record & " Single"} default button temp_default_button cancel button 1 with title my check_version_dialog(caller) giving up after Dialog_timeout with icon temp_icon)
 						
 						if button returned of temp_show_info_series contains "Series" then
 							set show_is_series of temp_show_info to true

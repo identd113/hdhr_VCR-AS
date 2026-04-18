@@ -296,9 +296,63 @@ Shows are ONE of 4 states, determined by `is_series`, `use_seriesid`, `use_serie
 
 ---
 
+## JSONHelper Behaviour (Verified by Round-Trip Test)
+
+JSONHelper is used via `use application "JSON Helper"` (declared at script top alongside `use scripting additions`). Commands `make JSON from` and `read JSON from` are then available without `tell` blocks. Test script: `scripts/jsonhelper_type_test.applescript`.
+
+### Supported types
+
+| AppleScript type | JSON stored as | Loads back as | Notes |
+|---|---|---|---|
+| `text` | `"string"` | `text` | Empty string `""` also works |
+| `integer` (small, e.g. `42`) | `42` | `integer` | |
+| `integer` (epoch-scale, e.g. `1745006400`) | `1745006400` | `real` | AppleScript stores large integers internally as `real` / scientific notation (`1.7450064E+9`); JSON preserves the full integer value — arithmetic still works |
+| `real` (e.g. `3.14159`, `20.5`) | `3.14159...` | `real` | Minor float precision expansion in JSON (e.g. `3.1415899999...`) — harmless for show-time decimals |
+| `integer 0` | `0` | `integer` | |
+| `integer` (large negative, e.g. `-1745006400`) | `-1745006400` | `real` | Same scientific notation behaviour as large positive |
+| `boolean true` / `false` | `true` / `false` | `boolean` | |
+| `text` containing `"missing value"` | `"missing value"` | `text` | The workaround already used for notify times — reliable |
+| `missing value` (raw) | `null` | `class` (not `missing value`) | Loads back as an AppleScript class descriptor, not the original type; the string workaround is safer |
+| `record` | `{...}` | `record` | Keys are preserved; nested records work correctly |
+| `list` of strings | `["a","b"]` | `list` | |
+| `list` of integers | `[1,2,3]` | `list` | |
+| `list` with mixed types | `["hello",42,true]` | `list` | Elements retain their types |
+| `list` of records | `[{...},{...}]` | `list` | Fully supported, including nested records |
+| `list` with `missing value` elements | `[1,null,3]` | `list` | `null` elements load as `class` descriptors — handle with care |
+| empty `list` (`{}`) | `[]` | `list` | |
+| Unicode text + emoji | `"Héllo wörld 📅"` | `text` | JSON stores correctly; emoji may not display in AppleScript log output but value is preserved |
+
+### NOT supported — fail silently (blank the output file, no error thrown)
+
+| AppleScript type | Behaviour | Workaround |
+|---|---|---|
+| **`date`** | `make JSON from` silently writes an empty file | Convert to epoch integer using `datetime2epoch()` before saving; convert back with `epoch2datetime()` on load |
+| **`alias`** (file path) | Same — silently blanks the file | Convert to `POSIX path of alias` (a text string) before saving |
+| **`record` containing a `date`** | Same — the date field inside a record also blanks the file | Pre-convert all date fields to epoch integers before building the record passed to `make JSON from` |
+
+**Critical rule:** Any record that contains a `date` anywhere in its structure — even deeply nested — will cause JSONHelper to blank the file. Scan all fields before saving. This is the root cause of the current `show_next`/`show_end`/`show_last` locale bug.
+
+### Date serialization pattern (correct approach)
+
+```applescript
+-- Before make JSON from:
+set show_next of item i of temp to my datetime2epoch(cm, show_next of item i of temp)
+
+-- After read JSON from:
+set show_next of item i of Show_info to epoch2datetime(cm, show_next of item i of Show_info) of LibScript
+```
+
+The current code stores dates as locale-formatted strings (e.g. `"Thursday, April 23, 2026 at 9:30:00 PM"`) which is a partial workaround — it avoids the blank-file crash but breaks on non-US locales. Fixing this is tracked in the en_GB locale compatibility plan.
+
+### File path note
+
+Use `open for access POSIX file path` (not `open for access file path`) for POSIX-style paths (`/Users/...`). The main script uses Mac alias paths which work with plain `file`; POSIX paths require `POSIX file`.
+
+---
+
 ## Known Limitations
 
-- English (en_US) locale only currently
+- English (en_US) locale only currently (en_GB compatibility planned)
 - Requires JSONHelper app
 - HDHomeRun device must have static IP
 - macOS only
