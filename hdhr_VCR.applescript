@@ -746,7 +746,7 @@ on tuner_ready_time(caller, hdhr_model)
 				end if
 			end repeat
 		end if
-		my logger(true, handlername, caller, "INFO", "Next Tuner Available in " & ms2time(my cm(handlername, caller), lowest_number, "s", 3))
+		my logger(true, handlername, caller, "INFO", "Next Tuner Available in " & ms2time(my cm(handlername, caller), lowest_number, "s", 3) of LibScript)
 		return lowest_number
 	end if
 	return 0
@@ -1817,7 +1817,7 @@ on main(caller, emulated_button_press)
 			--set progress completed steps to i
 			--set progress additional description to show_title of item i of Show_info
 			set show_channel_badges to my channel_lineup_badges(cm, hdhr_record of item i of Show_info, show_channel of item i of Show_info)
-			set temp_show_line to " " & (show_title of item i of Show_info & " on " & show_channel of item i of Show_info & show_channel_badges & " at " & show_time of item i of Show_info & " for " & show_length of item i of Show_info & " minutes on " & stringlistflip("main", show_air_date of item i of Show_info, ", ", "string"))
+			set temp_show_line to " " & (show_title of item i of Show_info & " on " & show_channel of item i of Show_info & show_channel_badges & " at " & show_time of item i of Show_info & " for " & show_length of item i of Show_info & " minutes on " & stringlistflip("main", show_air_date of item i of Show_info, ", ", "string") of LibScript)
 			
 			-- Right icon = recording style (single/series variants), or cancel if inactive.
 			if show_active of item i of Show_info is false then
@@ -2151,7 +2151,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 					end try
 					
 					try
-						set tags_text to stringlistflip(cm, show_tags of temp_show_info, ", ", "string")
+						set tags_text to stringlistflip(cm, show_tags of temp_show_info, ", ", "string") of LibScript
 					on error errmsg
 						set tags_text to "ERROR"
 						my logger(true, handlername, caller, "ERROR", errmsg)
@@ -2227,7 +2227,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				--if temp_show_use_seriesid is misisng value then
 				if show_is_series of temp_show_info is true and show_use_seriesid of temp_show_info is false then
 					set show_air_date of temp_show_info to (choose from list Full_week_days default items default_record_day with title my check_version_dialog(cm) OK button name "Next.." cancel button name Running_icon of Icon_record & " Run" with prompt "Select the days you wish to record." & return & "A \"Series\" can select multiple days" with multiple selections allowed without empty selection allowed)
-					my logger(true, handlername, caller, "INFO", "(Manual) show_air_date: " & stringlistflip(cm, show_air_date of temp_show_info, ",", "string"))
+					my logger(true, handlername, caller, "INFO", "(Manual) show_air_date: " & stringlistflip(cm, show_air_date of temp_show_info, ",", "string") of LibScript)
 				else
 					if hdhrGRID_response is {""} then
 						set show_air_date of temp_show_info to (choose from list Full_week_days default items default_record_day with title my check_version_dialog(cm) OK button name "Next.." cancel button name Running_icon of Icon_record & " Run" with prompt "Select the day you wish to record." & return & "A \"Single\" can only select 1 day." without empty selection allowed)
@@ -2235,7 +2235,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 							my logger(true, handlername, caller, "INFO", "add_show_info EXIT: User cancelled day selection (manual single)")
 							return
 						end if
-						my logger(true, handlername, caller, "INFO", "(Manual) show_air_date: " & stringlistflip(cm, show_air_date of temp_show_info, ",", "string"))
+						my logger(true, handlername, caller, "INFO", "(Manual) show_air_date: " & stringlistflip(cm, show_air_date of temp_show_info, ",", "string") of LibScript)
 					else
 						set show_air_date of temp_show_info to (weekday of (epoch2datetime(cm, (getTfromN(StartTime of item i3 of hdhrGRID_response) of LibScript)) of LibScript) as text) as list
 						my logger(true, handlername, caller, "INFO", "(Auto) show_air_date: " & show_air_date of temp_show_info)
@@ -2244,7 +2244,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				if show_is_series of temp_show_info is true and show_use_seriesid of temp_show_info is true then
 					set show_air_date of temp_show_info to Full_week_days
 				end if
-				set end of temp_show_progress to "When: " & stringlistflip(cm, show_air_date of temp_show_info, ", ", "string")
+				set end of temp_show_progress to "When: " & stringlistflip(cm, show_air_date of temp_show_info, ", ", "string") of LibScript
 				set progress additional description to stringlistflip(cm, temp_show_progress, return, "string") of LibScript
 				set progress completed steps to 5
 				
@@ -2412,7 +2412,7 @@ on record_start(caller, the_show_id, opt_show_length, force_update)
 					do shell script "caffeinate -i curl --connect-timeout 10 -H 'show_id:" & show_id of item i of Show_info & "' -H \"show_end:" & temp_show_end & "\" -H 'appname:" & name of me & "' '" & show_url of item i of Show_info & "?duration=" & (temp_show_length) & "&transcode=" & show_transcode of item i of Show_info & "' -o \"" & temp_save_path & "\"> /dev/null 2>&1 &"
 					set show_recording of item i of Show_info to true
 					set show_recording_path of item i of Show_info to temp_save_path
-					my logger(true, handlername, caller, "INFO", ("\"" & show_title of item i of Show_info & "\" started recording for " & ms2time(my cm(handlername, caller), temp_show_length, "s", 3) & " with transcode profile, " & show_transcode of item i of Show_info))
+					my logger(true, handlername, caller, "INFO", ("\"" & show_title of item i of Show_info & "\" started recording for " & ms2time(my cm(handlername, caller), temp_show_length, "s", 3) of LibScript & " with transcode profile, " & show_transcode of item i of Show_info))
 				else
 					my logger(true, handlername, caller, "INFO", "Record function surpressed in DEV")
 				end if
@@ -2835,7 +2835,7 @@ on update_show(caller, the_show_id, force_update)
 				set progress completed steps to 8
 			end if
 		else
-			my logger(true, handlername, caller, "DEBUG", "Did not update the show " & show_title of item show_offset of Show_info & ", next_show in " & ms2time("update_show1", ((show_next of item show_offset of Show_info) - (current date)), "s", 4))
+			my logger(true, handlername, caller, "DEBUG", "Did not update the show " & show_title of item show_offset of Show_info & ", next_show in " & ms2time("update_show1", ((show_next of item show_offset of Show_info) - (current date)), "s", 4) of LibScript)
 		end if
 	end if
 end update_show
@@ -3264,7 +3264,7 @@ on recordingnow_main(caller)
 	if length of Show_info is greater than 0 then
 		repeat with i from 1 to length of Show_info
 			if show_recording of item i of Show_info is true then
-				set recording_end to ms2time(my cm(handlername, caller), (show_end of item i of Show_info) - (cd), "s", 3)
+				set recording_end to ms2time(my cm(handlername, caller), (show_end of item i of Show_info) - (cd), "s", 3) of LibScript
 				if show_is_series of item i of Show_info is true then
 					if length of show_air_date of item i of Show_info is 1 then
 						set end of recording_now_final to (Series1_icon of Icon_record & " " & show_title of item i of Show_info & " on " & show_channel of item i of Show_info & " (" & recording_end & " left)")
@@ -3315,7 +3315,7 @@ on next_shows(caller)
 			set soonest_show to ((show_next of item i of Show_info) - (cd))
 		end if
 		if ((show_next of item i of Show_info) - (cd)) is less than 0 and show_recording of item i of Show_info is false and show_active of item i of Show_info is true then
-			set recording_end to ms2time(my cm(handlername, caller), (show_end of item i of Show_info) - (cd), "s", 3)
+			set recording_end to ms2time(my cm(handlername, caller), (show_end of item i of Show_info) - (cd), "s", 3) of LibScript
 			set time_left to ((show_next of item i of Show_info) - (cd))
 			set end of error_show_list to Warning_icon of Icon_record & " " & show_title of item i of Show_info & " on channel " & show_channel of item i of Show_info & " (" & recording_end & " left)"
 		end if
