@@ -80,7 +80,6 @@ on setup_lib(caller)
 	set LibScript to load script loaded_script_alias
 	set Lib_script_version to load_hdhrVCR_vars() of LibScript
 	set ParentScript of LibScript to me
-	my logger(true, handlername, caller, "INFO", "Library loaded: " & loaded_script_name & " v" & Lib_script_version)
 	return true
 end setup_lib
 
@@ -107,9 +106,7 @@ on sync_config(caller, config2var)
 		-- Load LoggerLevels from config if specified
 		try
 			set Logger_levels to LoggerLevels of Hdhr_config
-			my logger(true, handlername, caller, "INFO", "Logger levels loaded from config")
 		on error
-			my logger(true, handlername, caller, "INFO", "LoggerLevels not in config, using defaults")
 		end try
 	else
 		set Notify_recording of Hdhr_config to Notify_recording
