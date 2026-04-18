@@ -1736,22 +1736,10 @@ on main(caller, emulated_button_press)
 	set show_list_empty to false
 	set next_show_main_temp to my next_shows(cm)
 	my logger(true, handlername, caller, "DEBUG", "Tracking non open00")
-	try
-		set next_show_main to stringlistflip(cm, item 2 of next_show_main_temp, return, "string") of LibScript
-	on error
-		set next_show_main to ""
-	end try
-	try
-		set next_show_main_time to short_date(cm, item 1 of next_show_main_temp, false, false) of LibScript
-	on error
-		set next_show_main_time to ""
-	end try
+	set next_show_main to stringlistflip(cm, item 2 of next_show_main_temp, return, "string") of LibScript
+	set next_show_main_time to short_date(cm, item 1 of next_show_main_temp, false, false) of LibScript
 	set next_show_main_time_real to item 1 of next_show_main_temp
-	try
-		set error_shows to stringlistflip(cm, item 3 of next_show_main_temp, return, "string") of LibScript
-	on error
-		set error_shows to ""
-	end try
+	set error_shows to stringlistflip(cm, item 3 of next_show_main_temp, return, "string") of LibScript
 	my logger(true, handlername, caller, "DEBUG", "Tracking non open01")
 	if emulated_button_press is not in {"Add", "Shows"} then
 		my logger(true, handlername, caller, "INFO", "Emulated_button_press is " & emulated_button_press)
