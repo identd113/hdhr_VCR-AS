@@ -219,6 +219,7 @@ on run {}
 	set Loglines_max to 1000
 	set Logfilename to "hdhr_VCR.log"
 	set Log_dir to alias ((path to library folder from user domain) & "Logs" as text)
+	set First_open to true
 	set progress description to "Loading hdhr_VCR_lib..."
 	if my setup_lib(cmi) is true then
 		set progress description to "Setting up script..."
