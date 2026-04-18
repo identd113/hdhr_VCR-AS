@@ -214,6 +214,11 @@ on run {}
 	set startup_success to false
 	set Logger_levels to {"INFO", "WARN", "ERROR", "NEAT", "FATAL"}
 	set Idle_timer_default to 10
+	set Local_env to "hdhr_VCR"
+	set Loglines_written to 0
+	set Loglines_max to 1000
+	set Logfilename to "hdhr_VCR.log"
+	set Log_dir to alias ((path to library folder from user domain) & "Logs" as text)
 	set progress description to "Loading hdhr_VCR_lib..."
 	if my setup_lib(cmi) is true then
 		set progress description to "Setting up script..."
