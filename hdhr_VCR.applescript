@@ -87,8 +87,8 @@ on setup_icons(caller)
 	set handlername to "setup_icons"
 	set Base_icon_path to POSIX path of (path to home folder) & "Library/Caches/hdhr_VCR/" as text
 	try
-		set Icon_record to {Warning_icon:character id {9888, 65039}, Play_icon:character id 9654, Record_icon:character id 128308, Recordsoon_icon:character id 11093, Tv_icon:character id 128250, Plus_icon:character id 10133, Single_icon:character id {49, 65039, 8419}, Series_icon:character id 128257, Series1_icon:character id 128258, Edit_icon:character id {9999, 65039}, Soon_icon:character id 128284, Disk_icon:character id 128190, Update_icon:character id 8682, Stop_icon:character id 9726, Up_icon:character id 128316, Up1_icon:character id 128314, Up2_icon:character id 9195, Check_icon:character id 9989, Uncheck_icon:character id 10060, Futureshow_icon:character id {9197, 65039}, Calendar_icon:character id 128197, Calendar2_icon:character id 128198, Hourglass_icon:character id 9203, Film_icon:character id 127910, Back_icon:character id 8592, Done_icon:character id 9989, Running_icon:character id {127939, 8205, 9794, 65039}, Add_icon:character id 127381, Series3_icon:character id 128256, Star_icon:character id 9733, Eject_icon:character id 9167}
-		set Icon_list to {Warning_icon of Icon_record, Play_icon of Icon_record, Record_icon of Icon_record, Recordsoon_icon of Icon_record, Tv_icon of Icon_record, Plus_icon of Icon_record, Single_icon of Icon_record, Series_icon of Icon_record, Series1_icon of Icon_record, Edit_icon of Icon_record, Soon_icon of Icon_record, Disk_icon of Icon_record, Update_icon of Icon_record, Stop_icon of Icon_record, Up_icon of Icon_record, Up1_icon of Icon_record, Up2_icon of Icon_record, Check_icon of Icon_record, Uncheck_icon of Icon_record, Futureshow_icon of Icon_record, Calendar_icon of Icon_record, Calendar2_icon of Icon_record, Hourglass_icon of Icon_record, Film_icon of Icon_record, Back_icon of Icon_record, Done_icon of Icon_record, Running_icon of Icon_record, Add_icon of Icon_record, Series3_icon of Icon_record, Star_icon of Icon_record, Eject_icon of Icon_record}
+		set Icon_record to {Warning_icon:character id {9888, 65039}, Record_icon:character id 128308, Recordsoon_icon:character id 11093, Tv_icon:character id 128250, Plus_icon:character id 10133, Single_icon:character id {49, 65039, 8419}, Series_icon:character id 128256, Series1_icon:character id 128258, Edit_icon:character id {9999, 65039}, Disk_icon:character id 128190, Update_icon:character id 8682, Stop_icon:character id 9726, Up_icon:character id 128316, Up2_icon:character id 9195, Check_icon:character id 9989, Uncheck_icon:character id 10060, Futureshow_icon:character id {9197, 65039}, Hourglass_icon:character id 9203, Film_icon:character id 127910, Back_icon:character id 8592, Running_icon:character id {127939, 8205, 9794, 65039}, Add_icon:character id 127381, Series3_icon:character id 128257, Star_icon:character id 9733, Eject_icon:character id 9167}
+		set Icon_list to {Warning_icon of Icon_record, Record_icon of Icon_record, Recordsoon_icon of Icon_record, Tv_icon of Icon_record, Plus_icon of Icon_record, Single_icon of Icon_record, Series_icon of Icon_record, Series1_icon of Icon_record, Edit_icon of Icon_record, Disk_icon of Icon_record, Update_icon of Icon_record, Stop_icon of Icon_record, Up_icon of Icon_record, Up2_icon of Icon_record, Check_icon of Icon_record, Uncheck_icon of Icon_record, Futureshow_icon of Icon_record, Hourglass_icon of Icon_record, Film_icon of Icon_record, Back_icon of Icon_record, Running_icon of Icon_record, Add_icon of Icon_record, Series3_icon of Icon_record, Star_icon of Icon_record, Eject_icon of Icon_record}
 	on error errmsg
 		return false
 	end try
@@ -101,7 +101,7 @@ on sync_config(caller, config2var)
 		--set Hdhr_config to {Notify_upnext:Notify_upnext, Notify_recording:Notify_recording, Hdhr_setup_folder:Hdhr_setup_folder, Config_version:Config_version, Guide_hours:Guide_hours}
 		set Notify_recording to Notify_recording of Hdhr_config
 		set Notify_upnext to Notify_upnext of Hdhr_config
-		set Guide_hours to Guide_hours of Hdhr_config
+		set Guide_hours to GuideHours of Hdhr_config
 		set Hdhr_setup_folder to Hdhr_setup_folder of Hdhr_config
 		-- Load LoggerLevels from config if specified
 		try
@@ -111,7 +111,7 @@ on sync_config(caller, config2var)
 	else
 		set Notify_recording of Hdhr_config to Notify_recording
 		set Notify_upnext of Hdhr_config to Notify_upnext
-		set Guide_hours of Hdhr_config to Guide_hours
+		set GuideHours of Hdhr_config to Guide_hours
 		set Hdhr_setup_folder of Hdhr_config to Hdhr_setup_folder
 	end if
 end sync_config
@@ -418,9 +418,9 @@ on idle
 										my idle_change(cm, 1, (show_end of item i of Show_info) - (cd))
 									end if
 									if notify_recording_time of item i of Show_info is less than (cd) or notify_recording_time of item i of Show_info is missing value then
-										display notification "Ends " & short_date(cm, show_end of item i of Show_info, false, false) of LibScript & " (" & (ms2time("idle(19)", (show_end of item i of Show_info) - (cd), "s", 3)) & ") " with title Record_icon of Icon_record & " Recording in progress (" & hdhr_record of item i of Show_info & ")" subtitle quote & show_title of item i of Show_info & quote & " on " & show_channel of item i of Show_info & " (" & my channel2name(cm, show_channel of item i of Show_info as text, hdhr_record of item i of Show_info) & ")"
+										display notification "Ends " & short_date(cm, show_end of item i of Show_info, false, false) of LibScript & " (" & (ms2time("idle(19)", (show_end of item i of Show_info) - (cd), "s", 3) of LibScript) & ") " with title Record_icon of Icon_record & " Recording in progress (" & hdhr_record of item i of Show_info & ")" subtitle quote & show_title of item i of Show_info & quote & " on " & show_channel of item i of Show_info & " (" & my channel2name(cm, show_channel of item i of Show_info as text, hdhr_record of item i of Show_info) & ")"
 										set notify_recording_time of item i of Show_info to (cd) + (Notify_recording * minutes)
-										my logger(true, handlername, caller, "INFO", "Recording in progress for " & quote & (show_title of item i of Show_info & quote & " on " & show_channel of item i of Show_info & ", ends in " & ms2time("idle_rip(19.1)", (show_end of item i of Show_info) - (cd), "s", 3)) & ", Next Update: " & fixDate(cm, time string of (notify_recording_time of item i of Show_info)) of LibScript)
+										my logger(true, handlername, caller, "INFO", "Recording in progress for " & quote & (show_title of item i of Show_info & quote & " on " & show_channel of item i of Show_info & ", ends in " & ms2time("idle_rip(19.1)", (show_end of item i of Show_info) - (cd), "s", 3) of LibScript) & ", Next Update: " & fixDate(cm, time string of (notify_recording_time of item i of Show_info)) of LibScript)
 										
 										my tuner_inuse(cm, hdhr_record of item i of Show_info)
 										update_folder(cm, show_dir of item i of Show_info) of LibScript
@@ -586,7 +586,7 @@ on quit {}
 				try
 					activate me
 				end try
-				set quit_response to button returned of (display dialog "Do you want to cancel these recordings already in progress?" & return & return & stringlistflip(my cm(handlername, caller), hdhr_quit_record_titles, return, "string") buttons {"Go Back", "Yes", "No"} default button 3 with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout with icon caution)
+				set quit_response to button returned of (display dialog "Do you want to cancel these recordings already in progress?" & return & return & stringlistflip(my cm(handlername, caller), hdhr_quit_record_titles, return, "string") of LibScript buttons {"Go Back", "Yes", "No"} default button 3 with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout with icon caution)
 				my logger(true, handlername, caller, "INFO", "quit() user choice for killing shows: " & quit_response)
 			else
 				my logger(true, handlername, caller, "INFO", "" & Shutdown_reason & " detected, killing all recordings, and saving config file")
@@ -657,7 +657,7 @@ on hdhrGRID(caller, hdhr_device, hdhr_channel)
 		end if
 		set end of hdhrGRID_sort to temp_status_icon & " " & padnum(my cm(handlername, caller), word 2 of short_date(my cm(handlername, caller), temp_start, false, false) of LibScript, true) of LibScript & "-" & padnum(my cm(handlername, caller), word 2 of short_date(my cm(handlername, caller), temp_end, false, false) of LibScript, true) of LibScript & " " & temp_title
 	end repeat
-	set hdhrGRID_selected to choose from list hdhrGRID_sort with prompt ("Channel " & hdhr_channel & " (" & GuideName of hdhrGRID_temp & ")" & return & "Current Time: " & word 2 of short_date(my cm(handlername, caller), (current date), false, false) of LibScript & return & return & Record_icon of Icon_record & " Recording  " & Warning_icon of Icon_record & " Warning  " & Film_icon of Icon_record & " <1h  " & Up_icon of Icon_record & " <4h  " & Uncheck_icon of Icon_record & " Inactive" & return & Single_icon of Icon_record & " Single  " & Series_icon of Icon_record & " Series  " & Series3_icon of Icon_record & " SeriesID  " & Plus_icon of Icon_record & " Multiple") cancel button name "Manual Add" OK button name "Next.." with title my check_version_dialog(caller) default items item 1 of hdhrGRID_sort with multiple selections allowed
+	set hdhrGRID_selected to choose from list hdhrGRID_sort with prompt ("Channel " & hdhr_channel & " (" & GuideName of hdhrGRID_temp & ")" & return & "Current Time: " & word 2 of short_date(my cm(handlername, caller), (current date), false, false) of LibScript & return & return & "Left icon (next airing): " & Record_icon of Icon_record & " Recording  " & Warning_icon of Icon_record & " Error  " & Film_icon of Icon_record & " <1h  " & Up_icon of Icon_record & " <4h  " & Up2_icon of Icon_record & " >4h  " & Futureshow_icon of Icon_record & " Future day  " & Check_icon of Icon_record & " Recorded today" & return & "Right icon (show type): " & Single_icon of Icon_record & " Single  " & Series1_icon of Icon_record & " SeriesID(Channel)  " & Series_icon of Icon_record & " Date/Time  " & Series3_icon of Icon_record & " SeriesID(All)  " & Uncheck_icon of Icon_record & " Deactivated") cancel button name "Manual Add" OK button name "Next.." with title my check_version_dialog(caller) default items item 1 of hdhrGRID_sort with multiple selections allowed
 
 	if hdhrGRID_selected is false then
 		my logger(true, handlername, caller, "INFO", "User exited")
@@ -1302,7 +1302,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 				end if
 				try
 					if (show_fail_count of item i of Show_info) is less than Fail_count then
-						set show_deactivate to (display dialog "Would you like to deactivate: " & return & quote & show_title of item i of Show_info & quote & return & return & "Deactivated shows will be removed on the next save/load" & return & "Next Showing: " & short_date(my cm(handlername, caller), show_next of item i of Show_info, true, false) buttons {Running_icon of Icon_record & "Run", "Deactivate", Edit_icon of Icon_record & " Edit.."} cancel button 1 default button 3 with title my check_version_dialog(my cm(handlername, caller)) with icon curl2icon(my cm(handlername, caller), show_logo_url of item i of Show_info) of LibScript)
+						set show_deactivate to (display dialog "Would you like to deactivate: " & return & quote & show_title of item i of Show_info & quote & return & return & "Deactivated shows will be removed on the next save/load" & return & "Next Showing: " & short_date(my cm(handlername, caller), show_next of item i of Show_info, true, false) of LibScript buttons {Running_icon of Icon_record & "Run", Uncheck_icon of Icon_record & " Deactivate", Edit_icon of Icon_record & " Edit.."} cancel button 1 default button 3 with title my check_version_dialog(my cm(handlername, caller)) with icon curl2icon(my cm(handlername, caller), show_logo_url of item i of Show_info) of LibScript)
 					end if
 				on error number -128
 					my logger(true, handlername, caller, "WARN", "User clicked " & quote & "Run" & quote)
@@ -1311,7 +1311,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 					return false
 				end try
 				--	my logger(true, handlername, caller, "TRACE", "Status of show_deactivate: " & button returned of show_deactivate)
-				if button returned of show_deactivate is "Deactivate" then
+				if button returned of show_deactivate contains "Deactivate" then
 					set show_active of item i of Show_info to false
 					set show_recording of item i of Show_info to false
 					my showid2PID(my cm(handlername, caller), show_id of item i of Show_info, true, true)
@@ -1347,7 +1347,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 					set temp_default_button to 2
 				end if
 
-				set show_title_temp to display dialog "What is the title of this show, and is it a series??" & return & "Next Showing: " & short_date(my cm(handlername, caller), show_next of item i of Show_info, true, false) of LibScript & return & "SeriesID: " & show_seriesid of item i of Show_info buttons {Running_icon of Icon_record & " Run", Series_icon of Icon_record & " Series", Single_icon of Icon_record & " Single"} default button temp_default_button cancel button 1 default answer show_title of item i of Show_info with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout
+				set show_title_temp to display dialog "What is the title of this show, and is it a series??" & return & "Next Showing: " & short_date(my cm(handlername, caller), show_next of item i of Show_info, true, false) of LibScript & return & "SeriesID: " & show_seriesid of item i of Show_info buttons {Running_icon of Icon_record & " Run", Series_icon of Icon_record & " Date/Time", Single_icon of Icon_record & " Single"} default button temp_default_button cancel button 1 default answer show_title of item i of Show_info with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout
 				--fix add options to change series types
 				set show_title of item i of Show_info to stringToUtf8(my cm(handlername, caller), text returned of show_title_temp) of LibScript
 
@@ -1371,7 +1371,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 						set temp_default_button to 1
 					end if
 					-- Allow changing between DateTime/SeriesID(Channel)/SeriesID(All) modes
-					set series_type to button returned of (display dialog "What kind of series?" buttons {"Date/Time", "SeriesID(Channel)", "SeriesID(All)"} default button temp_default_button with title my check_version_dialog(my cm(handlername, caller)) with icon curl2icon(my cm(handlername, caller), show_logo_url of item i of Show_info) of LibScript)
+					set series_type to button returned of (display dialog "What kind of series?" buttons {Series_icon of Icon_record & " Date/Time", Series1_icon of Icon_record & " SeriesID(Channel)", Series3_icon of Icon_record & " SeriesID(All)"} default button temp_default_button with title my check_version_dialog(my cm(handlername, caller)) with icon curl2icon(my cm(handlername, caller), show_logo_url of item i of Show_info) of LibScript)
 
 					-- Set state based on series type selection
 					if series_type contains "Date/Time" then
@@ -1749,11 +1749,11 @@ on main(caller, emulated_button_press)
 			end try
 			if show_list_empty is true then
 				my logger(true, handlername, caller, "TRACE", "Tracking non open2")
-				set title_response to (display dialog "Would you like to add a show?" & return & return & "Tuner(s): " & return & stringlistflip(cm, my tuner_overview(cm), return, "string") buttons {Tv_icon of Icon_record & " Shows..", Plus_icon of Icon_record & " Add..", Running_icon of Icon_record & " Run"} with title my check_version_dialog(cm) giving up after (Dialog_timeout * 0.5) with icon curl2icon(cm, "https://raw.githubusercontent.com/identd113/hdhr_VCR-AS/master/app.jpg") of LibScript default button 2)
+				set title_response to (display dialog "Would you like to add a show?" & return & return & "Tuner(s): " & return & stringlistflip(cm, my tuner_overview(cm), return, "string") of LibScript buttons {Tv_icon of Icon_record & " Shows..", Plus_icon of Icon_record & " Add..", Running_icon of Icon_record & " Run"} with title my check_version_dialog(cm) giving up after (Dialog_timeout * 0.5) with icon curl2icon(cm, "https://raw.githubusercontent.com/identd113/hdhr_VCR-AS/master/app.jpg") of LibScript default button 2)
 				my logger(true, handlername, caller, "INFO", "EMPTY LIST")
 			else
 				my logger(true, handlername, caller, "TRACE", "Tracking non open3")
-				set title_response to (display dialog "Would you like to add a show?" & return & return & "Tuner(s): " & return & stringlistflip(cm, my tuner_overview(cm), return, "string") & return & return & my recordingnow_main(cm) & return & error_shows & return & return & Up_icon of Icon_record & " Next Show: " & next_show_main_time & " (in " & ms2time(cm, (next_show_main_time_real) - (current date), "s", 2) & ")" & return & next_show_main buttons {Tv_icon of Icon_record & " Shows..", Plus_icon of Icon_record & " Add..", Running_icon of Icon_record & " Run"} with title my check_version_dialog(cm) giving up after (Dialog_timeout * 0.5) with icon curl2icon(cm, "https://raw.githubusercontent.com/identd113/hdhr_VCR-AS/master/app.jpg") of LibScript default button 2)
+				set title_response to (display dialog "Would you like to add a show?" & return & return & "Tuner(s): " & return & stringlistflip(cm, my tuner_overview(cm), return, "string") of LibScript & return & return & my recordingnow_main(cm) & return & error_shows & return & return & Up_icon of Icon_record & " Next Show: " & next_show_main_time & " (in " & ms2time(cm, (next_show_main_time_real) - (current date), "s", 2) of LibScript & ")" & return & next_show_main buttons {Tv_icon of Icon_record & " Shows..", Plus_icon of Icon_record & " Add..", Running_icon of Icon_record & " Run"} with title my check_version_dialog(cm) giving up after (Dialog_timeout * 0.5) with icon curl2icon(cm, "https://raw.githubusercontent.com/identd113/hdhr_VCR-AS/master/app.jpg") of LibScript default button 2)
 				my logger(true, handlername, caller, "INFO", "SHOW LIST")
 			end if
 		on error errmsg
@@ -1875,7 +1875,7 @@ on main(caller, emulated_button_press)
 			end if
 		end repeat
 		if length of show_list is not 0 then
-			set temp_show_list to (choose from list show_list with title my check_version_dialog(caller) with prompt "" & length of show_list & " shows to edit:" & return & "Right icon (show type): " & Single_icon of Icon_record & " Single  " & Series1_icon of Icon_record & " One-day series  " & Series_icon of Icon_record & " Series  " & Series3_icon of Icon_record & " SeriesID  " & Uncheck_icon of Icon_record & " Inactive/Cancel" & return & "Left icon (next airing): " & Record_icon of Icon_record & " Recording  " & Warning_icon of Icon_record & " Error  " & Film_icon of Icon_record & " <1h  " & Up_icon of Icon_record & " <4h  " & Up2_icon of Icon_record & " >4h  " & Futureshow_icon of Icon_record & " Future day  " & Check_icon of Icon_record & " Recorded today" OK button name Edit_icon of Icon_record & " Edit.." cancel button name Running_icon of Icon_record & " Run" default items item 1 of show_list with multiple selections allowed without empty selection allowed)
+			set temp_show_list to (choose from list show_list with title my check_version_dialog(caller) with prompt "" & length of show_list & " shows to edit:" & return & "Right icon (show type): " & Single_icon of Icon_record & " Single  " & Series1_icon of Icon_record & " SeriesID(Channel)  " & Series_icon of Icon_record & " Date/Time  " & Series3_icon of Icon_record & " SeriesID(All)  " & Uncheck_icon of Icon_record & " Deactivated" & return & "Left icon (next airing): " & Record_icon of Icon_record & " Recording  " & Warning_icon of Icon_record & " Error  " & Film_icon of Icon_record & " <1h  " & Up_icon of Icon_record & " <4h  " & Up2_icon of Icon_record & " >4h  " & Futureshow_icon of Icon_record & " Future day  " & Check_icon of Icon_record & " Recorded today" OK button name Edit_icon of Icon_record & " Edit.." cancel button name Running_icon of Icon_record & " Run" default items item 1 of show_list with multiple selections allowed without empty selection allowed)
 			if temp_show_list is not false then
 				set temp_show_offsets to my resolve_selected_offsets(cm, temp_show_list, show_list)
 				if length of temp_show_offsets is 0 then
@@ -2014,7 +2014,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				if length of hdhrGRID_response is 1 and hdhrGRID_response is {""} then
 					my logger(true, handlername, caller, "INFO", "(Manual) Adding show for " & hdhr_device)
 					try
-						set show_title_temp to display dialog "What is the title of this show, and is it a series?" buttons {Running_icon of Icon_record & " Run", Series_icon of Icon_record & " Series", Single_icon of Icon_record & " Single"} cancel button 1 default button 3 default answer "" with title my check_version_dialog(caller) giving up after Dialog_timeout
+						set show_title_temp to display dialog "What is the title of this show, and is it a series?" buttons {Running_icon of Icon_record & " Run", Series_icon of Icon_record & " Date/Time", Single_icon of Icon_record & " Single"} cancel button 1 default button 3 default answer "" with title my check_version_dialog(caller) giving up after Dialog_timeout
 					on error errmsg number errnum
 						if errnum is -128 then
 							my logger(true, handlername, caller, "INFO", "User exited")
@@ -2172,12 +2172,12 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 					try
 						-- We need to note if the show start time was yesterday, and adjust as needed.
 						
-						set temp_show_info_series to (display dialog "Is this a single or a series recording? " & return & return & "Title: " & show_title of temp_show_info & return & "Type: " & tags_text & return & "SeriesID: " & seriesid_temp & return & return & "Synopsis: " & synopsis_temp & return & return & "Start: " & time string of time_set(cm, cd, show_time of temp_show_info) of LibScript & return & "Length: " & ms2time(cm, ((show_length of temp_show_info) * 60), "s", 2) & return & "OriginalAirdate: " & show_originalairdate_real buttons {Running_icon of Icon_record & " Run", Series_icon of Icon_record & " Series", Single_icon of Icon_record & " Single"} default button temp_default_button cancel button 1 with title my check_version_dialog(caller) giving up after Dialog_timeout with icon temp_icon)
+						set temp_show_info_series to (display dialog "Is this a single or a series recording? " & return & return & "Title: " & show_title of temp_show_info & return & "Type: " & tags_text & return & "SeriesID: " & seriesid_temp & return & return & "Synopsis: " & synopsis_temp & return & return & "Start: " & time string of time_set(cm, cd, show_time of temp_show_info) of LibScript & return & "Length: " & ms2time(cm, ((show_length of temp_show_info) * 60), "s", 2) of LibScript & return & "OriginalAirdate: " & show_originalairdate_real buttons {Running_icon of Icon_record & " Run", Series_icon of Icon_record & " Date/Time", Single_icon of Icon_record & " Single"} default button temp_default_button cancel button 1 with title my check_version_dialog(caller) giving up after Dialog_timeout with icon temp_icon)
 						
 						if button returned of temp_show_info_series contains "Series" then
 							set show_is_series of temp_show_info to true
 							-- Ask what kind of series
-							set series_type to button returned of (display dialog "What kind of series?" buttons {"Date/Time", "SeriesID(Channel)", "SeriesID(All)"} default button 1 with title my check_version_dialog(caller) with icon temp_icon)
+							set series_type to button returned of (display dialog "What kind of series?" buttons {Series_icon of Icon_record & " Date/Time", Series1_icon of Icon_record & " SeriesID(Channel)", Series3_icon of Icon_record & " SeriesID(All)"} default button 1 with title my check_version_dialog(caller) with icon temp_icon)
 							if series_type contains "Date/Time" then
 								set show_use_seriesid of temp_show_info to false
 								set show_use_seriesid_all of temp_show_info to false
@@ -2227,6 +2227,10 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				--if temp_show_use_seriesid is misisng value then
 				if show_is_series of temp_show_info is true and show_use_seriesid of temp_show_info is false then
 					set show_air_date of temp_show_info to (choose from list Full_week_days default items default_record_day with title my check_version_dialog(cm) OK button name "Next.." cancel button name Running_icon of Icon_record & " Run" with prompt "Select the days you wish to record." & return & "A \"Series\" can select multiple days" with multiple selections allowed without empty selection allowed)
+					if show_air_date of temp_show_info is false then
+						my logger(true, handlername, caller, "INFO", "add_show_info EXIT: User cancelled day selection (DateTime series)")
+						return
+					end if
 					my logger(true, handlername, caller, "INFO", "(Manual) show_air_date: " & stringlistflip(cm, show_air_date of temp_show_info, ",", "string") of LibScript)
 				else
 					if hdhrGRID_response is {""} then
@@ -3151,7 +3155,7 @@ on read_data(caller)
 		set Show_info to the_shows of show_info_json
 		set Hdhr_config to config of show_info_json
 		my sync_config(my cm(handlername, caller), true)
-		my logger(true, handlername, caller, "INFO", "Guide_hours (config): " & Guide_hours of Hdhr_config)
+		my logger(true, handlername, caller, "INFO", "Guide_hours (config): " & Guide_hours)
 		--my logger(true, handlername, caller, "INFO", "Guide_hours (var): " & Guide_hours)
 		my logger(true, handlername, caller, "INFO", "Config version: " & Config_version of Hdhr_config)
 		
@@ -3283,7 +3287,7 @@ on recordingnow_main(caller)
 		if recording_now_final is {} then
 			return ("No Shows Recording")
 		end if
-		return (Record_icon of Icon_record & " Recording" & return & stringlistflip(my cm(handlername, caller), recording_now_final, return, "string")) as text
+		return (Record_icon of Icon_record & " Recording" & return & stringlistflip(my cm(handlername, caller), recording_now_final, return, "string") of LibScript) as text
 	else
 		my logger(true, handlername, caller, "INFO", "No Shows")
 		return ("Recording: None")
@@ -3325,7 +3329,7 @@ on next_shows(caller)
 		set next_shows_final to {}
 		repeat with i2 from 1 to length of Show_info
 			try
-				set temp_show_end to items 2 thru end of stringlistflip(my cm(handlername, caller), short_date(my cm(handlername, caller), show_end of item i2 of Show_info, false, false) of LibScript, " ", "list")
+				set temp_show_end to items 2 thru end of stringlistflip(my cm(handlername, caller), short_date(my cm(handlername, caller), show_end of item i2 of Show_info, false, false) of LibScript, " ", "list") of LibScript
 			on error errmsg
 				my logger(true, handlername, caller, "WARN", "Error when calculating show_end")
 				set temp_show_end to {"ERROR", "ERROR", "ERROR", "ERROR"}
@@ -3375,7 +3379,7 @@ on showid2PID(caller, show_id, kill_pid, logging)
 				my logger(true, handlername, caller, "DEBUG", show_title of item show_offset of Show_info & ", err: " & errmsg)
 				return {show_id, {}}
 			end try
-			set showid2PID_data_parsed to stringlistflip(my cm(handlername, caller), showid2PID_result, return, "list")
+			set showid2PID_data_parsed to stringlistflip(my cm(handlername, caller), showid2PID_result, return, "list") of LibScript
 			if length of showid2PID_data_parsed is greater than 0 then
 				repeat with i from 1 to length of showid2PID_data_parsed
 					set end of showid2PID_perline to word 1 of item i of showid2PID_data_parsed
@@ -3445,13 +3449,13 @@ on existing_shows(caller)
 		set showid2PID_result to {}
 		return
 	end try
-	set showid2PID_result_list to stringlistflip(my cm(handlername, caller), showid2PID_result, return, "list")
+	set showid2PID_result_list to stringlistflip(my cm(handlername, caller), showid2PID_result, return, "list") of LibScript
 	if length of showid2PID_result_list is greater than 0 then
 		try
 			repeat with i from 1 to length of showid2PID_result_list
-				set showid2PID_result_list_perline to stringlistflip(my cm(handlername, caller), item i of showid2PID_result_list, {" -H ", "show_id:"}, "list")
+				set showid2PID_result_list_perline to stringlistflip(my cm(handlername, caller), item i of showid2PID_result_list, {" -H ", "show_id:"}, "list") of LibScript
 				set temp_show_id to item 3 of showid2PID_result_list_perline
-				set show_offset to HDHRShowSearch(my cm(handlername, caller), temp_show_id)
+				set show_offset to HDHRShowSearch(my cm(handlername, caller), temp_show_id) of LibScript
 				if show_offset is not 0 then
 					if show_recording of item show_offset of Show_info is false then
 						set show_recording of item show_offset of Show_info to true
