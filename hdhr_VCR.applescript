@@ -43,7 +43,7 @@ global Default_max_tries
 global Check_after_midnight_time
 global First_open
 global Show_status_list
-global Lib_script
+global LibScript
 global Lib_script_version
 global Log_ignored
 global Errloc
@@ -77,9 +77,9 @@ on setup_lib(caller)
 		display dialog temp_message with title "hdhr_VCR" buttons "Quit" default button 1 with icon stop giving up after 10
 		return false
 	end try
-	set Lib_script to load script loaded_script_alias
-	set Lib_script_version to load_hdhrVCR_vars() of Lib_script
-	set ParentScript of Lib_script to me
+	set LibScript to load script loaded_script_alias
+	set Lib_script_version to load_hdhrVCR_vars() of LibScript
+	set ParentScript of LibScript to me
 	my logger(true, handlername, caller, "INFO", "Library loaded: " & loaded_script_name & " v" & Lib_script_version)
 	return true
 end setup_lib
