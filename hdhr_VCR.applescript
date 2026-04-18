@@ -1371,10 +1371,10 @@ on validate_show_info(caller, show_to_check, should_edit)
 						set temp_default_button to 1
 					end if
 					-- Allow changing between DateTime/SeriesID(Channel)/SeriesID(All) modes
-					set series_type to button returned of (display dialog "What kind of series?" buttons {Calendar_icon of Icon_record & " Date/Time", Series1_icon of Icon_record & " SeriesID(Channel)", Series3_icon of Icon_record & " SeriesID(All)"} default button temp_default_button with title my check_version_dialog(my cm(handlername, caller)) with icon curl2icon(my cm(handlername, caller), show_logo_url of item i of Show_info) of LibScript)
+					set series_type to button returned of (display dialog "What kind of series?" buttons {Series_icon of Icon_record & " Series", Series1_icon of Icon_record & " SeriesID(Channel)", Series3_icon of Icon_record & " SeriesID(All)"} default button temp_default_button with title my check_version_dialog(my cm(handlername, caller)) with icon curl2icon(my cm(handlername, caller), show_logo_url of item i of Show_info) of LibScript)
 
 					-- Set state based on series type selection
-					if series_type contains "Date/Time" then
+					if series_type contains "Series" and series_type does not contain "SeriesID" then
 						-- DateTime Series: is_series=true, use_seriesid=false, use_seriesid_all=false
 						set show_use_seriesid of item i of Show_info to false
 						set show_use_seriesid_all of item i of Show_info to false
@@ -2177,8 +2177,8 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 						if button returned of temp_show_info_series contains "Series" then
 							set show_is_series of temp_show_info to true
 							-- Ask what kind of series
-							set series_type to button returned of (display dialog "What kind of series?" buttons {Calendar_icon of Icon_record & " Date/Time", Series1_icon of Icon_record & " SeriesID(Channel)", Series3_icon of Icon_record & " SeriesID(All)"} default button 1 with title my check_version_dialog(caller) with icon temp_icon)
-							if series_type contains "Date/Time" then
+							set series_type to button returned of (display dialog "What kind of series?" buttons {Series_icon of Icon_record & " Series", Series1_icon of Icon_record & " SeriesID(Channel)", Series3_icon of Icon_record & " SeriesID(All)"} default button 1 with title my check_version_dialog(caller) with icon temp_icon)
+							if series_type contains "Series" and series_type does not contain "SeriesID" then
 								set show_use_seriesid of temp_show_info to false
 								set show_use_seriesid_all of temp_show_info to false
 							else if series_type contains "SeriesID(Channel)" then
