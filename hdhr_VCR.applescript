@@ -3350,7 +3350,7 @@ on next_shows(caller)
 		end repeat
 		return {soonest_show_time, next_shows_final, error_show_list}
 	else
-		return {soonest_show_time, "Nope!", error_show_list}
+		return {soonest_show_time, {}, error_show_list}
 	end if
 end next_shows
 
