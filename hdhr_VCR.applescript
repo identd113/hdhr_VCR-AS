@@ -2497,7 +2497,7 @@ on HDHRDeviceDiscovery(caller, hdhr_device)
 				try
 					set tuner_transcode_temp to ModelNumber of hdhr_device_discovery
 
-					if item 1 of stringlistflip(my cm(handlername, caller), (ModelNumber of hdhr_device_discovery), "-", "list") is "HDTC" then
+					if item 1 of stringlistflip(my cm(handlername, caller), (ModelNumber of hdhr_device_discovery), "-", "list") of LibScript is "HDTC" then
 						set tuner_transcode_temp to 1
 					else
 						set tuner_transcode_temp to 0
@@ -2937,14 +2937,14 @@ on save_data(caller)
 						my logger(true, handlername, caller, "INFO", "Added show_last to " & quote & show_title of item i5 of temp_show_info & quote)
 					end try
 					try
-						set show_next of item i5 of temp_show_info to fixDate(my cm(handlername, caller), (show_next of item i5 of temp_show_info))
+						set show_next of item i5 of temp_show_info to fixDate(my cm(handlername, caller), (show_next of item i5 of temp_show_info)) of LibScript
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", errmsg)
 						set item i5 of temp_show_info to item i5 of temp_show_info & {show_next:""}
 						my logger(true, handlername, caller, "INFO", "Added show_next to " & quote & show_title of item i5 of temp_show_info & quote)
 					end try
 					try
-						set show_end of item i5 of temp_show_info to fixDate(my cm(handlername, caller), (show_end of item i5 of temp_show_info))
+						set show_end of item i5 of temp_show_info to fixDate(my cm(handlername, caller), (show_end of item i5 of temp_show_info)) of LibScript
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", errmsg)
 						set item i5 of temp_show_info to item i5 of temp_show_info & {show_end:""}
@@ -2952,7 +2952,7 @@ on save_data(caller)
 					end try
 					
 					try
-						set notify_recording_time of item i5 of temp_show_info to fixDate(my cm(handlername, caller), (notify_recording_time of item i5 of temp_show_info))
+						set notify_recording_time of item i5 of temp_show_info to fixDate(my cm(handlername, caller), (notify_recording_time of item i5 of temp_show_info)) of LibScript
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", errmsg)
 						set item i5 of temp_show_info to item i5 of temp_show_info & {notify_recording_time:""}
@@ -2960,7 +2960,7 @@ on save_data(caller)
 					end try
 					
 					try
-						set notify_upnext_time of item i5 of temp_show_info to fixDate(my cm(handlername, caller), (notify_upnext_time of item i5 of temp_show_info))
+						set notify_upnext_time of item i5 of temp_show_info to fixDate(my cm(handlername, caller), (notify_upnext_time of item i5 of temp_show_info)) of LibScript
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", errmsg)
 						set item i5 of temp_show_info to item i5 of temp_show_info & {notify_upnext_time:""}
