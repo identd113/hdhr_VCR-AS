@@ -212,6 +212,8 @@ on run {}
 	set Idle_loop to 0
 	set Errloc to ""
 	set startup_success to false
+	set Logger_levels to {"INFO", "WARN", "ERROR", "NEAT", "FATAL"}
+	set Idle_timer_default to 10
 	set progress description to "Loading hdhr_VCR_lib..."
 	if my setup_lib(cmi) is true then
 		set progress description to "Setting up script..."
