@@ -610,7 +610,20 @@ on deserialize_show(caller, show_rec)
 		if ep is 0 or ep is "" or ep is missing value then
 			set show_last of s to (current date)
 		else
-			set show_last of s to my epoch2datetime(caller, ep)
+			if class of ep is text then
+				try
+					set show_last of s to date ep
+				on error
+					set show_last of s to (current date)
+				end try
+			else
+				set result to my epoch2datetime(caller, ep)
+				if class of result is not list then
+					set show_last of s to result
+				else
+					set show_last of s to (current date)
+				end if
+			end if
 		end if
 	on error
 		set show_last of s to (current date)
@@ -620,7 +633,20 @@ on deserialize_show(caller, show_rec)
 		if ep is 0 or ep is "" or ep is missing value then
 			set show_next of s to (current date)
 		else
-			set show_next of s to my epoch2datetime(caller, ep)
+			if class of ep is text then
+				try
+					set show_next of s to date ep
+				on error
+					set show_next of s to (current date)
+				end try
+			else
+				set result to my epoch2datetime(caller, ep)
+				if class of result is not list then
+					set show_next of s to result
+				else
+					set show_next of s to (current date)
+				end if
+			end if
 		end if
 	on error
 		set show_next of s to (current date)
@@ -630,7 +656,20 @@ on deserialize_show(caller, show_rec)
 		if ep is 0 or ep is "" or ep is missing value then
 			set show_end of s to (current date)
 		else
-			set show_end of s to my epoch2datetime(caller, ep)
+			if class of ep is text then
+				try
+					set show_end of s to date ep
+				on error
+					set show_end of s to (current date)
+				end try
+			else
+				set result to my epoch2datetime(caller, ep)
+				if class of result is not list then
+					set show_end of s to result
+				else
+					set show_end of s to (current date)
+				end if
+			end if
 		end if
 	on error
 		set show_end of s to (current date)
@@ -641,7 +680,20 @@ on deserialize_show(caller, show_rec)
 		if ep is 0 or ep is "" or ep is missing value or ep is "missing value" then
 			set notify_recording_time of s to missing value
 		else
-			set notify_recording_time of s to my epoch2datetime(caller, ep)
+			if class of ep is text then
+				try
+					set notify_recording_time of s to date ep
+				on error
+					set notify_recording_time of s to missing value
+				end try
+			else
+				set result to my epoch2datetime(caller, ep)
+				if class of result is not list then
+					set notify_recording_time of s to result
+				else
+					set notify_recording_time of s to missing value
+				end if
+			end if
 		end if
 	on error
 		set notify_recording_time of s to missing value
@@ -651,7 +703,20 @@ on deserialize_show(caller, show_rec)
 		if ep is 0 or ep is "" or ep is missing value or ep is "missing value" then
 			set notify_upnext_time of s to missing value
 		else
-			set notify_upnext_time of s to my epoch2datetime(caller, ep)
+			if class of ep is text then
+				try
+					set notify_upnext_time of s to date ep
+				on error
+					set notify_upnext_time of s to missing value
+				end try
+			else
+				set result to my epoch2datetime(caller, ep)
+				if class of result is not list then
+					set notify_upnext_time of s to result
+				else
+					set notify_upnext_time of s to missing value
+				end if
+			end if
 		end if
 	on error
 		set notify_upnext_time of s to missing value
