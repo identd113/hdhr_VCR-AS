@@ -2945,27 +2945,9 @@ on save_data(caller)
 						my logger(true, handlername, caller, "INFO", "Added show_url to " & quote & show_title of item i5 of temp_show_info & quote)
 					end try
 					
-					try
-						set show_last of item i5 of temp_show_info to fixDate(my cm(handlername, caller), (show_last of item i5 of temp_show_info)) of LibScript
-					on error errmsg
-						my logger(true, handlername, caller, "WARN", errmsg)
-						set item i5 of temp_show_info to item i5 of temp_show_info & {show_last:""}
-						my logger(true, handlername, caller, "INFO", "Added show_last to " & quote & show_title of item i5 of temp_show_info & quote)
-					end try
-					try
-						set show_next of item i5 of temp_show_info to fixDate(my cm(handlername, caller), (show_next of item i5 of temp_show_info)) of LibScript
-					on error errmsg
-						my logger(true, handlername, caller, "WARN", errmsg)
-						set item i5 of temp_show_info to item i5 of temp_show_info & {show_next:""}
-						my logger(true, handlername, caller, "INFO", "Added show_next to " & quote & show_title of item i5 of temp_show_info & quote)
-					end try
-					try
-						set show_end of item i5 of temp_show_info to fixDate(my cm(handlername, caller), (show_end of item i5 of temp_show_info)) of LibScript
-					on error errmsg
-						my logger(true, handlername, caller, "WARN", errmsg)
-						set item i5 of temp_show_info to item i5 of temp_show_info & {show_end:""}
-						my logger(true, handlername, caller, "INFO", "Added show_end to " & quote & show_title of item i5 of temp_show_info & quote)
-					end try
+					-- Note: show_last, show_next, show_end are now handled by serialize_show
+					-- which converts date objects to epoch integers before JSON serialization.
+					-- Do NOT call fixDate here as it converts to strings, breaking serialize_show.
 					
 					try
 						set notify_recording_time of item i5 of temp_show_info to fixDate(my cm(handlername, caller), (notify_recording_time of item i5 of temp_show_info)) of LibScript
