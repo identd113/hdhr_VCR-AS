@@ -531,6 +531,161 @@ on epoch2show_time(caller, epoch)
 	end if
 end epoch2show_time
 
+on serialize_show(caller, show_rec)
+	set handlername to "serialize_show"
+	set s to show_rec
+
+	try
+		if (class of (show_last of s)) is date then
+			set show_last of s to my datetime2epoch(caller, show_last of s)
+		else
+			set show_last of s to 0
+		end if
+	on error
+		set show_last of s to 0
+	end try
+	try
+		if (class of (show_next of s)) is date then
+			set show_next of s to my datetime2epoch(caller, show_next of s)
+		else
+			set show_next of s to 0
+		end if
+	on error
+		set show_next of s to 0
+	end try
+	try
+		if (class of (show_end of s)) is date then
+			set show_end of s to my datetime2epoch(caller, show_end of s)
+		else
+			set show_end of s to 0
+		end if
+	on error
+		set show_end of s to 0
+	end try
+	try
+		if (class of (notify_recording_time of s)) is date then
+			set notify_recording_time of s to my datetime2epoch(caller, notify_recording_time of s)
+		else
+			set notify_recording_time of s to 0
+		end if
+	on error
+		set notify_recording_time of s to 0
+	end try
+	try
+		if (class of (notify_upnext_time of s)) is date then
+			set notify_upnext_time of s to my datetime2epoch(caller, notify_upnext_time of s)
+		else
+			set notify_upnext_time of s to 0
+		end if
+	on error
+		set notify_upnext_time of s to 0
+	end try
+
+	try
+		if (class of (show_dir of s)) is alias then
+			set show_dir of s to POSIX path of (show_dir of s)
+		else
+			set show_dir of s to (show_dir of s) as text
+		end if
+	on error
+	end try
+	try
+		if (class of (show_temp_dir of s)) is alias then
+			set show_temp_dir of s to POSIX path of (show_temp_dir of s)
+		else
+			set show_temp_dir of s to (show_temp_dir of s) as text
+		end if
+	on error
+	end try
+
+	return s
+end serialize_show
+
+on deserialize_show(caller, show_rec)
+	set handlername to "deserialize_show"
+	set s to show_rec
+
+	try
+		set ep to show_last of s
+		if ep is 0 or ep is "" or ep is missing value then
+			set show_last of s to (current date)
+		else
+			set show_last of s to my epoch2datetime(caller, ep)
+		end if
+	on error
+		set show_last of s to (current date)
+	end try
+	try
+		set ep to show_next of s
+		if ep is 0 or ep is "" or ep is missing value then
+			set show_next of s to (current date)
+		else
+			set show_next of s to my epoch2datetime(caller, ep)
+		end if
+	on error
+		set show_next of s to (current date)
+	end try
+	try
+		set ep to show_end of s
+		if ep is 0 or ep is "" or ep is missing value then
+			set show_end of s to (current date)
+		else
+			set show_end of s to my epoch2datetime(caller, ep)
+		end if
+	on error
+		set show_end of s to (current date)
+	end try
+
+	try
+		set ep to notify_recording_time of s
+		if ep is 0 or ep is "" or ep is missing value or ep is "missing value" then
+			set notify_recording_time of s to missing value
+		else
+			set notify_recording_time of s to my epoch2datetime(caller, ep)
+		end if
+	on error
+		set notify_recording_time of s to missing value
+	end try
+	try
+		set ep to notify_upnext_time of s
+		if ep is 0 or ep is "" or ep is missing value or ep is "missing value" then
+			set notify_upnext_time of s to missing value
+		else
+			set notify_upnext_time of s to my epoch2datetime(caller, ep)
+		end if
+	on error
+		set notify_upnext_time of s to missing value
+	end try
+
+	try
+		set dstr to show_dir of s as text
+		if dstr starts with "/" then
+			set show_dir of s to (dstr as alias)
+		end if
+	on error errmsg
+		logger(true, handlername, caller, "WARN", "show_dir could not be aliased for " & show_title of s & ": " & errmsg) of ParentScript
+	end try
+	try
+		set dstr to show_temp_dir of s as text
+		if dstr starts with "/" then
+			set show_temp_dir of s to (dstr as alias)
+		end if
+	on error errmsg
+		logger(true, handlername, caller, "WARN", "show_temp_dir could not be aliased for " & show_title of s & ": " & errmsg) of ParentScript
+	end try
+
+	try
+		set show_channel of s to (show_channel of s) as text
+	end try
+
+	try
+		set show_fail_count of s to 0
+		set show_fail_reason of s to ""
+	end try
+
+	return s
+end deserialize_show
+
 on tuner_dump(caller)
 	set handlername to "tuner_dump_lib"
 	set HDHR_DEVICE_LIST to HDHR_DEVICE_LIST of ParentScript
@@ -730,6 +885,15 @@ on time_set(caller, adate_object, time_shift)
 	set dateobject to dateobject + (time_shift * hours)
 	return dateobject
 end time_set
+
+on midnight_of(caller, d)
+	set handlername to "midnight_of"
+	copy d to d2
+	set hours of d2 to 0
+	set minutes of d2 to 0
+	set seconds of d2 to 0
+	return d2
+end midnight_of
 
 on corrupt_showinfo(caller)
 	set handlername to "corrupt_showinfo"

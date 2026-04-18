@@ -3016,6 +3016,12 @@ on save_data(caller)
 				
 			end repeat
 			set temp_show_info to emptylist(my cm(handlername, caller), temp_show_info) of LibScript
+			-- Serialize all shows to JSON-safe types before writing
+			repeat with i5 from 1 to length of temp_show_info
+				if item i5 of temp_show_info is not "" then
+					set item i5 of temp_show_info to serialize_show(my cm(handlername, caller), item i5 of temp_show_info) of LibScript
+				end if
+			end repeat
 			-- set temp_show_info_json to (make JSON from temp_show_info)
 			try
 				try
@@ -3165,96 +3171,7 @@ on read_data(caller)
 		
 		my logger(true, handlername, caller, "INFO", "Loading config from \"" & POSIX path of hdhr_vcr_config_file & "\"...")
 		repeat with i5 from 1 to length of Show_info
-			try
-				set show_dir_str to show_dir of item i5 of Show_info as text
-				-- Try to convert to alias if it's a POSIX path, otherwise keep as string if it's Mac alias format
-				if show_dir_str starts with "/" then
-					set show_dir of item i5 of Show_info to (show_dir_str as alias)
-				else if show_dir_str contains ":" then
-					-- Keep Mac alias format strings as-is; checkfileexists will handle conversion
-					set show_dir of item i5 of Show_info to show_dir_str
-				else
-					set show_dir of item i5 of Show_info to (show_dir_str as alias)
-				end if
-			on error errmsg
-				my logger(true, handlername, caller, "WARN", "show_dir for " & show_title of item i5 of Show_info & " could not be converted: " & errmsg)
-				set show_dir of item i5 of Show_info to show_dir of item i5 of Show_info
-			end try
-
-			try
-				set show_temp_dir_str to show_temp_dir of item i5 of Show_info as text
-				if show_temp_dir_str starts with "/" then
-					set show_temp_dir of item i5 of Show_info to (show_temp_dir_str as alias)
-				else if show_temp_dir_str contains ":" then
-					set show_temp_dir of item i5 of Show_info to show_temp_dir_str
-				else
-					set show_temp_dir of item i5 of Show_info to (show_temp_dir_str as alias)
-				end if
-			on error errmsg
-				my logger(true, handlername, caller, "WARN", "show_temp_dir for " & show_title of item i5 of Show_info & " could not be converted: " & errmsg)
-				set show_temp_dir of item i5 of Show_info to show_temp_dir of item i5 of Show_info
-			end try
-			try
-				set show_fail_count of item i5 of Show_info to 0
-				set show_fail_reason of item i5 of Show_info to ""
-			end try
-			try
-				set show_last of item i5 of Show_info to date (show_last of item i5 of Show_info as text)
-			on error
-				set show_last of item i5 of Show_info to (current date)
-			end try
-			try
-				set show_next of item i5 of Show_info to date (show_next of item i5 of Show_info as text)
-			on error
-				set show_next of item i5 of Show_info to (current date)
-			end try
-			try
-				set show_end of item i5 of Show_info to date (show_end of item i5 of Show_info as text)
-			on error
-				set show_end of item i5 of Show_info to (current date)
-			end try
-			set show_channel of item i5 of Show_info to (show_channel of item i5 of Show_info as text)
-			try
-				if notify_recording_time of item i5 of Show_info is "missing value" then
-					set notify_recording_time of item i5 of Show_info to missing value
-				else
-					set notify_recording_time of item i5 of Show_info to (notify_recording_time of item i5 of Show_info as text)
-				end if
-			on error errmsg
-				my logger(true, handlername, caller, "WARN", "Unable to change class of notify_recording_time, err: " & errmsg)
-			end try
-			
-			
-			try
-				if notify_upnext_time of item i5 of Show_info is "missing value" then
-					set notify_upnext_time of item i5 of Show_info to missing value
-				end if
-			on error errmsg
-				my logger(true, handlername, caller, "WARN", "Unable to change class of notify_upnext_time, err: " & errmsg)
-			end try
-			
-			try
-				if show_is_sport of item i5 of Show_info is "false" then
-					set show_is_sport of item i5 of Show_info to false
-				end if
-				if show_is_sport of item i5 of Show_info is "true" then
-					set show_is_sport of item i5 of Show_info to true
-				end if
-			on error errmsg
-				my logger(true, handlername, caller, "WARN", "Unable to change class of show_is_sport, err: " & errmsg)
-			end try
-			
-			try
-				if show_recorded_today of item i5 of Show_info is "false" then
-					set show_recorded_today of item i5 of Show_info to false
-				end if
-				if show_recorded_today of item i5 of Show_info is "true" then
-					set show_recorded_today of item i5 of Show_info to true
-				end if
-			on error errmsg
-				my logger(true, handlername, caller, "WARN", "Unable to change class of show_recorded_today, err: " & errmsg)
-			end try
-			
+			set item i5 of Show_info to deserialize_show(my cm(handlername, caller), item i5 of Show_info) of LibScript
 		end repeat
 	on error errmsg
 		my logger(true, handlername, caller, "FATAL", "Unable to read file, err: " & errmsg)

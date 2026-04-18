@@ -10,7 +10,7 @@ HANDLERS=(
   fixDate stringToUtf8 isSystemShutdown repeatProgress list_position
   padnum is_number end_jsonhelper epoch2show_time tuner_dump
   encode_strikethrough itemsInString check_after_midnight isModifierKeyPressed
-  quoteme time_set corrupt_showinfo iconEnumPopulate aroundDate rotate_logs
+  quoteme time_set midnight_of serialize_show deserialize_show corrupt_showinfo iconEnumPopulate aroundDate rotate_logs
   update_record_urls add_record_url match2showid recordSee show_name_fix
   convertByteSize cleanFolder curl2icon showSeek get_show_state2 nextday2
   enums2icons show_icons recordSee2 choose_folder_with_fallback choose_folder_with_fallback_v2
