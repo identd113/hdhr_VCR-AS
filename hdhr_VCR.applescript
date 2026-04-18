@@ -581,7 +581,7 @@ on quit {}
 		if hdhr_quit_record is true then
 			set systemShutdown to isSystemShutdown(my cm(handlername, caller)) of LibScript
 			my logger(true, handlername, caller, "INFO", "systemShutdown: " & systemShutdown)
-			my logger(true, handlername, caller, "INFO", "The following shows are marked as currently recording: " & stringlistflip("quit()", hdhr_quit_record_titles, ",", "string"))
+			my logger(true, handlername, caller, "INFO", "The following shows are marked as currently recording: " & stringlistflip("quit()", hdhr_quit_record_titles, ",", "string") of LibScript)
 			if systemShutdown is false then
 				try
 					activate me
@@ -859,7 +859,7 @@ on tuner_mismatch(caller, device_id)
 		else if temp_shows_recording is less than tuneractive of tuner_status2_result then
 			set tuner_inuse_return to my tuner_inuse(my cm(handlername, caller), device_id)
 			try
-				my logger(true, handlername, caller, "WARN", "There are more tuners in use then were expected, list of other IPs: " & stringlistflip(my cm(handlername, caller), tuner_inuse_return, ", ", "string"))
+				my logger(true, handlername, caller, "WARN", "There are more tuners in use then were expected, list of other IPs: " & stringlistflip(my cm(handlername, caller), tuner_inuse_return, ", ", "string") of LibScript)
 			on error errmsg
 				my logger(true, handlername, caller, "ERROR", "err, " & errmsg)
 			end try
@@ -3079,7 +3079,7 @@ on showPathVerify(caller, show_id)
 			my showPathVerify(my cm(handlername, caller), show_id of item i3 of Show_info)
 		end repeat
 	else
-		set show_offset to HDHRShowSearch(my cm(handlername, caller), show_id)
+		set show_offset to HDHRShowSearch(my cm(handlername, caller), show_id) of LibScript
 		try
 			if my checkfileexists(my cm(handlername, caller), show_dir of item show_offset of Show_info) is false then
 				my logger(true, handlername, caller, "WARN", "The show, " & show_title of item show_offset of Show_info & " has a invalid save directory")
@@ -3366,7 +3366,7 @@ on showid2PID(caller, show_id, kill_pid, logging)
 			my showid2PID(my cm(handlername, caller), show_id of item i of Show_info, kill_pid, logging)
 		end repeat
 	else
-		set show_offset to HDHRShowSearch(my cm(handlername, caller), show_id)
+		set show_offset to HDHRShowSearch(my cm(handlername, caller), show_id) of LibScript
 		if show_offset is greater than 0 then
 			try
 				my logger(true, handlername, caller, "TRACE", "ps -Aa|grep " & show_id & "|grep -v 'grep\\|caffeinate'")
