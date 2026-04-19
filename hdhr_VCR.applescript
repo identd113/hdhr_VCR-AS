@@ -663,15 +663,29 @@ on hdhrGRID(caller, hdhr_device, hdhr_channel)
 		set show_status to my get_show_state(my cm(handlername, caller), hdhr_device, hdhr_channel, temp_start, temp_end)
 		set end of Show_status_list to show_status
 		set temp_status_icon to status_icon of show_status
+		set temp_record_status to show_stat of show_status
+		if temp_record_status is missing value then
+			set temp_record_status to ""
+		end if
+		set temp_series_info to ""
 		if the_show_id of show_status is not missing value then
-			set temp_series_icon to status_icon of seriesStatusIcons(my cm(handlername, caller), the_show_id of show_status) of LibScript
+			set temp_series_result to seriesStatusIcons(my cm(handlername, caller), the_show_id of show_status) of LibScript
+			set temp_series_icon to status_icon of temp_series_result
+			set temp_show_type to show_stat of temp_series_result
 			if temp_series_icon is not "" then
 				set temp_status_icon to temp_status_icon & temp_series_icon
 			end if
+			if temp_show_type is not missing value then
+				set temp_series_info to " [" & temp_show_type
+				if temp_record_status is not "" then
+					set temp_series_info to temp_series_info & " - " & temp_record_status
+				end if
+				set temp_series_info to temp_series_info & "]"
+			end if
 		end if
-		set end of hdhrGRID_sort to temp_status_icon & " " & padnum(my cm(handlername, caller), word 2 of short_date(my cm(handlername, caller), temp_start, false, false) of LibScript, true) of LibScript & "-" & padnum(my cm(handlername, caller), word 2 of short_date(my cm(handlername, caller), temp_end, false, false) of LibScript, true) of LibScript & " " & temp_title
+		set end of hdhrGRID_sort to temp_status_icon & " " & padnum(my cm(handlername, caller), word 2 of short_date(my cm(handlername, caller), temp_start, false, false) of LibScript, true) of LibScript & "-" & padnum(my cm(handlername, caller), word 2 of short_date(my cm(handlername, caller), temp_end, false, false) of LibScript, true) of LibScript & " " & temp_title & temp_series_info
 	end repeat
-	set hdhrGRID_selected to choose from list hdhrGRID_sort with prompt ("Channel " & hdhr_channel & " (" & GuideName of hdhrGRID_temp & ")" & return & "Current Time: " & word 2 of short_date(my cm(handlername, caller), (current date), false, false) of LibScript & return & return & "Left icon (next airing): " & Record_icon of Icon_record & " Recording  " & Warning_icon of Icon_record & " Error  " & Film_icon of Icon_record & " <1h  " & Up_icon of Icon_record & " <4h  " & Up2_icon of Icon_record & " >4h  " & Futureshow_icon of Icon_record & " Future day  " & Check_icon of Icon_record & " Recorded today" & return & "Right icon (show type): " & Single_icon of Icon_record & " Single  " & Series1_icon of Icon_record & " SeriesID(Channel)  " & Series_icon of Icon_record & " Date/Time  " & Series3_icon of Icon_record & " SeriesID(All)  " & Uncheck_icon of Icon_record & " Deactivated") cancel button name "Manual Add" OK button name "Next.." with title my check_version_dialog(caller) default items item 1 of hdhrGRID_sort with multiple selections allowed
+	set hdhrGRID_selected to choose from list hdhrGRID_sort with prompt ("Channel " & hdhr_channel & " (" & GuideName of hdhrGRID_temp & ")" & return & "Current Time: " & word 2 of short_date(my cm(handlername, caller), (current date), false, false) of LibScript & return & return & Record_icon of Icon_record & " Recording  " & Warning_icon of Icon_record & " Error  " & Film_icon of Icon_record & " <1h  " & Up_icon of Icon_record & " <4h  " & Up2_icon of Icon_record & " >4h  " & Futureshow_icon of Icon_record & " Future day  " & Check_icon of Icon_record & " Recorded today" & return & Single_icon of Icon_record & " Single  " & Series1_icon of Icon_record & " SeriesID(Channel)  " & Series_icon of Icon_record & " Date/Time  " & Series3_icon of Icon_record & " SeriesID(All)  " & Uncheck_icon of Icon_record & " Deactivated") cancel button name "Manual Add" OK button name "Next.." with title my check_version_dialog(caller) default items item 1 of hdhrGRID_sort with multiple selections allowed
 
 	if hdhrGRID_selected is false then
 		my logger(true, handlername, caller, "INFO", "User exited")
@@ -3182,7 +3196,7 @@ on recordingnow_main(caller)
 	set recording_now_final to {}
 	if length of Show_info is greater than 0 then
 		repeat with i from 1 to length of Show_info
-			if show_recording of item i of Show_info is true then
+			if show_recording of item i of Show_info is true and (show_end of item i of Show_info) > cd then
 				set recording_end to ms2time(my cm(handlername, caller), (show_end of item i of Show_info) - (cd), "s", 3) of LibScript
 				if show_is_series of item i of Show_info is true then
 					if length of show_air_date of item i of Show_info is 1 then
@@ -3234,9 +3248,11 @@ on next_shows(caller)
 			set soonest_show to ((show_next of item i of Show_info) - (cd))
 		end if
 		if ((show_next of item i of Show_info) - (cd)) is less than 0 and show_recording of item i of Show_info is false and show_active of item i of Show_info is true then
-			set recording_end to ms2time(my cm(handlername, caller), (show_end of item i of Show_info) - (cd), "s", 3) of LibScript
-			set time_left to ((show_next of item i of Show_info) - (cd))
-			set end of error_show_list to Warning_icon of Icon_record & " " & show_title of item i of Show_info & " on channel " & show_channel of item i of Show_info & " (" & recording_end & " left)"
+			if (show_end of item i of Show_info) > cd then
+				set recording_end to ms2time(my cm(handlername, caller), (show_end of item i of Show_info) - (cd), "s", 3) of LibScript
+				set time_left to ((show_next of item i of Show_info) - (cd))
+				set end of error_show_list to Warning_icon of Icon_record & " " & show_title of item i of Show_info & " on channel " & show_channel of item i of Show_info & " (" & recording_end & " left)"
+			end if
 		end if
 	end repeat
 	my logger(true, handlername, caller, "INFO", "Soonest: " & soonest_show & ": 9999999")

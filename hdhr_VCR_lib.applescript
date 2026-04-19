@@ -261,6 +261,9 @@ on ms2time(caller, totalMS, time_duration, level_precision)
 	set handlername to "ms2time_lib"
 	try
 		set totalMS to totalMS as number
+		if totalMS is less than 0 then
+			return "ended"
+		end if
 		set temp_time_string to {}
 		set numseconds to 0
 		set numinutes to 0
@@ -270,9 +273,6 @@ on ms2time(caller, totalMS, time_duration, level_precision)
 		if time_duration is "ms" then
 			if totalMS is greater than 0 and totalMS is less than 1000 then
 				return ("<1s")
-			else if totalMS is less than 0 then
-				
-				set numseconds to totalMS div 1000
 			end if
 		else
 			set numseconds to totalMS
