@@ -1296,7 +1296,7 @@ on seriesScanNext(caller, seriesID, hdhr_device, thechan, show_id, theoffset)
 						set beginning of newest_show_epoch_offset to i
 						logger(true, handlername, caller, "INFO", "Offset: " & theoffset & " New Start Time: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), StartTime_epoch), false, false)) of ParentScript
 					else
-						logger(true, handlername, caller, "INFO", "Return show already recording or started") of ParentScript
+						logger(true, handlername, caller, "DEBUG", "Episode in past, StartTime: " & StartTime_epoch) of ParentScript
 					end if
 				else
 					set end of newest_show_epoch to StartTime_epoch
@@ -1310,7 +1310,14 @@ on seriesScanNext(caller, seriesID, hdhr_device, thechan, show_id, theoffset)
 				set temp to {item (item theoffset of newest_show_epoch_offset) of show_match_list of seriesScanTemp, item (item theoffset of newest_show_epoch_offset) of show_channel_list of seriesScanTemp, show_id of seriesScanTemp}
 				return temp
 			else
-				return {}
+				if length of newest_show_epoch_offset is greater than 1 then
+					logger(true, handlername, caller, "WARN", "No future episodes found, returning most recent: " & show_title of item show_offset of Show_info) of ParentScript
+					set temp to {item (item 2 of newest_show_epoch_offset) of show_match_list of seriesScanTemp, item (item 2 of newest_show_epoch_offset) of show_channel_list of seriesScanTemp, show_id of seriesScanTemp}
+					return temp
+				else
+					logger(true, handlername, caller, "WARN", "No episodes found for " & show_title of item show_offset of Show_info) of ParentScript
+					return {}
+				end if
 			end if
 		end if
 	else
