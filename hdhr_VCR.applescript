@@ -458,7 +458,7 @@ on idle
 						if show_recording of item i of Show_info is true then
 							my logger(true, handlername, caller, "TRACE", "Show end for " & show_title of item i of Show_info & " is " & show_end of item i of Show_info)
 							if (show_end of item i of Show_info) is less than or equal to cd then
-								my logger(true, handlername, caller, "WARN", show_title of item i of Show_info & " is " & show_end of item i of Show_info & ", and is past due")
+								my logger(true, handlername, caller, "WARN", show_title of item i of Show_info & " is " & show_end of item i of Show_info & ", and is past due. Time now: " & cd & " | Overdue by: " & ((cd) - show_end of item i of Show_info) & "s")
 								set show_recording of item i of Show_info to false
 								set show_last of item i of Show_info to show_end of item i of Show_info
 								set temp_guide_data to my channel_guide(cm, hdhr_record of item i of Show_info, show_channel of item i of Show_info, show_time of item i of Show_info)
@@ -2455,6 +2455,7 @@ on record_start(caller, the_show_id, opt_show_length, force_update)
 					do shell script "caffeinate -i curl --connect-timeout 10 -H 'show_id:" & show_id of item i of Show_info & "' -H \"show_end:" & temp_show_end & "\" -H 'appname:" & name of me & "' '" & show_url of item i of Show_info & "?duration=" & (temp_show_length) & "&transcode=" & show_transcode of item i of Show_info & "' -o \"" & temp_save_path & "\"> /dev/null 2>&1 &"
 					set show_recording of item i of Show_info to true
 					set show_recording_path of item i of Show_info to temp_save_path
+					my logger(true, handlername, caller, "INFO", "RECORD_START: " & show_title of item i of Show_info & " | show_id: " & show_id of item i of Show_info & " | duration: " & temp_show_length & "s | show_end: " & temp_show_end & " | show_length: " & show_length of item i of Show_info)
 					my logger(true, handlername, caller, "INFO", ("\"" & show_title of item i of Show_info & "\" started recording for " & ms2time(my cm(handlername, caller), temp_show_length, "s", 3) of LibScript & " with transcode profile, " & show_transcode of item i of Show_info))
 				else
 					my logger(true, handlername, caller, "INFO", "Record function surpressed in DEV")
