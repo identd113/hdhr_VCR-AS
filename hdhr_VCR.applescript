@@ -459,6 +459,7 @@ on idle
 							my logger(true, handlername, caller, "TRACE", "Show end for " & show_title of item i of Show_info & " is " & show_end of item i of Show_info)
 							if (show_end of item i of Show_info) is less than or equal to cd then
 								my logger(true, handlername, caller, "WARN", show_title of item i of Show_info & " is " & show_end of item i of Show_info & ", and is past due. Time now: " & cd & " | Overdue by: " & ((cd) - show_end of item i of Show_info) & "s")
+								my showid2PID(cm, show_id of item i of Show_info, true, true)
 								set show_recording of item i of Show_info to false
 								set show_last of item i of Show_info to show_end of item i of Show_info
 								set temp_guide_data to my channel_guide(cm, hdhr_record of item i of Show_info, show_channel of item i of Show_info, show_time of item i of Show_info)
