@@ -1643,14 +1643,14 @@ on setup(caller)
 				end try
 				
 				try
-					my logger(true, handlername, caller, "INFO", "Starting guide hours dialog, Guide_hours = " & Guide_hours of Hdhr_config)
+					my logger(true, handlername, caller, "INFO", "Starting guide hours dialog, Guide_hours = " & Guide_hours)
 					set temp to false
 					repeat until temp is true
-						set guide_length to (display dialog "How many hours of guide data to grab?" & return & "6-24 valid range" default answer Guide_hours of Hdhr_config buttons {"Run", "6H (Default)", "Set"} default button 3)
+						set guide_length to (display dialog "How many hours of guide data to grab?" & return & "6-24 valid range" default answer Guide_hours buttons {"Run", "6H (Default)", "Set"} default button 3)
 						
 						if button returned of guide_length is "Set" then
 							try
-								set Guide_hours of Hdhr_config to (text returned of guide_length as integer)
+								set Guide_hours to (text returned of guide_length as integer)
 							on error errmsg
 								set temp to false
 							end try
