@@ -1153,14 +1153,7 @@ on seriesScanAdd(caller, show_id)
 	set Show_info to Show_info of ParentScript
 	try
 		if show_id = "" then
-			logger(true, handlername, caller, "INFO", "Scanning Show List (full refresh)...") of ParentScript
-			--Reset scan tracking on full discovery refresh so all SeriesID shows can be re-scanned
-			repeat with i from 1 to length of Show_info
-				if show_use_seriesid of item i of Show_info is true then
-					set show_last of item i of Show_info to date "January 1, 1970 00:00:00"
-				end if
-			end repeat
-			set Show_info of ParentScript to Show_info
+			logger(true, handlername, caller, "INFO", "Scanning Show List...") of ParentScript
 			--We need to loop shows, and filter out shows that use seriesid
 			repeat with i from 1 to length of Show_info
 				if show_use_seriesid of item i of Show_info is true then
@@ -1173,14 +1166,8 @@ on seriesScanAdd(caller, show_id)
 			if show_offset is not 0 then
 				if show_use_seriesid of item show_offset of Show_info is true then
 					if show_id is not in RefreshSeriesID_list then
-						copy (current date) to cd
-						set scan_age to (cd - (show_last of item show_offset of Show_info)) div minutes
-						if scan_age is less than 5 then
-							logger(true, handlername, caller, "DEBUG", show_id & " was scanned " & scan_age & " minutes ago, skipping re-add") of ParentScript
-						else
-							set end of RefreshSeriesID_list to show_id
-							logger(true, handlername, caller, "INFO", "Added " & show_id & " to seriesScan list") of ParentScript
-						end if
+						set end of RefreshSeriesID_list to show_id
+						logger(true, handlername, caller, "INFO", "Added " & show_id & " to seriesScan list") of ParentScript
 					else
 						logger(true, handlername, caller, "WARN", show_id & " already on refresh list") of ParentScript
 					end if
@@ -1409,7 +1396,6 @@ on seriesScanUpdate(caller, show_id)
 				logger(true, handlername, caller, "INFO", "There are no upcoming shows for " & quote & show_title of item show_offset of Show_info & quote) of ParentScript
 				--set show_time of item show_offset of Show_info to ((show_time of item show_offset of Show_info) + 2 * hours)
 				set show_next of item show_offset of Show_info to ((show_next of item show_offset of Show_info) + 4 * hours)
-				set show_last of item show_offset of Show_info to (current date)
 			end if
 		else
 			logger(true, handlername, caller, "DEBUG", "The show, " & quote & show_title of item show_offset of Show_info & quote & " is not tracked by SeriesID") of ParentScript

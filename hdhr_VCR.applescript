@@ -368,7 +368,7 @@ on idle
 													set show_next of item i of Show_info to my nextday(cm, show_id of item i of Show_info)
 													my save_data(cm)
 												else
-													seriesScanAdd(cm, show_id of item i of Show_info) of LibScript
+													my logger(true, handlername, caller, "DEBUG", "SeriesID " & show_title of item i of Show_info & " will be rescanned at next discovery refresh")
 													my save_data(cm)
 												end if
 												set show_fail_count of item i of Show_info to 0
@@ -502,7 +502,7 @@ on idle
 									else
 										set show_fail_count of item i of Show_info to 0
 										set show_fail_reason of item i of Show_info to ""
-										seriesScanAdd(cm, show_id of item i of Show_info) of LibScript
+										my logger(true, handlername, caller, "DEBUG", "SeriesID " & show_title of item i of Show_info & " will be rescanned at next discovery refresh")
 									end if
 								else
 										set show_active of item i of Show_info to false
@@ -547,15 +547,6 @@ on idle
 			set show_recorded_today of item i of Show_info to false
 		end repeat
 	end if
-	repeat with i from 1 to length of Show_info
-		if show_end of item i of Show_info is less than cd then
-			set check_showid_recording to item 2 of my showid2PID(cm, show_id of item i of Show_info, false, false)
-			if length of check_showid_recording is greater than 0 then
-				my logger(true, handlername, caller, "WARN", show_title of item i of Show_info & " (" & show_id of item i of Show_info & ") is past due with running process, killing it")
-				my showid2PID(cm, show_id of item i of Show_info, true, true)
-			end if
-		end if
-	end repeat
 	if "BARS" is in Logger_levels then
 		set progress description to "END Idle Loop"
 		set progress completed steps to 2
