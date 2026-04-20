@@ -172,7 +172,7 @@ on setup_globals(caller)
 		set Max_disk_percentage to 93
 		set Icon_record to {}
 		set Icon_list to {}
-		set Guide_hours to 12
+		set Guide_hours to 6
 		set Code_version_epoch to 1744785120 -- Updated: 2026-04-14 23:32:00 UTC
 	on error errmsg
 		return false
@@ -1644,7 +1644,7 @@ on setup(caller)
 				try
 					set temp to false
 					repeat until temp is true
-						set guide_length to (display dialog "How many hours of guide data to grab?" & return & "1-24 valid range" default answer Guide_hours of Hdhr_config buttons {"Run", "12H (Default)", "Set"} default button 3)
+						set guide_length to (display dialog "How many hours of guide data to grab?" & return & "6-24 valid range" default answer Guide_hours of Hdhr_config buttons {"Run", "6H (Default)", "Set"} default button 3)
 						
 						if button returned of guide_length is "Set" then
 							try
@@ -1654,10 +1654,10 @@ on setup(caller)
 							end try
 						end if
 						
-						if button returned of guide_length is "12H (Default)" then
-							set Guide_hours of Hdhr_config to 12
+						if button returned of guide_length is "6H (Default)" then
+							set Guide_hours of Hdhr_config to 6
 						end if
-						if Guide_hours of Hdhr_config is less than 25 and Guide_hours of Hdhr_config is greater than 0 then
+						if Guide_hours of Hdhr_config is less than 25 and Guide_hours of Hdhr_config is greater than 5 then
 							set temp to true
 						else
 							set temp to false
@@ -1666,12 +1666,10 @@ on setup(caller)
 					my logger(true, handlername, caller, "INFO", "Guide_hours(vars): " & Guide_hours of Hdhr_config)
 				end try
 				
-				set rerun_discovery to button returned of (display dialog "Rerun HDHRDeviceDiscovery?" buttons {"Skip", "Yes"} default button 2 with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout with icon note)
 				try
-					if rerun_discovery is "Yes" then
-						my HDHRDeviceDiscovery(my cm(handlername, caller), "")
-						seriesScanAdd(my cm(handlername, caller), "") of LibScript
-					end if
+					my logger(true, handlername, caller, "INFO", "Auto-running HDHRDeviceDiscovery to fetch guide data")
+					my HDHRDeviceDiscovery(my cm(handlername, caller), "")
+					seriesScanAdd(my cm(handlername, caller), "") of LibScript
 				on error errmsg
 					my logger(true, handlername, caller, "ERROR", errmsg)
 				end try
