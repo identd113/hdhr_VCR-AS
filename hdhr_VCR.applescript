@@ -316,21 +316,19 @@ on idle
 		if length of Hdhr_device_list is greater than 0 then
 			repeat with i2 from 1 to length of Hdhr_device_list
 				if hdhr_guide_update of item i2 of Hdhr_device_list is not missing value then
-					if minutes of (cd) is in {0, 30} then
-						if ((cd) - (hdhr_guide_update of item i2 of Hdhr_device_list)) div 60 is greater than or equal to 5 then
-							my logger(true, handlername, caller, "INFO", "Periodic update of tuner " & device_id of item i2 of Hdhr_device_list & ", last update: " & fixDate(cm, hdhr_guide_update of item i2 of Hdhr_device_list) of LibScript)
-							try
-								with timeout of 15 seconds
-									my HDHRDeviceDiscovery(cm, device_id of item i2 of Hdhr_device_list)
-								end timeout
-								seriesScanAdd(cm, "") of LibScript
-								seriesScanRun(cm, true) of LibScript
-								-- Removed periodic save — now only save on explicit triggers (add/deactivate/quit)
-							on error errmsg
-								my logger(true, handlername, caller, "ERROR", "Unable to update HDHRDeviceDiscovery, errmsg " & errmsg)
-							end try
-							my logger(true, handlername, caller, "INFO", "Tuners refresh complete")
-						end if
+					if ((cd) - (hdhr_guide_update of item i2 of Hdhr_device_list)) div 60 is greater than or equal to (Guide_hours * 60 / 4) then
+						my logger(true, handlername, caller, "INFO", "Periodic update of tuner " & device_id of item i2 of Hdhr_device_list & ", last update: " & fixDate(cm, hdhr_guide_update of item i2 of Hdhr_device_list) of LibScript)
+						try
+							with timeout of 15 seconds
+								my HDHRDeviceDiscovery(cm, device_id of item i2 of Hdhr_device_list)
+							end timeout
+							seriesScanAdd(cm, "") of LibScript
+							seriesScanRun(cm, true) of LibScript
+							-- Removed periodic save — now only save on explicit triggers (add/deactivate/quit)
+						on error errmsg
+							my logger(true, handlername, caller, "ERROR", "Unable to update HDHRDeviceDiscovery, errmsg " & errmsg)
+						end try
+						my logger(true, handlername, caller, "INFO", "Tuners refresh complete")
 					end if
 				end if
 			end repeat
