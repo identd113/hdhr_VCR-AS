@@ -547,6 +547,15 @@ on idle
 			set show_recorded_today of item i of Show_info to false
 		end repeat
 	end if
+	repeat with i from 1 to length of Show_info
+		if show_end of item i of Show_info is less than cd then
+			set check_showid_recording to item 2 of my showid2PID(cm, show_id of item i of Show_info, false, false)
+			if length of check_showid_recording is greater than 0 then
+				my logger(true, handlername, caller, "WARN", show_title of item i of Show_info & " (" & show_id of item i of Show_info & ") is past due with running process, killing it")
+				my showid2PID(cm, show_id of item i of Show_info, true, true)
+			end if
+		end if
+	end repeat
 	if "BARS" is in Logger_levels then
 		set progress description to "END Idle Loop"
 		set progress completed steps to 2
