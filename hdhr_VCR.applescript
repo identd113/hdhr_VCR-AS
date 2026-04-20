@@ -324,6 +324,7 @@ on idle
 									my HDHRDeviceDiscovery(cm, device_id of item i2 of Hdhr_device_list)
 								end timeout
 								seriesScanAdd(cm, "") of LibScript
+								seriesScanRun(cm, true) of LibScript
 								-- Removed periodic save — now only save on explicit triggers (add/deactivate/quit)
 							on error errmsg
 								my logger(true, handlername, caller, "ERROR", "Unable to update HDHRDeviceDiscovery, errmsg " & errmsg)
@@ -2118,13 +2119,22 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 					set progress completed steps to 2
 					my logger(true, handlername, caller, "INFO", "(Auto) show length: " & show_length of temp_show_info)
 					
-					--auto show_time 
+					--auto show_time
 					set show_time of temp_show_info to epoch2show_time(cm, getTfromN(StartTime of item i3 of hdhrGRID_response) of LibScript) of LibScript
 					set show_time_orig of temp_show_info to show_time of temp_show_info
 					my logger(true, handlername, caller, "INFO", "(Auto) show time: " & (show_time of temp_show_info as text))
 					set end of temp_show_progress to "Air time: " & show_time of temp_show_info
 					set progress additional description to stringlistflip(cm, temp_show_progress, return, "string") of LibScript
 					set progress completed steps to 3
+
+					--auto show_next and show_end from guide entry
+					try
+						set show_next of temp_show_info to my epoch2datetime(cm, getTfromN(StartTime of item i3 of hdhrGRID_response))
+						set show_end of temp_show_info to my epoch2datetime(cm, getTfromN(EndTime of item i3 of hdhrGRID_response))
+						my logger(true, handlername, caller, "INFO", "(Auto) show_next from guide: " & show_next of temp_show_info & ", show_end: " & show_end of temp_show_info)
+					on error errmsg
+						my logger(true, handlername, caller, "WARN", "(Auto) Failed to set show_next/show_end from guide: " & errmsg)
+					end try
 					try
 						set synopsis_temp to Synopsis of item i3 of hdhrGRID_response
 					on error errmsg
