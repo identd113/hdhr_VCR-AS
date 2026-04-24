@@ -122,7 +122,7 @@ on setup_script(caller)
 	try
 		set cache_me to (name of me)
 		set Local_env to (name of current application)
-		set Version_local to "20260419"
+		set Version_local to "20260424"
 		set Version_subversion to (text 1 thru 2 of ("0" & (hours of (current date)) as text) & "." & text 1 thru 2 of ("0" & (minutes of (current date)) as text))
 		set Config_version to 1
 		set temp_info to (system info)
@@ -439,9 +439,13 @@ on idle
 									set check_showid_recording to item 2 of my showid2PID(cm, show_id of item i of Show_info, false, false)
 									my logger(true, handlername, caller, "TRACE", "check_showid_recording: " & check_showid_recording)
 									if length of check_showid_recording is 0 then
-										my idle_change(cm, 1, 3)
-										my logger(true, handlername, caller, "WARN", show_title of item i of Show_info & " (" & show_id of item i of Show_info & ") is marked as recording, but we do not have a valid PID, setting show_recording to false")
-										set show_recording of item i of Show_info to false
+										if (show_end of item i of Show_info) is less than or equal to cd then
+											my logger(true, handlername, caller, "INFO", show_title of item i of Show_info & " (" & show_id of item i of Show_info & ") curl exited normally after show_end, deferring to overrun handler")
+										else
+											my idle_change(cm, 1, 3)
+											my logger(true, handlername, caller, "WARN", show_title of item i of Show_info & " (" & show_id of item i of Show_info & ") is marked as recording, but we do not have a valid PID, setting show_recording to false")
+											set show_recording of item i of Show_info to false
+										end if
 									end if
 								end if
 							else --show time has not passed.
@@ -2450,8 +2454,8 @@ on record_start(caller, the_show_id, opt_show_length, force_update)
 				end if
 				if Local_env is not in Debugger_apps then
 					set temp_save_path to (POSIX path of (show_temp_dir of item i of Show_info) & show_title of item i of Show_info & "_" & show_channel of item i of Show_info & "_" & short_date(my cm(handlername, caller), current date, true, true) of LibScript & fileext)
-					my logger(true, handlername, caller, "INFO", "caffeinate -i curl --connect-timeout 10 -H 'show_id:" & show_id of item i of Show_info & "' -H \"show_end:" & temp_show_end & "\" -H 'appname:" & name of me & "' '" & show_url of item i of Show_info & "?duration=" & (temp_show_length) & "&transcode=" & show_transcode of item i of Show_info & "' -o \"" & temp_save_path & "\"> /dev/null 2>&1 &")
-					do shell script "caffeinate -i curl --connect-timeout 10 -H 'show_id:" & show_id of item i of Show_info & "' -H \"show_end:" & temp_show_end & "\" -H 'appname:" & name of me & "' '" & show_url of item i of Show_info & "?duration=" & (temp_show_length) & "&transcode=" & show_transcode of item i of Show_info & "' -o \"" & temp_save_path & "\"> /dev/null 2>&1 &"
+					my logger(true, handlername, caller, "INFO", "caffeinate -i curl --connect-timeout 10 --max-time " & (temp_show_length) & " -H 'show_id:" & show_id of item i of Show_info & "' -H \"show_end:" & temp_show_end & "\" -H 'appname:" & name of me & "' '" & show_url of item i of Show_info & "?duration=" & (temp_show_length) & "&transcode=" & show_transcode of item i of Show_info & "' -o \"" & temp_save_path & "\"> /dev/null 2>&1 &")
+					do shell script "caffeinate -i curl --connect-timeout 10 --max-time " & (temp_show_length) & " -H 'show_id:" & show_id of item i of Show_info & "' -H \"show_end:" & temp_show_end & "\" -H 'appname:" & name of me & "' '" & show_url of item i of Show_info & "?duration=" & (temp_show_length) & "&transcode=" & show_transcode of item i of Show_info & "' -o \"" & temp_save_path & "\"> /dev/null 2>&1 &"
 					set show_recording of item i of Show_info to true
 					set show_recording_path of item i of Show_info to temp_save_path
 					my logger(true, handlername, caller, "INFO", "RECORD_START: " & show_title of item i of Show_info & " | show_id: " & show_id of item i of Show_info & " | duration: " & temp_show_length & "s | show_end: " & temp_show_end & " | show_length: " & show_length of item i of Show_info)
