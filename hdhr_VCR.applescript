@@ -299,6 +299,7 @@ on run {}
 		update_record_urls(cmi, "") of LibScript
 		my idle_change(cmi, 1, 4)
 		seriesScanAdd(cmi, "") of LibScript
+		seriesScanRun(cmi, true) of LibScript
 		if Local_env is in Debugger_apps then
 			my main(cmi, "run")
 		end if
