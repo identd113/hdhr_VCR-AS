@@ -2404,12 +2404,13 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				end if
 				
 				my logger(true, handlername, caller, "DEBUG", "Adding temp_show_info to end of show_info, count: " & length of Show_info)
-				--I believe show_next is not needed here?
-				set show_next of last item of Show_info to my nextday(cm, show_id of temp_show_info)
+				if show_use_seriesid of last item of Show_info is true then
+					seriesScanUpdate(cm, show_id of last item of Show_info) of LibScript
+				else
+					set show_next of last item of Show_info to my nextday(cm, show_id of temp_show_info)
+				end if
 				my validate_show_info(caller, show_id of last item of Show_info, false)
 				my update_show(cm, show_id of last item of Show_info, false)
-				--	if show_use_seriesid of last item of Show_info is true then 
-				--	end if
 				seriesScanAdd(cm, show_id of last item of Show_info) of LibScript
 				my save_data(cm)
 				-- Validate SeriesID show setup
