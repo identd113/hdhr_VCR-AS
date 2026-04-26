@@ -1391,10 +1391,9 @@ on seriesScanUpdate(caller, show_id)
 							set show_time of item show_offset of Show_info to my epoch2show_time(my cm(handlername, caller), my getTfromN(StartTime of channel_record))
 						end if
 						if (show_channel of item show_offset of Show_info) is not channel_number then
-							--logger(true, handlername, caller, "INFO", "Old channel = " & (show_channel of item show_offset of Show_info)) of ParentScript
-							logger(true, handlername, caller, "INFO", "New channel: " & channel_number) of ParentScript
-							set show_channel of item show_offset of Show_info to channel_number
+							logger(true, handlername, caller, "INFO", "Channel updated: " & (show_channel of item show_offset of Show_info) & " → " & channel_number) of ParentScript
 						end if
+						set show_channel of item show_offset of Show_info to channel_number
 						
 						if false is in isdupe then
 							set new_showid to do shell script ("uuidgen | tr -d '-'")
