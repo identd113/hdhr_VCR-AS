@@ -1458,8 +1458,7 @@ on seriesScanUpdate(caller, show_id)
 					end if
 				end if
 			else
-				logger(true, handlername, caller, "INFO", "There are no upcoming shows for " & quote & show_title of item show_offset of Show_info & quote) of ParentScript
-				--set show_time of item show_offset of Show_info to ((show_time of item show_offset of Show_info) + 2 * hours)
+				logger(true, handlername, caller, "WARN", "No upcoming episodes found in guide for " & quote & show_title of item show_offset of Show_info & quote & " (seriesID: " & show_seriesid of item show_offset of Show_info & "); advancing show_next by 4 hours to retry later") of ParentScript
 				set show_next of item show_offset of Show_info to ((show_next of item show_offset of Show_info) + 4 * hours)
 			end if
 		else

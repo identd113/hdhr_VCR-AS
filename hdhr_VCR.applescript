@@ -266,8 +266,8 @@ on run {}
 		quit {}
 	end if
 	
-	if Locale is not "en_US" then
-		display dialog "Due to poor planning on my part, only en_US regions can use this script, sorry!"
+	if Locale is not in {"en_US", "en_GB"} then
+		display dialog "Due to poor planning on my part, only en_US and en_GB regions are supported. Locale: " & Locale
 		quit {}
 		return
 	end if
@@ -1672,21 +1672,24 @@ on setup(caller)
 						if button returned of guide_length is "Set" then
 							try
 								set Guide_hours to (text returned of guide_length as integer)
+								set GuideHours of Hdhr_config to Guide_hours
 							on error errmsg
+								my logger(true, handlername, caller, "WARN", "Guide hours set failed: " & errmsg)
 								set temp to false
 							end try
 						end if
 						
 						if button returned of guide_length is "6H (Default)" then
-							set Guide_hours of Hdhr_config to 6
+							set Guide_hours to 6
+							set GuideHours of Hdhr_config to 6
 						end if
-						if Guide_hours of Hdhr_config is less than 25 and Guide_hours of Hdhr_config is greater than 5 then
+						if Guide_hours is less than 25 and Guide_hours is greater than 5 then
 							set temp to true
 						else
 							set temp to false
 						end if
 					end repeat
-					my logger(true, handlername, caller, "INFO", "Guide_hours(vars): " & Guide_hours of Hdhr_config)
+					my logger(true, handlername, caller, "INFO", "Guide_hours set to: " & Guide_hours)
 				on error errmsg
 					my logger(true, handlername, caller, "WARN", "Guide hours dialog error: " & errmsg)
 				end try
@@ -2458,19 +2461,24 @@ on record_start(caller, the_show_id, opt_show_length, force_update)
 		my logger(true, handlername, caller, "WARN", show_title of item i of Show_info & " has no recording folder set, skipping")
 		return false
 	end if
+	if show_url of item i of Show_info is in {"", missing value} then
+		my logger(true, handlername, caller, "ERROR", show_title of item i of Show_info & " has no recording URL (show_url is empty), skipping")
+		return false
+	end if
 	set checkDiskSpace_percent to 0
 	set checkDiskSpace_temp to checkDiskSpace(my cm(handlername, caller), (POSIX path of (show_temp_dir of item i of Show_info))) of LibScript
 	set checkDiskSpace_leftKB to item 3 of checkDiskSpace_temp
 	set checkDiskSpace_percent to item 2 of checkDiskSpace_temp
 	set checkDiskSpace_path to item 1 of checkDiskSpace_temp
-	
+	my logger(true, handlername, caller, "TRACE", "Disk: " & checkDiskSpace_path & " " & checkDiskSpace_percent & "% used, " & checkDiskSpace_leftKB & " KB free")
+
 	if show_fail_count of item i of Show_info is less than Fail_count then
 		update_folder(my cm(handlername, caller), show_dir of item i of Show_info) of LibScript
 		my update_show(my cm(handlername, caller), the_show_id, force_update)
 		try
 			set show_fail_count of item i of Show_info to ((show_fail_count of item i of Show_info) + 1)
-			if checkDiskSpace_percent is less than or equal to Max_disk_percentage or checkDiskSpace_leftKB is less than or equal to 10485760 then
-				my logger(true, handlername, caller, "INFO", "Path: " & quote & checkDiskSpace_path & quote & " is " & checkDiskSpace_percent & "% full, max is " & Max_disk_percentage & "%")
+			if checkDiskSpace_percent is less than or equal to Max_disk_percentage and checkDiskSpace_leftKB is greater than or equal to 10485760 then
+				my logger(true, handlername, caller, "INFO", "Path: " & quote & checkDiskSpace_path & quote & " is " & checkDiskSpace_percent & "% full (" & checkDiskSpace_leftKB & " KB free), max is " & Max_disk_percentage & "%")
 				if show_transcode of item i of Show_info is in {missing value, "None", "none", ""} then
 					set show_transcode of item i of Show_info to "none"
 					set fileext to ".m2ts"
@@ -2487,16 +2495,16 @@ on record_start(caller, the_show_id, opt_show_length, force_update)
 					my logger(true, handlername, caller, "INFO", "Record function surpressed in DEV")
 				end if
 			else
-				my logger(true, handlername, caller, "ERROR", "The show " & quote & show_title of item i of Show_info & quote & " can not be recorded. " & quote & checkDiskSpace_path & quote & " is " & checkDiskSpace_percent & "% full, max is " & Max_disk_percentage & "%")
+				my logger(true, handlername, caller, "FATAL", "The show " & quote & show_title of item i of Show_info & quote & " can not be recorded. " & quote & checkDiskSpace_path & quote & " is " & checkDiskSpace_percent & "% full (" & checkDiskSpace_leftKB & " KB free), max is " & Max_disk_percentage & "% / 10485760 KB min free")
 				set show_fail_count of item i of Show_info to (show_fail_count of item i of Show_info) + 1
-				set show_fail_reason of item i of Show_info to "" & quote & checkDiskSpace_path & quote & " is " & checkDiskSpace_percent & "% full, max is " & Max_disk_percentage & "%"
+				set show_fail_reason of item i of Show_info to "" & quote & checkDiskSpace_path & quote & " is " & checkDiskSpace_percent & "% full, " & checkDiskSpace_leftKB & " KB free"
 			end if
 		on error errmsg
-			my logger(true, handlername, caller, "ERROR", "errmsg: " & errmsg)
+			my logger(true, handlername, caller, "ERROR", "record_start inner error: " & errmsg)
 		end try
 	else
 		if show_fail_count of item i of Show_info is Fail_count then
-			my logger(true, handlername, caller, "ERROR", "The show " & quote & show_title of item i of Show_info & quote & " has failed to record multiple times, so we fail here")
+			my logger(true, handlername, caller, "ERROR", "The show " & quote & show_title of item i of Show_info & quote & " has failed to record " & Fail_count & " times, pausing")
 			set show_fail_count of item i of Show_info to (show_fail_count of item i of Show_info) + 1
 			set show_fail_reason of item i of Show_info to quote & "Failed for unknown reason" & quote
 		end if
@@ -2983,24 +2991,21 @@ on save_data(caller)
 						my logger(true, handlername, caller, "INFO", "Added show_recording_path to " & quote & show_title of item i5 of temp_show_info & quote)
 					end try
 					
-					-- Note: show_last, show_next, show_end are now handled by serialize_show
-					-- which converts date objects to epoch integers before JSON serialization.
-					-- Do NOT call fixDate here as it converts to strings, breaking serialize_show.
-					
+					-- Note: show_last, show_next, show_end, notify_recording_time, notify_upnext_time
+					-- are all handled by serialize_show which converts date objects to epoch integers.
+					-- Do NOT call fixDate here — it converts dates to strings before serialize_show
+					-- can see them, causing serialize_show to write 0 instead of the epoch value.
 					try
-						set notify_recording_time of item i5 of temp_show_info to fixDate(my cm(handlername, caller), (notify_recording_time of item i5 of temp_show_info)) of LibScript
-					on error errmsg
-						my logger(true, handlername, caller, "WARN", errmsg)
-						set item i5 of temp_show_info to item i5 of temp_show_info & {notify_recording_time:""}
-						my logger(true, handlername, caller, "INFO", "Added notify_recording_time to " & quote & show_title of item i5 of temp_show_info & quote)
+						set notify_recording_time of item i5 of temp_show_info to notify_recording_time of item i5 of temp_show_info
+					on error
+						set item i5 of temp_show_info to item i5 of temp_show_info & {notify_recording_time:missing value}
+						my logger(true, handlername, caller, "DEBUG", "Added missing notify_recording_time to " & quote & show_title of item i5 of temp_show_info & quote)
 					end try
-					
 					try
-						set notify_upnext_time of item i5 of temp_show_info to fixDate(my cm(handlername, caller), (notify_upnext_time of item i5 of temp_show_info)) of LibScript
-					on error errmsg
-						my logger(true, handlername, caller, "WARN", errmsg)
-						set item i5 of temp_show_info to item i5 of temp_show_info & {notify_upnext_time:""}
-						my logger(true, handlername, caller, "INFO", "Added notify_upnext_time to " & quote & show_title of item i5 of temp_show_info & quote)
+						set notify_upnext_time of item i5 of temp_show_info to notify_upnext_time of item i5 of temp_show_info
+					on error
+						set item i5 of temp_show_info to item i5 of temp_show_info & {notify_upnext_time:missing value}
+						my logger(true, handlername, caller, "DEBUG", "Added missing notify_upnext_time to " & quote & show_title of item i5 of temp_show_info & quote)
 					end try
 					
 				else
@@ -3168,11 +3173,13 @@ on read_data(caller)
 		my logger(true, handlername, caller, "INFO", "Config version: " & Config_version of Hdhr_config)
 		
 		my logger(true, handlername, caller, "INFO", "Loading config from \"" & POSIX path of hdhr_vcr_config_file & "\"...")
-		repeat with i5 from 1 to length of Show_info
+		set read_show_count to length of Show_info
+		repeat with i5 from 1 to read_show_count
 			set item i5 of Show_info to deserialize_show(my cm(handlername, caller), item i5 of Show_info) of LibScript
 		end repeat
+		my logger(true, handlername, caller, "INFO", "Loaded " & read_show_count & " shows from config")
 	on error errmsg
-		my logger(true, handlername, caller, "FATAL", "Unable to read file, err: " & errmsg)
+		my logger(true, handlername, caller, "FATAL", "Unable to read config file: " & errmsg)
 	end try
 	close access ref_num
 	-- Note: validate_show_info is called later during idle loop, not during initial load
