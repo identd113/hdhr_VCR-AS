@@ -2450,6 +2450,10 @@ on record_start(caller, the_show_id, opt_show_length, force_update)
 		set show_active of item i of Show_info to false
 	end if
 	
+	if show_temp_dir of item i of Show_info is "" or show_temp_dir of item i of Show_info is missing value then
+		my logger(true, handlername, caller, "WARN", show_title of item i of Show_info & " has no recording folder set, skipping")
+		return false
+	end if
 	set checkDiskSpace_percent to 0
 	set checkDiskSpace_temp to checkDiskSpace(my cm(handlername, caller), (POSIX path of (show_temp_dir of item i of Show_info))) of LibScript
 	set checkDiskSpace_leftKB to item 3 of checkDiskSpace_temp
