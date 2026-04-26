@@ -382,12 +382,13 @@ on idle
 													set show_next of item i of Show_info to my nextday(cm, show_id of item i of Show_info)
 													my save_data(cm)
 												else
-													my logger(true, handlername, caller, "DEBUG", "SeriesID " & show_title of item i of Show_info & " will be rescanned at next discovery refresh")
+													seriesScanAdd(cm, show_id of item i of Show_info) of LibScript
+													my logger(true, handlername, caller, "INFO", "SeriesID " & show_title of item i of Show_info & " queued for next episode scan")
 													my save_data(cm)
 												end if
 												set show_fail_count of item i of Show_info to 0
 												set show_fail_reason of item i of Show_info to ""
-											
+
 											--my seriesScanUpdate(cm, show_id of item i of Show_info, true)
 											my logger(true, handlername, caller, "WARN", show_title of item i of Show_info & " is a series, but passed, next " & short_date(cm, show_next of item i of Show_info, false, false) of LibScript)
 											exit repeat
@@ -520,7 +521,8 @@ on idle
 									else
 										set show_fail_count of item i of Show_info to 0
 										set show_fail_reason of item i of Show_info to ""
-										my logger(true, handlername, caller, "DEBUG", "SeriesID " & show_title of item i of Show_info & " will be rescanned at next discovery refresh")
+										seriesScanAdd(cm, show_id of item i of Show_info) of LibScript
+										my logger(true, handlername, caller, "INFO", "SeriesID recording complete: " & show_title of item i of Show_info & " queued for next episode scan")
 									end if
 								else
 										set show_active of item i of Show_info to false
