@@ -330,7 +330,7 @@ JSONHelper is used via `use application "JSON Helper"` (declared at script top a
 | **`alias`** (file path) | Same — silently blanks the file | Convert to `POSIX path of alias` (a text string) before saving |
 | **`record` containing a `date`** | Same — the date field inside a record also blanks the file | Pre-convert all date fields to epoch integers before building the record passed to `make JSON from` |
 
-**Critical rule:** Any record that contains a `date` anywhere in its structure — even deeply nested — will cause JSONHelper to blank the file. Scan all fields before saving. This is the root cause of the current `show_next`/`show_end`/`show_last` locale bug.
+**Critical rule:** Any record that contains a `date` anywhere in its structure — even deeply nested — will cause JSONHelper to blank the file. Scan all fields before saving. This was the root cause of the `show_next`/`show_end`/`show_last` locale bug (now fixed — all date fields use epoch integers).
 
 ### Date serialization pattern (correct approach)
 
@@ -342,7 +342,7 @@ set show_next of item i of temp to my datetime2epoch(cm, show_next of item i of 
 set show_next of item i of Show_info to epoch2datetime(cm, show_next of item i of Show_info) of LibScript
 ```
 
-The current code stores dates as locale-formatted strings (e.g. `"Thursday, April 23, 2026 at 9:30:00 PM"`) which is a partial workaround — it avoids the blank-file crash but breaks on non-US locales. Fixing this is tracked in the en_GB locale compatibility plan.
+Dates are stored as epoch integers (`datetime2epoch()` before save, `epoch2datetime()` on load). This is locale-independent and works correctly on both en_US and en_GB. The old workaround stored locale-formatted strings (e.g. `"Thursday, April 23, 2026 at 9:30:00 PM"`) which broke on non-US locales — that approach is no longer used.
 
 ### File path note
 
@@ -352,7 +352,7 @@ Use `open for access POSIX file path` (not `open for access file path`) for POSI
 
 ## Known Limitations
 
-- English (en_US) locale only currently (en_GB compatibility planned)
+- English locales supported: en_US and en_GB
 - Requires JSONHelper app
 - HDHomeRun device must have static IP
 - macOS only

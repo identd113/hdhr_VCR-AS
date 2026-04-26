@@ -610,20 +610,27 @@ on deserialize_show(caller, show_rec)
 	try
 		set ep to show_last of s
 		if ep is 0 or ep is "" or ep is missing value then
-			set show_last of s to date "January 1, 1970 00:00:00"
+			set show_last of s to my epoch("")
 		else
 			if class of ep is text then
 				try
-					set show_last of s to date ep
+					set ep_num to ep as number
+					set result to my epoch2datetime(caller, ep_num)
+					if class of result is not list then
+						set show_last of s to result
+					else
+						set show_last of s to my epoch("")
+					end if
 				on error
-					set show_last of s to (current date)
+					-- Old locale-formatted date string — cannot safely parse cross-locale
+					set show_last of s to my epoch("")
 				end try
 			else
 				set result to my epoch2datetime(caller, ep)
 				if class of result is not list then
 					set show_last of s to result
 				else
-					set show_last of s to (current date)
+					set show_last of s to my epoch("")
 				end if
 			end if
 		end if
@@ -633,20 +640,27 @@ on deserialize_show(caller, show_rec)
 	try
 		set ep to show_next of s
 		if ep is 0 or ep is "" or ep is missing value then
-			set show_next of s to date "January 1, 1970 00:00:00"
+			set show_next of s to my epoch("")
 		else
 			if class of ep is text then
 				try
-					set show_next of s to date ep
+					set ep_num to ep as number
+					set result to my epoch2datetime(caller, ep_num)
+					if class of result is not list then
+						set show_next of s to result
+					else
+						set show_next of s to my epoch("")
+					end if
 				on error
-					set show_next of s to (current date)
+					-- Old locale-formatted date string — cannot safely parse cross-locale
+					set show_next of s to my epoch("")
 				end try
 			else
 				set result to my epoch2datetime(caller, ep)
 				if class of result is not list then
 					set show_next of s to result
 				else
-					set show_next of s to (current date)
+					set show_next of s to my epoch("")
 				end if
 			end if
 		end if
@@ -656,20 +670,27 @@ on deserialize_show(caller, show_rec)
 	try
 		set ep to show_end of s
 		if ep is 0 or ep is "" or ep is missing value then
-			set show_end of s to date "January 1, 1970 00:00:00"
+			set show_end of s to my epoch("")
 		else
 			if class of ep is text then
 				try
-					set show_end of s to date ep
+					set ep_num to ep as number
+					set result to my epoch2datetime(caller, ep_num)
+					if class of result is not list then
+						set show_end of s to result
+					else
+						set show_end of s to my epoch("")
+					end if
 				on error
-					set show_end of s to (current date)
+					-- Old locale-formatted date string — cannot safely parse cross-locale
+					set show_end of s to my epoch("")
 				end try
 			else
 				set result to my epoch2datetime(caller, ep)
 				if class of result is not list then
 					set show_end of s to result
 				else
-					set show_end of s to (current date)
+					set show_end of s to my epoch("")
 				end if
 			end if
 		end if
@@ -684,8 +705,15 @@ on deserialize_show(caller, show_rec)
 		else
 			if class of ep is text then
 				try
-					set notify_recording_time of s to date ep
+					set ep_num to ep as number
+					set result to my epoch2datetime(caller, ep_num)
+					if class of result is not list then
+						set notify_recording_time of s to result
+					else
+						set notify_recording_time of s to missing value
+					end if
 				on error
+					-- Old locale-formatted date string — cannot safely parse cross-locale
 					set notify_recording_time of s to missing value
 				end try
 			else
@@ -707,8 +735,15 @@ on deserialize_show(caller, show_rec)
 		else
 			if class of ep is text then
 				try
-					set notify_upnext_time of s to date ep
+					set ep_num to ep as number
+					set result to my epoch2datetime(caller, ep_num)
+					if class of result is not list then
+						set notify_upnext_time of s to result
+					else
+						set notify_upnext_time of s to missing value
+					end if
 				on error
+					-- Old locale-formatted date string — cannot safely parse cross-locale
 					set notify_upnext_time of s to missing value
 				end try
 			else
