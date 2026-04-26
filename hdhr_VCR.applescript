@@ -98,21 +98,36 @@ end setup_icons
 on sync_config(caller, config2var)
 	set handlername to "sync_config"
 	if config2var is true then
-		--set Hdhr_config to {Notify_upnext:Notify_upnext, Notify_recording:Notify_recording, Hdhr_setup_folder:Hdhr_setup_folder, Config_version:Config_version, Guide_hours:Guide_hours}
-		set Notify_recording to Notify_recording of Hdhr_config
-		set Notify_upnext to Notify_upnext of Hdhr_config
-		set Guide_hours to GuideHours of Hdhr_config
-		set Hdhr_setup_folder to Hdhr_setup_folder of Hdhr_config
-		-- Load LoggerLevels from config if specified
+		try
+			set Notify_recording to Notify_recording of Hdhr_config
+		end try
+		try
+			set Notify_upnext to Notify_upnext of Hdhr_config
+		end try
+		try
+			set Guide_hours to GuideHours of Hdhr_config
+		end try
+		try
+			set Hdhr_setup_folder to Hdhr_setup_folder of Hdhr_config
+		end try
 		try
 			set Logger_levels to LoggerLevels of Hdhr_config
-		on error
 		end try
 	else
-		set Notify_recording of Hdhr_config to Notify_recording
-		set Notify_upnext of Hdhr_config to Notify_upnext
-		set GuideHours of Hdhr_config to Guide_hours
-		set Hdhr_setup_folder of Hdhr_config to Hdhr_setup_folder
+		try
+			set Notify_recording of Hdhr_config to Notify_recording
+		end try
+		try
+			set Notify_upnext of Hdhr_config to Notify_upnext
+		end try
+		try
+			set GuideHours of Hdhr_config to Guide_hours
+		on error
+			set Hdhr_config to Hdhr_config & {GuideHours:Guide_hours}
+		end try
+		try
+			set Hdhr_setup_folder of Hdhr_config to Hdhr_setup_folder
+		end try
 	end if
 end sync_config
 
@@ -122,7 +137,7 @@ on setup_script(caller)
 	try
 		set cache_me to (name of me)
 		set Local_env to (name of current application)
-		set Version_local to "20260424"
+		set Version_local to "20260426"
 		set Version_subversion to (text 1 thru 2 of ("0" & (hours of (current date)) as text) & "." & text 1 thru 2 of ("0" & (minutes of (current date)) as text))
 		set Config_version to 1
 		set temp_info to (system info)
@@ -2997,10 +3012,8 @@ on save_data(caller)
 					end try
 					
 					try
-						set show_fail_count of item i5 of temp_show_info to 0
-						set show_fail_reason of item i5 of temp_show_info to ""
-					on error errmsg
-						my logger(true, handlername, caller, "WARN", errmsg)
+						set show_fail_count of item i5 of temp_show_info to show_fail_count of item i5 of temp_show_info
+					on error
 						set item i5 of temp_show_info to item i5 of temp_show_info & {show_fail_count:0}
 						my logger(true, handlername, caller, "INFO", "Added show_fail_count to " & quote & show_title of item i5 of temp_show_info & quote)
 					end try

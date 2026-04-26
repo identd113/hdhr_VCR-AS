@@ -746,8 +746,39 @@ on deserialize_show(caller, show_rec)
 	end try
 
 	try
-		set show_fail_count of s to 0
-		set show_fail_reason of s to ""
+		set show_fail_count of s to show_fail_count of s
+	on error
+		set s to s & {show_fail_count:0}
+	end try
+	try
+		set show_fail_reason of s to show_fail_reason of s
+	on error
+		set s to s & {show_fail_reason:""}
+	end try
+	try
+		set show_logo_url of s to show_logo_url of s
+	on error
+		set s to s & {show_logo_url:""}
+	end try
+	try
+		set show_url of s to show_url of s
+	on error
+		set s to s & {show_url:""}
+	end try
+	try
+		set show_time_OriginalAirdate of s to show_time_OriginalAirdate of s
+	on error
+		set s to s & {show_time_OriginalAirdate:""}
+	end try
+	try
+		set show_use_seriesid of s to show_use_seriesid of s
+	on error
+		set s to s & {show_use_seriesid:false}
+	end try
+	try
+		set show_use_seriesid_all of s to show_use_seriesid_all of s
+	on error
+		set s to s & {show_use_seriesid_all:false}
 	end try
 
 	return s
