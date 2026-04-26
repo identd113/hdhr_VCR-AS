@@ -3,9 +3,9 @@
 # Deploy script for hdhr_VCR
 # Compiles applescript files and deploys to source location
 
-REPO_DIR="/Users/plexserver/Documents/GitHub/hdhr_VCR"
-DEPLOY_DIR="/Users/plexserver/source/HDHR_VCR"
-DOCS_DIR="/Users/plexserver/Documents"
+REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
+DEPLOY_DIR="$HOME/source/HDHR_VCR"
+DOCS_DIR="$HOME/Documents"
 
 echo "Killing running app..."
 pkill -f "hdhr_VCR.app" || true

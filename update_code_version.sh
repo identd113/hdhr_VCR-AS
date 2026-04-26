@@ -4,7 +4,7 @@
 
 SCRIPT_FILE="$1"
 if [ -z "$SCRIPT_FILE" ]; then
-	SCRIPT_FILE="/Users/plexserver/Documents/GitHub/hdhr_VCR/hdhr_VCR.applescript"
+	SCRIPT_FILE="$(cd "$(dirname "$0")" && pwd)/hdhr_VCR.applescript"
 fi
 
 # Get current epoch time
