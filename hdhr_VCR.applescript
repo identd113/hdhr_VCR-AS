@@ -2975,22 +2975,6 @@ on save_data(caller)
 						my logger(true, handlername, caller, "INFO", "Added show_recording_path to " & quote & show_title of item i5 of temp_show_info & quote)
 					end try
 					
-					try
-						set show_logo_url of item i5 of temp_show_info to (show_logo_url of item i5 of temp_show_info)
-					on error errmsg
-						my logger(true, handlername, caller, "INFO", errmsg)
-						set item i5 of temp_show_info to item i5 of temp_show_info & {show_logo_url:""}
-						my logger(true, handlername, caller, "INFO", "Added show_logo_url to " & quote & show_title of item i5 of temp_show_info & quote)
-					end try
-					
-					try
-						set show_url of item i5 of temp_show_info to (show_url of item i5 of temp_show_info)
-					on error errmsg
-						my logger(true, handlername, caller, "WARN", errmsg)
-						set item i5 of temp_show_info to item i5 of temp_show_info & {show_url:""}
-						my logger(true, handlername, caller, "INFO", "Added show_url to " & quote & show_title of item i5 of temp_show_info & quote)
-					end try
-					
 					-- Note: show_last, show_next, show_end are now handled by serialize_show
 					-- which converts date objects to epoch integers before JSON serialization.
 					-- Do NOT call fixDate here as it converts to strings, breaking serialize_show.
@@ -3011,36 +2995,6 @@ on save_data(caller)
 						my logger(true, handlername, caller, "INFO", "Added notify_upnext_time to " & quote & show_title of item i5 of temp_show_info & quote)
 					end try
 					
-					try
-						set show_fail_count of item i5 of temp_show_info to show_fail_count of item i5 of temp_show_info
-					on error
-						set item i5 of temp_show_info to item i5 of temp_show_info & {show_fail_count:0}
-						my logger(true, handlername, caller, "INFO", "Added show_fail_count to " & quote & show_title of item i5 of temp_show_info & quote)
-					end try
-					
-					try
-						set show_use_seriesid of item i5 of temp_show_info to show_use_seriesid of item i5 of temp_show_info
-					on error errmsg
-						my logger(true, handlername, caller, "WARN", errmsg)
-						set item i5 of temp_show_info to item i5 of temp_show_info & {show_use_seriesid:false}
-						my logger(true, handlername, caller, "INFO", "Added show_use_seriesid to " & quote & show_title of item i5 of temp_show_info & quote)
-					end try
-					
-					try
-						set show_use_seriesid_all of item i5 of temp_show_info to show_use_seriesid_all of item i5 of temp_show_info
-					on error errmsg
-						my logger(true, handlername, caller, "WARN", errmsg)
-						set item i5 of temp_show_info to item i5 of temp_show_info & {show_use_seriesid_all:false}
-						my logger(true, handlername, caller, "INFO", "Added show_use_seriesid_all to " & quote & show_title of item i5 of temp_show_info & quote)
-					end try
-					
-					try
-						set show_fail_reason of item i5 of temp_show_info to show_fail_reason of item i5 of temp_show_info
-					on error errmsg
-						my logger(true, handlername, caller, "WARN", errmsg)
-						set item i5 of temp_show_info to item i5 of temp_show_info & {show_fail_reason:""}
-						my logger(true, handlername, caller, "INFO", "Added show_fail_reason to " & quote & show_fail_reason of item i5 of temp_show_info & quote)
-					end try
 				else
 					set deleted_show_count to deleted_show_count + 1
 					set temp_title to show_title of item i5 of temp_show_info
