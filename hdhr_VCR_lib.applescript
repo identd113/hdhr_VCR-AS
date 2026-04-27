@@ -1411,14 +1411,14 @@ on seriesScanUpdate(caller, show_id)
 				set channel_showid to item 3 of show_temp
 				if show_offset is not 0 then
 					if show_recording of item show_offset of Show_info is false then
-						set isdupe to {false, false}
+						set isdupe to {false, false, false}
 						if show_next of item show_offset of Show_info is my epoch2datetime(my cm(handlername, caller), my getTfromN(StartTime of channel_record)) then
 							logger(true, handlername, caller, "DEBUG", "show_next is the same") of ParentScript
 							set item 1 of isdupe to true
 						else
 							set show_next of item show_offset of Show_info to my epoch2datetime(my cm(handlername, caller), my getTfromN(StartTime of channel_record))
 						end if
-						
+
 						if show_time of item show_offset of Show_info is my epoch2show_time(my cm(handlername, caller), my getTfromN(StartTime of channel_record)) then
 							logger(true, handlername, caller, "DEBUG", "show_time is the same") of ParentScript
 							set item 2 of isdupe to true
@@ -1429,8 +1429,16 @@ on seriesScanUpdate(caller, show_id)
 							logger(true, handlername, caller, "INFO", "Channel updated: " & (show_channel of item show_offset of Show_info) & " → " & channel_number) of ParentScript
 						end if
 						set show_channel of item show_offset of Show_info to channel_number
-						
-						if false is in isdupe then
+
+						set guide_title to fixall of my show_name_fix(my cm(handlername, caller), "", channel_record)
+						if show_title of item show_offset of Show_info is guide_title then
+							logger(true, handlername, caller, "DEBUG", "show_title is the same (same episode)") of ParentScript
+							set item 3 of isdupe to true
+						else
+							logger(true, handlername, caller, "DEBUG", "show_title changed: " & show_title of item show_offset of Show_info & " → " & guide_title) of ParentScript
+						end if
+
+						if item 3 of isdupe is false then
 							set new_showid to do shell script ("uuidgen | tr -d '-'")
 							logger(true, handlername, caller, "WARN", "The show, " & show_title of item show_offset of Show_info & " showid changed from " & show_id of item show_offset of Show_info & " to " & new_showid) of ParentScript
 							set show_id of item show_offset of Show_info to new_showid
@@ -1451,7 +1459,7 @@ on seriesScanUpdate(caller, show_id)
 							logger(true, handlername, caller, "INFO", "The show, " & show_title of item show_offset of Show_info & ", was updated") of ParentScript
 							--	my idle_change(my cm(handlername, caller), 1, 2)
 						else
-							--	logger(true, handlername, caller, "INFO", "This show is a dupe") of ParentScript
+							logger(true, handlername, caller, "DEBUG", "Same episode, no show_id rotation needed") of ParentScript
 						end if
 					else
 						logger(true, handlername, caller, "WARN", "The show, " & show_title of item show_offset of Show_info & " was not updated, as it was recording") of ParentScript

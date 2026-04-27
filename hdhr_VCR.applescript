@@ -188,7 +188,7 @@ on setup_globals(caller)
 		set Icon_record to {}
 		set Icon_list to {}
 		set Guide_hours to 6
-		set Code_version_epoch to 1777249496 -- Updated: 2026-04-27 00:24:56 UTC
+		set Code_version_epoch to 1777249852 -- Updated: 2026-04-27 00:30:52 UTC
 	on error errmsg
 		return false
 	end try
@@ -459,14 +459,9 @@ on idle
 										if (show_end of item i of Show_info) is less than or equal to cd then
 											my logger(true, handlername, caller, "INFO", show_title of item i of Show_info & " (" & show_id of item i of Show_info & ") curl exited normally after show_end, deferring to overrun handler")
 										else
-											set check_url_recording to do shell script "ps -Aa | grep curl | grep -F " & quoted form of (show_url of item i of Show_info) & " | grep -v grep || true"
-											if check_url_recording is not "" then
-												my logger(true, handlername, caller, "WARN", show_title of item i of Show_info & " (" & show_id of item i of Show_info & ") show_id mismatch but curl is running on same URL, leaving show_recording true")
-											else
-												my idle_change(cm, 1, 3)
-												my logger(true, handlername, caller, "WARN", show_title of item i of Show_info & " (" & show_id of item i of Show_info & ") is marked as recording, but we do not have a valid PID, setting show_recording to false")
-												set show_recording of item i of Show_info to false
-											end if
+											my idle_change(cm, 1, 3)
+											my logger(true, handlername, caller, "WARN", show_title of item i of Show_info & " (" & show_id of item i of Show_info & ") is marked as recording, but we do not have a valid PID, setting show_recording to false")
+											set show_recording of item i of Show_info to false
 										end if
 									end if
 								end if
