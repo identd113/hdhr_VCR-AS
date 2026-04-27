@@ -137,7 +137,7 @@ on setup_script(caller)
 	try
 		set cache_me to (name of me)
 		set Local_env to (name of current application)
-		set Version_local to "20260426"
+		set Version_local to "20260427"
 		set Version_subversion to (text 1 thru 2 of ("0" & (hours of (current date)) as text) & "." & text 1 thru 2 of ("0" & (minutes of (current date)) as text))
 		set Config_version to 1
 		set temp_info to (system info)
@@ -188,7 +188,7 @@ on setup_globals(caller)
 		set Icon_record to {}
 		set Icon_list to {}
 		set Guide_hours to 6
-		set Code_version_epoch to 1777238086 -- Updated: 2026-04-26 21:14:46 UTC
+		set Code_version_epoch to 1777249496 -- Updated: 2026-04-27 00:24:56 UTC
 	on error errmsg
 		return false
 	end try
@@ -459,9 +459,14 @@ on idle
 										if (show_end of item i of Show_info) is less than or equal to cd then
 											my logger(true, handlername, caller, "INFO", show_title of item i of Show_info & " (" & show_id of item i of Show_info & ") curl exited normally after show_end, deferring to overrun handler")
 										else
-											my idle_change(cm, 1, 3)
-											my logger(true, handlername, caller, "WARN", show_title of item i of Show_info & " (" & show_id of item i of Show_info & ") is marked as recording, but we do not have a valid PID, setting show_recording to false")
-											set show_recording of item i of Show_info to false
+											set check_url_recording to do shell script "ps -Aa | grep curl | grep -F " & quoted form of (show_url of item i of Show_info) & " | grep -v grep || true"
+											if check_url_recording is not "" then
+												my logger(true, handlername, caller, "WARN", show_title of item i of Show_info & " (" & show_id of item i of Show_info & ") show_id mismatch but curl is running on same URL, leaving show_recording true")
+											else
+												my idle_change(cm, 1, 3)
+												my logger(true, handlername, caller, "WARN", show_title of item i of Show_info & " (" & show_id of item i of Show_info & ") is marked as recording, but we do not have a valid PID, setting show_recording to false")
+												set show_recording of item i of Show_info to false
+											end if
 										end if
 									end if
 								end if
@@ -2156,8 +2161,8 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 
 					--auto show_next and show_end from guide entry
 					try
-						set show_next of temp_show_info to my epoch2datetime(cm, getTfromN(StartTime of item i3 of hdhrGRID_response))
-						set show_end of temp_show_info to my epoch2datetime(cm, getTfromN(EndTime of item i3 of hdhrGRID_response))
+						set show_next of temp_show_info to my epoch2datetime(cm, getTfromN(StartTime of item i3 of hdhrGRID_response) of LibScript)
+						set show_end of temp_show_info to my epoch2datetime(cm, getTfromN(EndTime of item i3 of hdhrGRID_response) of LibScript)
 						my logger(true, handlername, caller, "INFO", "(Auto) show_next from guide: " & show_next of temp_show_info & ", show_end: " & show_end of temp_show_info)
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", "(Auto) Failed to set show_next/show_end from guide: " & errmsg)
