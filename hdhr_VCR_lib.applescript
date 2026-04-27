@@ -1357,12 +1357,12 @@ on seriesScanNext(caller, seriesID, hdhr_device, thechan, show_id, theoffset)
 				my show_name_fix(my cm(handlername, caller), show_id, item i of show_match_list of seriesScanTemp) --correct, returns the whole channel object, build_channel might do this.
 				logger(true, handlername, caller, "DEBUG", "start: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), StartTime_epoch), false, false) & ", end: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), EndTime_epoch), false, false)) of ParentScript
 				if StartTime_epoch is less than item 1 of newest_show_epoch then
-					if cd is less than my epoch2datetime(my cm(handlername, caller), EndTime_epoch) then
+					if cd is less than my epoch2datetime(my cm(handlername, caller), StartTime_epoch) then
 						set beginning of newest_show_epoch to StartTime_epoch
 						set beginning of newest_show_epoch_offset to i
 						logger(true, handlername, caller, "INFO", "Offset: " & theoffset & " New Start Time: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), StartTime_epoch), false, false)) of ParentScript
 					else
-						logger(true, handlername, caller, "DEBUG", "Episode in past, StartTime: " & StartTime_epoch) of ParentScript
+						logger(true, handlername, caller, "DEBUG", "Episode already started or in past, skipping: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), StartTime_epoch), false, false)) of ParentScript
 					end if
 				else
 					set end of newest_show_epoch to StartTime_epoch

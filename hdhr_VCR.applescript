@@ -188,7 +188,7 @@ on setup_globals(caller)
 		set Icon_record to {}
 		set Icon_list to {}
 		set Guide_hours to 6
-		set Code_version_epoch to 1777249852 -- Updated: 2026-04-27 00:30:52 UTC
+		set Code_version_epoch to 1777250100 -- Updated: 2026-04-27 00:35:00 UTC
 	on error errmsg
 		return false
 	end try
@@ -384,7 +384,6 @@ on idle
 												else
 													seriesScanAdd(cm, show_id of item i of Show_info) of LibScript
 													my logger(true, handlername, caller, "INFO", "SeriesID " & show_title of item i of Show_info & " queued for next episode scan")
-													my save_data(cm)
 												end if
 												set show_fail_count of item i of Show_info to 0
 												set show_fail_reason of item i of Show_info to ""
@@ -574,6 +573,7 @@ on idle
 	end if
 	if length of RefreshSeriesID_list is not 0 then
 		seriesScanRun(cm, true) of LibScript
+		my save_data(cm)
 	end if
 	if First_open is true then
 		my logger(true, handlername, caller, "INFO", "Idle_loop: " & Idle_loop)
