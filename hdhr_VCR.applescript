@@ -303,9 +303,6 @@ on run {}
 		if Local_env is in Debugger_apps then
 			my main(cmi, "run")
 		end if
-		if Local_env is not in Debugger_apps then
-			rotate_logs(cmi, (Log_dir & Logfilename as text)) of LibScript
-		end if
 	end if
 	my logger(true, handlername, caller, "INFO", "Idle_loop: 0")
 	my logger(true, handlername, caller, "INFO", "End of run() handler")
@@ -578,6 +575,11 @@ on idle
 	end if
 	if First_open is true then
 		my logger(true, handlername, caller, "INFO", "Idle_loop: " & Idle_loop)
+		if Idle_loop is 1 then
+			if Local_env is not in Debugger_apps then
+				rotate_logs(cm, (Log_dir & Logfilename as text)) of LibScript
+			end if
+		end if
 		if Idle_loop is 2 then
 			my logger(true, handlername, caller, "INFO", "Now running initial main() at end of idle loop")
 			set First_open to false
