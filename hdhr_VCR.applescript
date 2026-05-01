@@ -695,11 +695,7 @@ on hdhrGRID(caller, hdhr_device, hdhr_channel)
 		set temp_series_info to ""
 		if the_show_id of show_status is not missing value then
 			set temp_series_result to seriesStatusIcons(my cm(handlername, caller), the_show_id of show_status) of LibScript
-			set temp_series_icon to status_icon of temp_series_result
 			set temp_show_type to show_stat of temp_series_result
-			if temp_series_icon is not "" then
-				set temp_status_icon to temp_status_icon & temp_series_icon
-			end if
 			if temp_show_type is not missing value then
 				set temp_series_info to " [" & temp_show_type
 				if temp_record_status is not "" then
