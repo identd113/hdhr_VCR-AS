@@ -188,7 +188,7 @@ on setup_globals(caller)
 		set Icon_record to {}
 		set Icon_list to {}
 		set Guide_hours to 6
-		set Code_version_epoch to 1777613327 -- Updated: 2026-05-01 05:28:47 UTC
+		set Code_version_epoch to "1.777613327E+9" -- Updated: 2026-05-01 05:28:47 UTC
 	on error errmsg
 		return false
 	end try
