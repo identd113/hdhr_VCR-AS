@@ -285,6 +285,7 @@ on run {}
 		if Online_detected is true and Hdhr_detected is true then
 			my logger(true, handlername, caller, "INFO", "Online and HDHR detected, proceeding with discovery...")
 			my HDHRDeviceDiscovery(cmi, "")
+			update_record_urls(cmi, "") of LibScript
 		else
 			my logger(true, handlername, caller, "WARN", "Online_detected: " & Online_detected & ", Hdhr_detected: " & Hdhr_detected)
 		end if
@@ -296,7 +297,6 @@ on run {}
 		set First_open to true
 		my logger(true, handlername, caller, "INFO", "Initial main() skipped, will run at the end of idle")
 		--my build_channel_list(my cm(handlername, caller), "", cd)
-		update_record_urls(cmi, "") of LibScript
 		my idle_change(cmi, 1, 4)
 		seriesScanAdd(cmi, "") of LibScript
 		if Hdhr_detected is true then seriesScanRun(cmi, true) of LibScript
