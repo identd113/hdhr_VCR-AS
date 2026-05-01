@@ -1015,8 +1015,6 @@ on get_show_state(caller, hdhr_tuner, channelcheck, start_time, end_time)
 								else
 									return {show_stat:"upnext", the_show_id:show_record_id, status_icon:Up_icon of Icon_record}
 								end if
-							else
-								return {show_stat:"deact", the_show_id:show_record_id, status_icon:Uncheck_icon of Icon_record}
 							end if
 						else
 							--	return {show_stat:"test", the_show_id:show_record_id, status_icon:Disk_icon of Icon_record}
