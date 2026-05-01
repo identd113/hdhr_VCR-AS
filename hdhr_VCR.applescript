@@ -553,7 +553,9 @@ on idle
 			else
 				my logger(true, handlername, caller, "WARN", "There are no shows setup for recording.  If you are seeing this message, and wondering if the script is actually working, it is")
 				delay 1
-				my idle_change(cm, 10, 60)
+				if Idle_timer_dateobj is less than or equal to (cd) then
+					my idle_change(cm, 30, 30)
+				end if
 			end if
 		on error errmsg
 			my logger(true, handlername, caller, "ERROR", errmsg)

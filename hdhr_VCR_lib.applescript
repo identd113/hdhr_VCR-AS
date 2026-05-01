@@ -1393,6 +1393,10 @@ end seriesScanNext
 
 on seriesScanUpdate(caller, show_id)
 	set handlername to "seriesScanUpdate_lib"
+	-- SeriesID shows track by HDHomeRun-provided SeriesID only, not by air_date filter.
+	-- When a SeriesID show is added or scanned, we search the guide for that SeriesID,
+	-- find the most recent/current episode, and update the show record to match.
+	-- All days in show_air_date are valid because guide data (not the date filter) determines actual schedule.
 	set Show_info to Show_info of ParentScript
 	set show_offset to my HDHRShowSearch(my cm(handlername, caller), show_id)
 	if show_offset is not 0 then
