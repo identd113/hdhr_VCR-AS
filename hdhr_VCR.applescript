@@ -1872,65 +1872,62 @@ on main(caller, emulated_button_press)
 			--set progress completed steps to i
 			--set progress additional description to show_title of item i of Show_info
 			set show_channel_badges to my channel_lineup_badges(cm, hdhr_record of item i of Show_info, show_channel of item i of Show_info)
-			set temp_show_line to " " & (show_title of item i of Show_info & " on " & show_channel of item i of Show_info & show_channel_badges & " at " & show_time of item i of Show_info & " for " & show_length of item i of Show_info & " minutes on " & stringlistflip("main", show_air_date of item i of Show_info, ", ", "string") of LibScript)
-			
-			-- Right icon = recording style (single/series variants), or cancel if inactive.
+			set temp_show_line to (show_title of item i of Show_info & " on " & show_channel of item i of Show_info & show_channel_badges & " at " & show_time of item i of Show_info & " for " & show_length of item i of Show_info & " minutes on " & stringlistflip("main", show_air_date of item i of Show_info, ", ", "string") of LibScript)
+
+			-- Col 3: Show type icon
 			if show_active of item i of Show_info is false then
-				set temp_show_line to Uncheck_icon of Icon_record & temp_show_line
-			else
-				if show_is_series of item i of Show_info is true then
-					if length of show_air_date of item i of Show_info is 1 then
-						set temp_show_line to Series1_icon of Icon_record & temp_show_line
-					else
-						if show_use_seriesid of item i of Show_info is true then
-							set temp_show_line to Series3_icon of Icon_record & temp_show_line
-						else
-							set temp_show_line to Series_icon of Icon_record & temp_show_line
-						end if
-					end if
+				set col3 to Uncheck_icon of Icon_record
+			else if show_is_series of item i of Show_info is true then
+				if length of show_air_date of item i of Show_info is 1 then
+					set col3 to Series1_icon of Icon_record
+				else if show_use_seriesid of item i of Show_info is true then
+					set col3 to Series3_icon of Icon_record
 				else
-					set temp_show_line to Single_icon of Icon_record & temp_show_line
+					set col3 to Series_icon of Icon_record
 				end if
+			else
+				set col3 to Single_icon of Icon_record
 			end if
-			
-			-- Left icon = next-air timing/status.
+
+			-- Col 2: Next-show timing/status icon (exactly one, priority order)
+			set col2 to Futureshow_icon of Icon_record
 			try
-				if ((show_next of item i of Show_info) - (cd)) is less than 4 * hours and show_recording of item i of Show_info is false then
-					if ((show_next of item i of Show_info) - (cd)) is greater than 1 * hours then
-						set temp_show_line to Up_icon of Icon_record & temp_show_line
-					else if ((show_next of item i of Show_info) - (cd)) is less than 0 then
-						set temp_show_line to Warning_icon of Icon_record & temp_show_line
-					else
-						set temp_show_line to Film_icon of Icon_record & temp_show_line
-					end if
-				end if
-				if ((show_next of item i of Show_info) - (cd)) is greater than or equal to 4 * hours and (date (date string of (cd))) is (date (date string of (show_next of item i of Show_info))) and show_recording of item i of Show_info is false then
-					set temp_show_line to Up2_icon of Icon_record & temp_show_line
-				end if
 				if show_recording of item i of Show_info is true then
-					set temp_show_line to Record_icon of Icon_record & temp_show_line
+					set col2 to Record_icon of Icon_record
+				else if ((show_next of item i of Show_info) - (cd)) is less than 0 then
+					set col2 to Warning_icon of Icon_record
+				else if ((show_next of item i of Show_info) - (cd)) is less than 1 * hours then
+					set col2 to Film_icon of Icon_record
+				else if ((show_next of item i of Show_info) - (cd)) is less than 4 * hours then
+					set col2 to Up_icon of Icon_record
+				else if (date (date string of (cd))) is (date (date string of (show_next of item i of Show_info))) then
+					set col2 to Up2_icon of Icon_record
+				else
+					set col2 to Futureshow_icon of Icon_record
 				end if
-				if (date (date string of (cd))) is less than (date (date string of (show_next of item i of Show_info))) and (show_recorded_today of item i of Show_info) is false then
-					set temp_show_line to Futureshow_icon of Icon_record & temp_show_line
-				end if
-				try
-					if (show_recorded_today of item i of Show_info) is true then
-						set temp_show_line to Check_icon of Icon_record & temp_show_line
-					end if
-				on error errmsg
-					my logger(true, handlername, caller, "ERROR", "Error with show_recorded_today, errmsg: " & errmsg)
-				end try
 			on error errmsg
-				my logger(true, handlername, caller, "WARN", "Unable to determine left icon for " & quote & show_title of item i of Show_info & quote & ": " & errmsg)
-				set temp_show_line to Warning_icon of Icon_record & temp_show_line
+				my logger(true, handlername, caller, "WARN", "Unable to determine status icon for " & quote & show_title of item i of Show_info & quote & ": " & errmsg)
+				set col2 to Warning_icon of Icon_record
 			end try
+
+			-- Col 1: Recorded today (checkmark or space)
+			set col1 to " "
+			try
+				if (show_recorded_today of item i of Show_info) is true then
+					set col1 to Check_icon of Icon_record
+				end if
+			on error errmsg
+				my logger(true, handlername, caller, "ERROR", "Error with show_recorded_today, errmsg: " & errmsg)
+			end try
+
+			set temp_show_line to col1 & col2 & col3 & " " & temp_show_line
 			set end of show_list to temp_show_line
 			if show_list_length is i then
 				--		set progress additional description to length of Show_info & " shows loaded"
 			end if
 		end repeat
 		if length of show_list is not 0 then
-			set temp_show_list to (choose from list show_list with title my check_version_dialog(caller) with prompt "" & length of show_list & " shows to edit:" & return & "Right icon (show type): " & Single_icon of Icon_record & " Single  " & Series1_icon of Icon_record & " SeriesID(Channel)  " & Series_icon of Icon_record & " Date/Time  " & Series3_icon of Icon_record & " SeriesID(All)  " & Uncheck_icon of Icon_record & " Deactivated" & return & "Left icon (next airing): " & Record_icon of Icon_record & " Recording  " & Warning_icon of Icon_record & " Error  " & Film_icon of Icon_record & " <1h  " & Up_icon of Icon_record & " <4h  " & Up2_icon of Icon_record & " >4h  " & Futureshow_icon of Icon_record & " Future day  " & Check_icon of Icon_record & " Recorded today" OK button name Edit_icon of Icon_record & " Edit.." cancel button name Running_icon of Icon_record & " Run" default items item 1 of show_list with multiple selections allowed without empty selection allowed)
+			set temp_show_list to (choose from list show_list with title my check_version_dialog(caller) with prompt "" & length of show_list & " shows to edit:" & return & "Icon 1 (recorded today): " & Check_icon of Icon_record & " Recorded today" & return & "Icon 2 (next airing): " & Record_icon of Icon_record & " Recording  " & Warning_icon of Icon_record & " Error  " & Film_icon of Icon_record & " <1h  " & Up_icon of Icon_record & " <4h  " & Up2_icon of Icon_record & " >4h  " & Futureshow_icon of Icon_record & " Future day" & return & "Icon 3 (show type): " & Single_icon of Icon_record & " Single  " & Series1_icon of Icon_record & " SeriesID(Channel)  " & Series_icon of Icon_record & " Date/Time  " & Series3_icon of Icon_record & " SeriesID(All)  " & Uncheck_icon of Icon_record & " Deactivated" OK button name Edit_icon of Icon_record & " Edit.." cancel button name Running_icon of Icon_record & " Run" default items item 1 of show_list with multiple selections allowed without empty selection allowed)
 			if temp_show_list is not false then
 				set temp_show_offsets to my resolve_selected_offsets(cm, temp_show_list, show_list)
 				if length of temp_show_offsets is 0 then
