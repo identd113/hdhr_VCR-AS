@@ -13,3 +13,4 @@ whatsnew.txt
 # Local packaging leftovers
 *.dmg
 *.pkg
+/.claude
