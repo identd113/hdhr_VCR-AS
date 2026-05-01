@@ -2802,14 +2802,20 @@ on update_show(caller, the_show_id, force_update)
 		set progress description to "Updating Show: " & show_title of item show_offset of Show_info
 		set progress total steps to 8
 		set time2show_next to (show_next of item show_offset of Show_info) - (cd)
-		set progress additional description to "Updating Show: " & show_title of item show_offset of Show_info
+		set progress additional description to ""
+		set temp_show_progress to {}
+
 		if time2show_next is less than or equal to 6 * hours and time2show_next is greater than or equal to -60 and show_active of item show_offset of Show_info is true or force_update is true then
 			try
+				set end of temp_show_progress to "Fetching guide data..."
+				set progress additional description to stringlistflip(my cm(handlername, caller), temp_show_progress, return, "string") of LibScript
 				set progress completed steps to 1
 				my logger(true, handlername, caller, "INFO", "Updating " & quote & show_title of item show_offset of Show_info & quote & " " & the_show_id & "...")
 				set hdhr_response_channel to {}
 				set hdhr_response_channel to my channel_guide(my cm(handlername, caller), hdhr_record of item show_offset of Show_info, show_channel of item show_offset of Show_info, show_time of item show_offset of Show_info)
 			on error errmsg
+				set end of temp_show_progress to "Guide error: " & errmsg
+				set progress additional description to stringlistflip(my cm(handlername, caller), temp_show_progress, return, "string") of LibScript
 				my logger(true, handlername, caller, "ERROR", "ERROR: " & errmsg)
 			end try
 			set hdhr_response_channel_title to fixall of show_name_fix(my cm(handlername, caller), show_id of item show_offset of Show_info, hdhr_response_channel) of LibScript
@@ -2818,6 +2824,8 @@ on update_show(caller, the_show_id, force_update)
 				set show_title of item show_offset of Show_info to hdhr_response_channel_title
 			end if
 			if show_use_seriesid of item show_offset of Show_info is false then
+				set end of temp_show_progress to "Reading metadata..."
+				set progress additional description to stringlistflip(my cm(handlername, caller), temp_show_progress, return, "string") of LibScript
 				set progress completed steps to 2
 				if length of hdhr_response_channel is greater than 0 then
 					try
@@ -2827,7 +2835,7 @@ on update_show(caller, the_show_id, force_update)
 						my logger(true, handlername, caller, "DEBUG", "Show did not contain an OriginalAirdate , " & errmsg)
 					end try
 					--set hdhr_response_channel_title to fixall of my show_name_fix(my cm(handlername, caller), show_id of item show_offset of Show_info, hdhr_response_channel)
-					
+
 					try
 						if show_seriesid of item show_offset of Show_info is not seriesID of hdhr_response_channel then
 							my logger(true, handlername, caller, "INFO", "SeriesID Changed from " & show_seriesid of item show_offset of Show_info & " to " & seriesID of hdhr_response_channel)
@@ -2838,24 +2846,21 @@ on update_show(caller, the_show_id, force_update)
 					on error errmsg
 						my logger(true, handlername, caller, "DEBUG", "Unable to set show_seriesid, errmsg: " & errmsg)
 					end try
-					
+
 					try
 						set show_tags of item show_offset of Show_info to Filter of hdhr_response_channel
 					on error errmsg
 						my logger(true, handlername, caller, "DEBUG", "Unable to set show_tags, errmsg: " & errmsg)
 					end try
-					
+
 					try
 						set show_logo_url of item show_offset of Show_info to (ImageURL of hdhr_response_channel as text)
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", "Unable to set ImageURL, errmsg: " & errmsg)
 					end try
+					set end of temp_show_progress to "Updating tags & logo..."
+					set progress additional description to stringlistflip(my cm(handlername, caller), temp_show_progress, return, "string") of LibScript
 					set progress completed steps to 3
-					--	if show_title of item show_offset of Show_info is not equal to hdhr_response_channel_title then
-					--		my logger(true, handlername, caller, "INFO", "Title changed from " & quote & show_title of item show_offset of Show_info & quote & " to " & quote & hdhr_response_channel_title & quote)
-					--		set show_title of item show_offset of Show_info to hdhr_response_channel_title
-					--	end if
-					set progress completed steps to 4
 					try
 						if (show_length of item show_offset of Show_info as number) is not equal to (((EndTime of hdhr_response_channel) - (StartTime of hdhr_response_channel)) div 60 as number) then
 							my logger(true, handlername, caller, "INFO", "Show length changed to " & ((EndTime of hdhr_response_channel) - (StartTime of hdhr_response_channel)) div 60 & " minutes")
@@ -2864,22 +2869,26 @@ on update_show(caller, the_show_id, force_update)
 					on error errmsg
 						my logger(true, handlername, caller, "Unable to set length of " & show_title of item show_offset of Show_info & ", errmsg: " & errmsg)
 					end try
-					
-					set progress completed steps to 5
+
+					set end of temp_show_progress to "Updating length..."
+					set progress additional description to stringlistflip(my cm(handlername, caller), temp_show_progress, return, "string") of LibScript
+					set progress completed steps to 4
 					try
 						set temp_show_time to epoch2show_time(my cm(handlername, caller), getTfromN((StartTime of hdhr_response_channel)) of LibScript) of LibScript
-						
+
 						if (temp_show_time as number) is not equal to (show_time of item show_offset of Show_info as number) then
 							my logger(true, handlername, caller, "INFO", "Show time changed from " & show_time of item show_offset of Show_info & " to " & temp_show_time)
 							set show_time of item show_offset of Show_info to epoch2show_time("hdhrGRID(8)", getTfromN((StartTime of hdhr_response_channel)) of LibScript) of LibScript
-							
+
 							set show_next of item show_offset of Show_info to my nextday(my cm(handlername, caller), show_id of item show_offset of Show_info)
-							--We may be to run next_day logic  
+							--We may be to run next_day logic
 						end if
 					on error errmsg
 						my logger(true, handlername, caller, "ERROR", "Unable to set show_time for this show, error: " & errmsg)
 					end try
-					set progress completed steps to 6
+					set end of temp_show_progress to "Updating air time..."
+					set progress additional description to stringlistflip(my cm(handlername, caller), temp_show_progress, return, "string") of LibScript
+					set progress completed steps to 5
 					try
 						if (show_next of item show_offset of Show_info) + ((show_length of item show_offset of Show_info) * minutes) is not equal to show_end of item show_offset of Show_info then
 							set show_end of item show_offset of Show_info to (show_next of item show_offset of Show_info) + ((show_length of item show_offset of Show_info) * minutes)
@@ -2888,7 +2897,9 @@ on update_show(caller, the_show_id, force_update)
 					on error errmsg
 						my logger(true, handlername, caller, "ERROR", "Unable to set show_time for this show, error: " & errmsg)
 					end try
-					set progress completed steps to 7
+					set end of temp_show_progress to "Updating end time..."
+					set progress additional description to stringlistflip(my cm(handlername, caller), temp_show_progress, return, "string") of LibScript
+					set progress completed steps to 6
 					try
 						if show_url of item show_offset of Show_info is in {"", "?", false, "false"} then
 							my logger(true, handlername, caller, "WARN", "show_url is invalid, updating...")
@@ -2905,14 +2916,30 @@ on update_show(caller, the_show_id, force_update)
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", "Unable to show_time_OriginalAirdate of " & show_title of item show_offset of Show_info & ", errmsg: " & errmsg)
 					end try
+					set end of temp_show_progress to "Updating URL..."
+					set progress additional description to stringlistflip(my cm(handlername, caller), temp_show_progress, return, "string") of LibScript
+					set progress completed steps to 7
+					set end of temp_show_progress to "Complete"
+					set progress additional description to stringlistflip(my cm(handlername, caller), temp_show_progress, return, "string") of LibScript
+					set progress completed steps to 8
+				else
+					set end of temp_show_progress to "Guide data not available for this time slot"
+					set progress additional description to stringlistflip(my cm(handlername, caller), temp_show_progress, return, "string") of LibScript
+					set progress completed steps to 8
 				end if
-				set progress completed steps to 8
 			else
+				set end of temp_show_progress to "SeriesID show — queuing next episode scan..."
+				set progress additional description to stringlistflip(my cm(handlername, caller), temp_show_progress, return, "string") of LibScript
 				set progress completed steps to 7
 				seriesScanAdd(my cm(handlername, caller), show_id of item show_offset of Show_info) of LibScript
+				set end of temp_show_progress to "Complete"
+				set progress additional description to stringlistflip(my cm(handlername, caller), temp_show_progress, return, "string") of LibScript
 				set progress completed steps to 8
 			end if
 		else
+			set end of temp_show_progress to "Next airing not within update window"
+			set progress additional description to stringlistflip(my cm(handlername, caller), temp_show_progress, return, "string") of LibScript
+			set progress completed steps to 8
 			my logger(true, handlername, caller, "DEBUG", "Did not update the show " & show_title of item show_offset of Show_info & ", next_show in " & ms2time("update_show1", ((show_next of item show_offset of Show_info) - (current date)), "s", 4) of LibScript)
 		end if
 	end if
