@@ -395,8 +395,14 @@ on idle
 											exit repeat
 										end if
 									end if
-									
-									set show_runtime to (show_end of item i of Show_info) - (cd)
+
+									set show_runtime to 0
+									try
+										set show_runtime to (show_end of item i of Show_info) - (cd)
+									on error errmsg
+										my logger(true, handlername, caller, "ERROR", "Failed to calculate show_runtime: " & errmsg & "; show_end class: " & class of (show_end of item i of Show_info))
+										set show_runtime to 60
+									end try
 									set tuner_status_result to my tuner_status(cm, hdhr_record of item i of Show_info)
 									if tunermax of tuner_status_result is greater than tuneractive of tuner_status_result then
 										my logger(true, handlername, caller, "DEBUG", show_title of item i of Show_info)
@@ -437,10 +443,14 @@ on idle
 											end if
 										end if
 									end if
-								else --show_recording true 
-									if (show_end of item i of Show_info) - (cd) is less than or equal to Idle_timer then
-										my idle_change(cm, 1, (show_end of item i of Show_info) - (cd))
-									end if
+								else --show_recording true
+									try
+										if (show_end of item i of Show_info) - (cd) is less than or equal to Idle_timer then
+											my idle_change(cm, 1, (show_end of item i of Show_info) - (cd))
+										end if
+									on error errmsg
+										my logger(true, handlername, caller, "ERROR", "Failed to check show_end for recording: " & errmsg)
+									end try
 									if notify_recording_time of item i of Show_info is less than (cd) or notify_recording_time of item i of Show_info is missing value then
 										display notification "Ends " & short_date(cm, show_end of item i of Show_info, false, false) of LibScript & " (" & (ms2time("idle(19)", (show_end of item i of Show_info) - (cd), "s", 3) of LibScript) & ") " with title Record_icon of Icon_record & " Recording in progress (" & hdhr_record of item i of Show_info & ")" subtitle quote & show_title of item i of Show_info & quote & " on " & show_channel of item i of Show_info & " (" & my channel2name(cm, show_channel of item i of Show_info as text, hdhr_record of item i of Show_info) & ")"
 										set notify_recording_time of item i of Show_info to (cd) + (Notify_recording * minutes)
@@ -463,17 +473,22 @@ on idle
 									end if
 								end if
 							else --show time has not passed.
-								if (notify_upnext_time of item i of Show_info is less than (cd) or notify_upnext_time of item i of Show_info is missing value) and (show_next of item i of Show_info) - (cd) is less than or equal to 1 * hours and show_recording of item i of Show_info is false then
-									display notification "Starts: " & short_date(cm, show_next of item i of Show_info, false, false) of LibScript & " (" & ms2time(cm, ((show_next of item i of Show_info) - (cd)), "s", 3) of LibScript & ")" with title Film_icon of Icon_record & " Next Up on (" & hdhr_record of item i of Show_info & ")" subtitle quote & show_title of item i of Show_info & quote & " on " & show_channel of item i of Show_info & " (" & my channel2name(cm, show_channel of item i of Show_info, hdhr_record of item i of Show_info) & ")"
-									my logger(true, handlername, caller, "INFO", "Next Up: " & quote & show_title of item i of Show_info & quote & " on " & hdhr_record of item i of Show_info)
-									set notify_upnext_time of item i of Show_info to (cd) + (Notify_upnext * minutes)
-								end if
+								try
+									if (notify_upnext_time of item i of Show_info is less than (cd) or notify_upnext_time of item i of Show_info is missing value) and (show_next of item i of Show_info) - (cd) is less than or equal to 1 * hours and show_recording of item i of Show_info is false then
+										display notification "Starts: " & short_date(cm, show_next of item i of Show_info, false, false) of LibScript & " (" & ms2time(cm, ((show_next of item i of Show_info) - (cd)), "s", 3) of LibScript & ")" with title Film_icon of Icon_record & " Next Up on (" & hdhr_record of item i of Show_info & ")" subtitle quote & show_title of item i of Show_info & quote & " on " & show_channel of item i of Show_info & " (" & my channel2name(cm, show_channel of item i of Show_info, hdhr_record of item i of Show_info) & ")"
+										my logger(true, handlername, caller, "INFO", "Next Up: " & quote & show_title of item i of Show_info & quote & " on " & hdhr_record of item i of Show_info)
+										set notify_upnext_time of item i of Show_info to (cd) + (Notify_upnext * minutes)
+									end if
+								on error errmsg
+									my logger(true, handlername, caller, "DEBUG", "show_next notification skipped: " & errmsg)
+								end try
 							end if
 						end if
 						
 						if show_recording of item i of Show_info is true then
 							my logger(true, handlername, caller, "TRACE", "Show end for " & show_title of item i of Show_info & " is " & show_end of item i of Show_info)
-							if (show_end of item i of Show_info) is less than or equal to cd then
+							try
+								if (show_end of item i of Show_info) is less than or equal to cd then
 								my logger(true, handlername, caller, "WARN", show_title of item i of Show_info & " is " & show_end of item i of Show_info & ", and is past due. Time now: " & cd & " | Overdue by: " & ((cd) - show_end of item i of Show_info) & "s")
 								my showid2PID(cm, show_id of item i of Show_info, true, true)
 								set show_recording of item i of Show_info to false
@@ -539,12 +554,19 @@ on idle
 								on error errmsg
 									my logger(true, handlername, caller, "WARN", "Show " & show_title of item i of Show_info & " unable to revert to show_time_orig, err: " & errmsg)
 								end try
+							on error errmsg
+								my logger(true, handlername, caller, "ERROR", "Failed during show_end recording completion check: " & errmsg)
+							end try
 							end if
-						else if show_is_series of item i of Show_info is false and show_end of item i of Show_info is less than or equal to (cd) and show_active of item i of Show_info is true then
-							set show_active of item i of Show_info to false
-							my logger(true, handlername, caller, "INFO", "Show: " & show_title of item i of Show_info & " was deactivated, as it is a single, and recording time has passed")
-							display notification "Show: " & show_title of item i of Show_info & " removed" with title Stop_icon of Icon_record
-						end if
+						try
+							if show_is_series of item i of Show_info is false and show_end of item i of Show_info is less than or equal to (cd) and show_active of item i of Show_info is true then
+								set show_active of item i of Show_info to false
+								my logger(true, handlername, caller, "INFO", "Show: " & show_title of item i of Show_info & " was deactivated, as it is a single, and recording time has passed")
+								display notification "Show: " & show_title of item i of Show_info & " removed" with title Stop_icon of Icon_record
+							end if
+						on error errmsg
+							my logger(true, handlername, caller, "DEBUG", "Single show deactivation check failed: " & errmsg)
+						end try
 						on error errmsg
 							my logger(true, handlername, caller, "ERROR", "Idle loop error for show " & show_title of item i of Show_info & " (" & show_id of item i of Show_info & "): " & errmsg)
 						end try
