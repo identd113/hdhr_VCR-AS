@@ -520,6 +520,7 @@ on idle
 									else
 										set show_fail_count of item i of Show_info to 0
 										set show_fail_reason of item i of Show_info to ""
+										set show_recorded_today of item i of Show_info to true
 										seriesScanAdd(cm, show_id of item i of Show_info) of LibScript
 										my logger(true, handlername, caller, "INFO", "SeriesID recording complete: " & show_title of item i of Show_info & " queued for next episode scan")
 									end if
