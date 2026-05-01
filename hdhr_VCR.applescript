@@ -137,7 +137,7 @@ on setup_script(caller)
 	try
 		set cache_me to (name of me)
 		set Local_env to (name of current application)
-		set Version_local to "20260427"
+		set Version_local to "20260501"
 		set Version_subversion to (text 1 thru 2 of ("0" & (hours of (current date)) as text) & "." & text 1 thru 2 of ("0" & (minutes of (current date)) as text))
 		set Config_version to 1
 		set temp_info to (system info)
