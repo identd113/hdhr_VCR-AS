@@ -1911,7 +1911,7 @@ on main(caller, emulated_button_press)
 			end try
 
 			-- Col 1: Recorded today (checkmark or multiple spaces for alignment)
-			set col1 to "   "
+			set col1 to "      "
 			try
 				if (show_recorded_today of item i of Show_info) is true then
 					set col1 to Check_icon of Icon_record
