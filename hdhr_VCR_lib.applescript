@@ -1438,7 +1438,7 @@ on seriesScanUpdate(caller, show_id)
 							logger(true, handlername, caller, "DEBUG", "show_title changed: " & show_title of item show_offset of Show_info & " → " & guide_title) of ParentScript
 						end if
 
-						if item 3 of isdupe is false then
+						if item 1 of isdupe is false and item 3 of isdupe is false then
 							set new_showid to do shell script ("uuidgen | tr -d '-'")
 							logger(true, handlername, caller, "WARN", "The show, " & show_title of item show_offset of Show_info & " showid changed from " & show_id of item show_offset of Show_info & " to " & new_showid) of ParentScript
 							set show_id of item show_offset of Show_info to new_showid
@@ -1459,6 +1459,9 @@ on seriesScanUpdate(caller, show_id)
 							logger(true, handlername, caller, "INFO", "The show, " & show_title of item show_offset of Show_info & ", was updated") of ParentScript
 							--	my idle_change(my cm(handlername, caller), 1, 2)
 						else
+							if item 1 of isdupe is true and item 3 of isdupe is false then
+								logger(true, handlername, caller, "INFO", "Title changed but StartTime unchanged; keeping existing show_id. Old: " & show_title of item show_offset of Show_info) of ParentScript
+							end if
 							logger(true, handlername, caller, "DEBUG", "Same episode, no show_id rotation needed") of ParentScript
 						end if
 					else

@@ -329,8 +329,8 @@ on idle
 		if length of Hdhr_device_list is greater than 0 then
 			repeat with i2 from 1 to length of Hdhr_device_list
 				if hdhr_guide_update of item i2 of Hdhr_device_list is not missing value then
-					if ((cd) - (hdhr_guide_update of item i2 of Hdhr_device_list)) div 60 is greater than or equal to (Guide_hours * 60 / 4) then
-						my logger(true, handlername, caller, "INFO", "Periodic update of tuner " & device_id of item i2 of Hdhr_device_list & ", last update: " & fixDate(cm, hdhr_guide_update of item i2 of Hdhr_device_list) of LibScript)
+					if ((minutes of (current date)) is less than or equal to 2) and (((cd) - (hdhr_guide_update of item i2 of Hdhr_device_list)) div 60 is greater than or equal to 59) then
+						my logger(true, handlername, caller, "INFO", "Periodic hourly update of tuner " & device_id of item i2 of Hdhr_device_list & ", last update: " & fixDate(cm, hdhr_guide_update of item i2 of Hdhr_device_list) of LibScript)
 						try
 							with timeout of 15 seconds
 								my HDHRDeviceDiscovery(cm, device_id of item i2 of Hdhr_device_list)
@@ -379,6 +379,7 @@ on idle
 													set show_next of item i of Show_info to my nextday(cm, show_id of item i of Show_info)
 													my save_data(cm)
 												else
+													set show_next of item i of Show_info to (current date) + 4 * hours
 													seriesScanAdd(cm, show_id of item i of Show_info) of LibScript
 													my logger(true, handlername, caller, "INFO", "SeriesID " & show_title of item i of Show_info & " queued for next episode scan")
 												end if
@@ -484,7 +485,7 @@ on idle
 									set temp_OriginalAirdate to getTfromN(OriginalAirdate of temp_guide_data) of LibScript
 									set show_time_OriginalAirdate of item i of Show_info to temp_OriginalAirdate
 								on error errmsg
-									my logger(true, handlername, caller, "WARN", "OriginalAirdate does not exist for " & quote & show_title of item i of Show_info & quote)
+									my logger(true, handlername, caller, "INFO", "OriginalAirdate does not exist for " & quote & show_title of item i of Show_info & quote)
 								end try
 								try
 									if (temp_OriginalAirdate) is not in {"", {}} then
@@ -518,6 +519,7 @@ on idle
 										set show_fail_count of item i of Show_info to 0
 										set show_fail_reason of item i of Show_info to ""
 										set show_recorded_today of item i of Show_info to true
+										set show_next of item i of Show_info to (current date) + 4 * hours
 										seriesScanAdd(cm, show_id of item i of Show_info) of LibScript
 										my logger(true, handlername, caller, "INFO", "SeriesID recording complete: " & show_title of item i of Show_info & " queued for next episode scan")
 									end if
@@ -690,7 +692,7 @@ on hdhrGRID(caller, hdhr_device, hdhr_channel)
 		set temp_status_icon to ""
 		if the_show_id of show_status is not missing value then
 			set sec_to_show to (temp_start - (current date))
-			if show_stat of show_status is "Recording" then
+			if show_stat of show_status is "record" then
 				set temp_status_icon to Record_icon of Icon_record
 			else if show_stat of show_status is "Error" then
 				set temp_status_icon to Warning_icon of Icon_record
@@ -710,19 +712,23 @@ on hdhrGRID(caller, hdhr_device, hdhr_channel)
 		if temp_record_status is missing value then
 			set temp_record_status to ""
 		end if
-		set temp_series_info to ""
+		set col3 to " "
 		if the_show_id of show_status is not missing value then
 			set temp_series_result to seriesStatusIcons(my cm(handlername, caller), the_show_id of show_status) of LibScript
-			set temp_show_type to show_stat of temp_series_result
-			if temp_show_type is not missing value then
-				set temp_series_info to " [" & temp_show_type
-				if temp_record_status is not "" then
-					set temp_series_info to temp_series_info & " - " & temp_record_status
-				end if
-				set temp_series_info to temp_series_info & "]"
+			if temp_series_result is not false then
+				set col3 to status_icon of temp_series_result
 			end if
 		end if
-		set end of hdhrGRID_sort to temp_status_icon & " " & padnum(my cm(handlername, caller), word 2 of short_date(my cm(handlername, caller), temp_start, false, false) of LibScript, true) of LibScript & "-" & padnum(my cm(handlername, caller), word 2 of short_date(my cm(handlername, caller), temp_end, false, false) of LibScript, true) of LibScript & " " & temp_title
+		set col1 to temp_status_icon
+		if col1 is "" then
+			set col1 to "     "
+		end if
+		set col2 to col3
+		if col2 is " " then
+			set col2 to "     "
+		end if
+		set time_range to padnum(my cm(handlername, caller), word 2 of short_date(my cm(handlername, caller), temp_start, false, false) of LibScript, true) of LibScript & "-" & padnum(my cm(handlername, caller), word 2 of short_date(my cm(handlername, caller), temp_end, false, false) of LibScript, true) of LibScript
+		set end of hdhrGRID_sort to col1 & col2 & " " & time_range & " " & temp_title
 	end repeat
 	set hdhrGRID_selected to choose from list hdhrGRID_sort with prompt ("Channel " & hdhr_channel & " (" & GuideName of hdhrGRID_temp & ")" & return & "Current Time: " & word 2 of short_date(my cm(handlername, caller), (current date), false, false) of LibScript & return & return & Record_icon of Icon_record & " Recording  " & Warning_icon of Icon_record & " Error  " & Film_icon of Icon_record & " <1h  " & Up_icon of Icon_record & " <4h  " & Up2_icon of Icon_record & " >4h  " & Futureshow_icon of Icon_record & " Future day  " & Check_icon of Icon_record & " Recorded today") cancel button name "Manual Add" OK button name "Next.." with title my check_version_dialog(caller) default items item 1 of hdhrGRID_sort with multiple selections allowed
 
@@ -1285,7 +1291,14 @@ on nextday(caller, the_show_id)
 	else
 		my logger(true, handlername, caller, "INFO", "MATCHED Show end of " & quote & show_title of item show_offset of Show_info & quote & " set to: " & (nextup + ((show_length of item show_offset of Show_info) * minutes)))
 	end if
-	
+
+	-- Guard: if no matching weekday was found in the search window, set a safe fallback
+	-- rather than returning {} which serializes to epoch 0 (01.01.70)
+	if nextup is {} then
+		my logger(true, handlername, caller, "WARN", "No matching weekday found for " & show_title of item show_offset of Show_info & "; setting show_next to current date + 1 day as fallback")
+		set nextup to (current date) + 1 * days
+	end if
+
 	-- Return the next airing time
 	return nextup
 end nextday
@@ -2118,8 +2131,8 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 
 					--auto show_next and show_end from guide entry
 					try
-						set show_next of temp_show_info to my epoch2datetime(cm, getTfromN(StartTime of item i3 of hdhrGRID_response) of LibScript)
-						set show_end of temp_show_info to my epoch2datetime(cm, getTfromN(EndTime of item i3 of hdhrGRID_response) of LibScript)
+						set show_next of temp_show_info to epoch2datetime(cm, getTfromN(StartTime of item i3 of hdhrGRID_response) of LibScript) of LibScript
+						set show_end of temp_show_info to epoch2datetime(cm, getTfromN(EndTime of item i3 of hdhrGRID_response) of LibScript) of LibScript
 						my logger(true, handlername, caller, "INFO", "(Auto) show_next from guide: " & show_next of temp_show_info & ", show_end: " & show_end of temp_show_info)
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", "(Auto) Failed to set show_next/show_end from guide: " & errmsg)
