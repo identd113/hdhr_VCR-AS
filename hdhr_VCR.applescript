@@ -685,8 +685,9 @@ on hdhrGRID(caller, hdhr_device, hdhr_channel)
 		else
 			set temp_title to (fixTitle of temp_name & " " & fixEpisodeNum of temp_name)
 		end if
-		set temp_start to epoch2datetime(my cm(handlername, caller), getTfromN(StartTime of item i of Guide of hdhrGRID_temp) of LibScript) of LibScript
-		set temp_end to epoch2datetime(my cm(handlername, caller), getTfromN(EndTime of item i of Guide of hdhrGRID_temp) of LibScript) of LibScript
+		-- Guide returns times as "local time encoded as UTC epoch", so subtract GMT offset to get true UTC epoch
+		set temp_start to epoch2datetime(my cm(handlername, caller), (getTfromN(StartTime of item i of Guide of hdhrGRID_temp) of LibScript) - (time to GMT)) of LibScript
+		set temp_end to epoch2datetime(my cm(handlername, caller), (getTfromN(EndTime of item i of Guide of hdhrGRID_temp) of LibScript) - (time to GMT)) of LibScript
 		set show_status to my get_show_state(my cm(handlername, caller), hdhr_device, hdhr_channel, temp_start, temp_end)
 		set end of Show_status_list to show_status
 		set temp_status_icon to ""
@@ -2096,7 +2097,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 					
 					set hdhr_response_channel_title to fixall of show_name_fix(cm, "", item i3 of hdhrGRID_response) of LibScript
 					try
-						set default_record_day to (weekday of epoch2datetime(cm, (getTfromN(StartTime of item i3 of hdhrGRID_response) of LibScript)) of LibScript) as text
+						set default_record_day to (weekday of epoch2datetime(cm, (getTfromN(StartTime of item i3 of hdhrGRID_response) of LibScript) - (time to GMT)) of LibScript) as text
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", "default_record_day failed, errmsg: " & errmsg)
 						set default_record_day to weekday of (cd) as text
@@ -2122,7 +2123,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 					my logger(true, handlername, caller, "INFO", "(Auto) show length: " & show_length of temp_show_info)
 					
 					--auto show_time
-					set show_time of temp_show_info to epoch2show_time(cm, getTfromN(StartTime of item i3 of hdhrGRID_response) of LibScript) of LibScript
+					set show_time of temp_show_info to epoch2show_time(cm, (getTfromN(StartTime of item i3 of hdhrGRID_response) of LibScript) - (time to GMT)) of LibScript
 					set show_time_orig of temp_show_info to show_time of temp_show_info
 					my logger(true, handlername, caller, "INFO", "(Auto) show time: " & (show_time of temp_show_info as text))
 					set end of temp_show_progress to "Air time: " & show_time of temp_show_info
@@ -2131,8 +2132,9 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 
 					--auto show_next and show_end from guide entry
 					try
-						set show_next of temp_show_info to epoch2datetime(cm, getTfromN(StartTime of item i3 of hdhrGRID_response) of LibScript) of LibScript
-						set show_end of temp_show_info to epoch2datetime(cm, getTfromN(EndTime of item i3 of hdhrGRID_response) of LibScript) of LibScript
+						-- Guide returns times as "local time encoded as UTC epoch", so subtract GMT offset to get true UTC epoch
+						set show_next of temp_show_info to epoch2datetime(cm, (getTfromN(StartTime of item i3 of hdhrGRID_response) of LibScript) - (time to GMT)) of LibScript
+						set show_end of temp_show_info to epoch2datetime(cm, (getTfromN(EndTime of item i3 of hdhrGRID_response) of LibScript) - (time to GMT)) of LibScript
 						my logger(true, handlername, caller, "INFO", "(Auto) show_next from guide: " & show_next of temp_show_info & ", show_end: " & show_end of temp_show_info)
 					on error errmsg
 						my logger(true, handlername, caller, "WARN", "(Auto) Failed to set show_next/show_end from guide: " & errmsg)
@@ -2244,7 +2246,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				
 				if temp_show_air_date is missing value then
 					try
-						if (weekday of epoch2datetime(cm, (getTfromN(StartTime of item i3 of hdhrGRID_response) of LibScript)) of LibScript) as text is not (weekday of (cd) as text) then
+						if (weekday of epoch2datetime(cm, (getTfromN(StartTime of item i3 of hdhrGRID_response) of LibScript) - (time to GMT)) of LibScript) as text is not (weekday of (cd) as text) then
 							set Time_slide to 1
 						end if
 					on error errmsg
@@ -2279,7 +2281,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 						end if
 						my logger(true, handlername, caller, "INFO", "(Manual) show_air_date: " & stringlistflip(cm, show_air_date of temp_show_info, ",", "string") of LibScript)
 					else
-						set show_air_date of temp_show_info to (weekday of (epoch2datetime(cm, (getTfromN(StartTime of item i3 of hdhrGRID_response) of LibScript)) of LibScript) as text) as list
+						set show_air_date of temp_show_info to (weekday of (epoch2datetime(cm, (getTfromN(StartTime of item i3 of hdhrGRID_response) of LibScript) - (time to GMT)) of LibScript) as text) as list
 						my logger(true, handlername, caller, "INFO", "(Auto) show_air_date: " & show_air_date of temp_show_info)
 					end if
 				end if
@@ -2720,8 +2722,10 @@ on channel_guide(caller, hdhr_device, hdhr_channel, hdhr_time)
 		if (hdhr_time + 1) is less than hours of (cd) then
 			set Time_slide to 1
 		end if
-		set hdhr_proposed_time to my datetime2epoch(my cm(handlername, caller), (date (date string of ((cd) + Time_slide * days))) + hdhr_time * hours - (time to GMT)) as number
-		set hdhr_proposed_time to getTfromN(hdhr_proposed_time) of LibScript
+		-- Use the old working formula: subtract time_to_GMT before passing to datetime2epoch
+		-- The library's datetime2epoch expects a local date, but the old code was passing UTC
+		-- So we recreate the old behavior by converting back
+		set hdhr_proposed_time to getTfromN(((date (date string of ((cd) + Time_slide * days))) + hdhr_time * hours - (time to GMT)) - (epoch("") of LibScript)) of LibScript
 		my logger(true, handlername, caller, "DEBUG", "hdhr_proposed_time2: " & epoch2show_time(my cm(handlername, caller), hdhr_proposed_time) of LibScript)
 	end if
 	if Hdhr_device_list is not in {missing value, {}, 0, ""} then
@@ -3333,10 +3337,8 @@ on showid2PID(caller, show_id, kill_pid, logging)
 end showid2PID
 
 ##########    Handlers with custom logic (not pure wrappers)    ##########
-on datetime2epoch(caller, the_date_object)
-	set handlername to "datetime2epoch"
-	return getTfromN(the_date_object - (epoch("") of LibScript)) of LibScript
-end datetime2epoch
+-- datetime2epoch moved to hdhr_VCR_lib.applescript
+-- Call via: datetime2epoch(caller, date_object) of LibScript
 
 on logger(logtofile, the_handler, caller, loglevel, message)
 	set handlername to "logger"

@@ -508,7 +508,7 @@ on epoch2datetime(caller, epochseconds)
 			set unix_time to epochseconds
 		end try
 		set epoch_time to my epoch("")
-		--epoch_time is now current unix epoch time as a date object 
+		--epoch_time is now current unix epoch time as a date object
 		logger(true, handlername, caller, "TRACE", epochseconds) of ParentScript
 		set epochOFFSET to (epoch_time + (unix_time as number) + (time to GMT))
 		logger(true, handlername, caller, "TRACE", class of (epochOFFSET)) of ParentScript
@@ -517,6 +517,14 @@ on epoch2datetime(caller, epochseconds)
 		return {handlername, errmsg}
 	end try
 end epoch2datetime
+
+on datetime2epoch(caller, the_date_object)
+	set handlername to "datetime2epoch_lib"
+	-- Convert local date to Unix epoch: subtract epoch base, then subtract GMT offset
+	set local_seconds to the_date_object - (my epoch(""))
+	set unix_epoch to local_seconds - (time to GMT)
+	return getTfromN(unix_epoch) of me
+end datetime2epoch
 
 on epoch2show_time(caller, epoch)
 	set handlername to "epoch2show_time_lib"
@@ -533,15 +541,12 @@ end epoch2show_time
 
 on serialize_show(caller, show_rec)
 	set handlername to "serialize_show"
-	set s to show_rec
+	copy show_rec to s
 	logger(true, handlername, caller, "DEBUG", "Converting show: " & show_title of s) of ParentScript
 
 	try
 		if (class of (show_last of s)) is date then
-			set show_last of s to (datetime2epoch(caller, show_last of s) of ParentScript) as text
-			logger(true, handlername, caller, "TRACE", "  show_last converted to epoch: " & show_last of s) of ParentScript
-		else if show_last of s is not "" and show_last of s is not 0 then
-			set show_last of s to (show_last of s) as text
+			set show_last of s to (my datetime2epoch(caller, show_last of s)) as text
 		else
 			set show_last of s to 0
 		end if
@@ -550,7 +555,7 @@ on serialize_show(caller, show_rec)
 	end try
 	try
 		if (class of (show_next of s)) is date then
-			set show_next of s to datetime2epoch(caller, show_next of s) of ParentScript
+			set show_next of s to (my datetime2epoch(caller, show_next of s)) as text
 		else
 			set show_next of s to 0
 		end if
@@ -559,7 +564,7 @@ on serialize_show(caller, show_rec)
 	end try
 	try
 		if (class of (show_end of s)) is date then
-			set show_end of s to datetime2epoch(caller, show_end of s) of ParentScript
+			set show_end of s to (my datetime2epoch(caller, show_end of s)) as text
 		else
 			set show_end of s to 0
 		end if
@@ -568,7 +573,7 @@ on serialize_show(caller, show_rec)
 	end try
 	try
 		if (class of (notify_recording_time of s)) is date then
-			set notify_recording_time of s to (datetime2epoch(caller, notify_recording_time of s) of ParentScript) as text
+			set notify_recording_time of s to (my datetime2epoch(caller, notify_recording_time of s)) as text
 		else if notify_recording_time of s is not "missing value" and notify_recording_time of s is not "" and notify_recording_time of s is not 0 then
 			set notify_recording_time of s to (notify_recording_time of s) as text
 		else
@@ -579,7 +584,7 @@ on serialize_show(caller, show_rec)
 	end try
 	try
 		if (class of (notify_upnext_time of s)) is date then
-			set notify_upnext_time of s to (datetime2epoch(caller, notify_upnext_time of s) of ParentScript) as text
+			set notify_upnext_time of s to (my datetime2epoch(caller, notify_upnext_time of s)) as text
 		else if notify_upnext_time of s is not "missing value" and notify_upnext_time of s is not "" and notify_upnext_time of s is not 0 then
 			set notify_upnext_time of s to (notify_upnext_time of s) as text
 		else
@@ -611,97 +616,44 @@ end serialize_show
 
 on deserialize_show(caller, show_rec)
 	set handlername to "deserialize_show"
-	set s to show_rec
+	copy show_rec to s
 
 	try
 		set ep to show_last of s
-		if ep is 0 or ep is "" or ep is missing value then
-			set show_last of s to my epoch("")
+		if ep is 0 then
+			-- Sentinel value: never recorded, keep as 0
+			set show_last of s to 0
+		else if ep is "" or ep is missing value then
+			-- Empty sentinel: convert to never-recorded marker
+			set show_last of s to 0
 		else
-			if class of ep is text then
-				try
-					set ep_num to ep as number
-					set result to my epoch2datetime(caller, ep_num)
-					if class of result is not list then
-						set show_last of s to result
-					else
-						set show_last of s to my epoch("")
-					end if
-				on error
-					-- Old locale-formatted date string — cannot safely parse cross-locale
-					set show_last of s to my epoch("")
-				end try
-			else
-				set result to my epoch2datetime(caller, ep)
-				if class of result is not list then
-					set show_last of s to result
-				else
-					set show_last of s to my epoch("")
-				end if
-			end if
+			set ep_num to ep as number
+			set show_last of s to my epoch2datetime(caller, ep_num)
 		end if
 	on error
-		set show_last of s to (current date)
+		set show_last of s to 0
 	end try
 	try
 		set ep to show_next of s
 		if ep is 0 or ep is "" or ep is missing value then
 			set show_next of s to my epoch("")
 		else
-			if class of ep is text then
-				try
-					set ep_num to ep as number
-					set result to my epoch2datetime(caller, ep_num)
-					if class of result is not list then
-						set show_next of s to result
-					else
-						set show_next of s to my epoch("")
-					end if
-				on error
-					-- Old locale-formatted date string — cannot safely parse cross-locale
-					set show_next of s to my epoch("")
-				end try
-			else
-				set result to my epoch2datetime(caller, ep)
-				if class of result is not list then
-					set show_next of s to result
-				else
-					set show_next of s to my epoch("")
-				end if
-			end if
+			set ep_num to ep as number
+			set show_next of s to my epoch2datetime(caller, ep_num)
 		end if
 	on error
-		set show_next of s to (current date)
+		set show_next of s to my epoch("")
 	end try
 	try
 		set ep to show_end of s
 		if ep is 0 or ep is "" or ep is missing value then
 			set show_end of s to my epoch("")
 		else
-			if class of ep is text then
-				try
-					set ep_num to ep as number
-					set result to my epoch2datetime(caller, ep_num)
-					if class of result is not list then
-						set show_end of s to result
-					else
-						set show_end of s to my epoch("")
-					end if
-				on error
-					-- Old locale-formatted date string — cannot safely parse cross-locale
-					set show_end of s to my epoch("")
-				end try
-			else
-				set result to my epoch2datetime(caller, ep)
-				if class of result is not list then
-					set show_end of s to result
-				else
-					set show_end of s to my epoch("")
-				end if
-			end if
+			set ep_num to ep as number
+			set show_end of s to my epoch2datetime(caller, ep_num)
 		end if
 	on error
-		set show_end of s to (current date)
+		set show_end of s to my epoch("")
 	end try
 
 	try
@@ -709,27 +661,8 @@ on deserialize_show(caller, show_rec)
 		if ep is 0 or ep is "" or ep is missing value or ep is "missing value" then
 			set notify_recording_time of s to missing value
 		else
-			if class of ep is text then
-				try
-					set ep_num to ep as number
-					set result to my epoch2datetime(caller, ep_num)
-					if class of result is not list then
-						set notify_recording_time of s to result
-					else
-						set notify_recording_time of s to missing value
-					end if
-				on error
-					-- Old locale-formatted date string — cannot safely parse cross-locale
-					set notify_recording_time of s to missing value
-				end try
-			else
-				set result to my epoch2datetime(caller, ep)
-				if class of result is not list then
-					set notify_recording_time of s to result
-				else
-					set notify_recording_time of s to missing value
-				end if
-			end if
+			set ep_num to ep as number
+			set notify_recording_time of s to my epoch2datetime(caller, ep_num)
 		end if
 	on error
 		set notify_recording_time of s to missing value
@@ -739,27 +672,8 @@ on deserialize_show(caller, show_rec)
 		if ep is 0 or ep is "" or ep is missing value or ep is "missing value" then
 			set notify_upnext_time of s to missing value
 		else
-			if class of ep is text then
-				try
-					set ep_num to ep as number
-					set result to my epoch2datetime(caller, ep_num)
-					if class of result is not list then
-						set notify_upnext_time of s to result
-					else
-						set notify_upnext_time of s to missing value
-					end if
-				on error
-					-- Old locale-formatted date string — cannot safely parse cross-locale
-					set notify_upnext_time of s to missing value
-				end try
-			else
-				set result to my epoch2datetime(caller, ep)
-				if class of result is not list then
-					set notify_upnext_time of s to result
-				else
-					set notify_upnext_time of s to missing value
-				end if
-			end if
+			set ep_num to ep as number
+			set notify_upnext_time of s to my epoch2datetime(caller, ep_num)
 		end if
 	on error
 		set notify_upnext_time of s to missing value
@@ -1455,16 +1369,20 @@ on seriesScanUpdate(caller, show_id)
 				if show_offset is not 0 then
 					if show_recording of item show_offset of Show_info is false then
 						set isdupe to {false, false, false}
-						if show_next of item show_offset of Show_info is my epoch2datetime(my cm(handlername, caller), my getTfromN(StartTime of channel_record)) then
+						-- Guide returns times as "local time encoded as UTC epoch", so subtract GMT offset to get true UTC epoch
+						set StartTime_guide_epoch to my getTfromN(StartTime of channel_record)
+						set StartTime_utc_epoch to StartTime_guide_epoch - (time to GMT)
+
+						if show_next of item show_offset of Show_info is my epoch2datetime(my cm(handlername, caller), StartTime_utc_epoch) then
 							logger(true, handlername, caller, "DEBUG", "show_next is the same") of ParentScript
 							set item 1 of isdupe to true
 						else
-							set show_next of item show_offset of Show_info to my epoch2datetime(my cm(handlername, caller), my getTfromN(StartTime of channel_record))
+							set show_next of item show_offset of Show_info to my epoch2datetime(my cm(handlername, caller), StartTime_utc_epoch)
 						end if
 						-- Always update show_end based on show_next + show_length
 						set show_end of item show_offset of Show_info to (show_next of item show_offset of Show_info) + (show_length of item show_offset of Show_info * minutes)
 
-						if show_time of item show_offset of Show_info is my epoch2show_time(my cm(handlername, caller), my getTfromN(StartTime of channel_record)) then
+						if show_time of item show_offset of Show_info is my epoch2show_time(my cm(handlername, caller), StartTime_utc_epoch) then
 							logger(true, handlername, caller, "DEBUG", "show_time is the same") of ParentScript
 							set item 2 of isdupe to true
 						else
@@ -1492,8 +1410,8 @@ on seriesScanUpdate(caller, show_id)
 							logger(true, handlername, caller, "INFO", "show channel: " & show_channel of item show_offset of Show_info) of ParentScript
 							
 							set show_title of item show_offset of Show_info to fixall of my show_name_fix(my cm(handlername, caller), new_showid, channel_record)
-							set show_next of item show_offset of Show_info to my epoch2datetime(my cm(handlername, caller), my getTfromN(StartTime of channel_record))
-							set show_end of item show_offset of Show_info to my epoch2datetime(my cm(handlername, caller), my getTfromN(EndTime of channel_record))
+							set show_next of item show_offset of Show_info to my epoch2datetime(my cm(handlername, caller), (my getTfromN(StartTime of channel_record)) - (time to GMT))
+							set show_end of item show_offset of Show_info to my epoch2datetime(my cm(handlername, caller), (my getTfromN(EndTime of channel_record)) - (time to GMT))
 							set show_fail_count of item show_offset of Show_info to 0
 							set show_fail_reason of item show_offset of Show_info to ""
 							try
