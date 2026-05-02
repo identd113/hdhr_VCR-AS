@@ -538,7 +538,7 @@ on serialize_show(caller, show_rec)
 
 	try
 		if (class of (show_last of s)) is date then
-			set show_last of s to my datetime2epoch(caller, show_last of s)
+			set show_last of s to datetime2epoch(caller, show_last of s) of ParentScript
 			logger(true, handlername, caller, "TRACE", "  show_last converted to epoch: " & show_last of s) of ParentScript
 		else
 			set show_last of s to 0
@@ -548,7 +548,7 @@ on serialize_show(caller, show_rec)
 	end try
 	try
 		if (class of (show_next of s)) is date then
-			set show_next of s to my datetime2epoch(caller, show_next of s)
+			set show_next of s to datetime2epoch(caller, show_next of s) of ParentScript
 		else
 			set show_next of s to 0
 		end if
@@ -557,7 +557,7 @@ on serialize_show(caller, show_rec)
 	end try
 	try
 		if (class of (show_end of s)) is date then
-			set show_end of s to my datetime2epoch(caller, show_end of s)
+			set show_end of s to datetime2epoch(caller, show_end of s) of ParentScript
 		else
 			set show_end of s to 0
 		end if
@@ -566,7 +566,7 @@ on serialize_show(caller, show_rec)
 	end try
 	try
 		if (class of (notify_recording_time of s)) is date then
-			set notify_recording_time of s to my datetime2epoch(caller, notify_recording_time of s)
+			set notify_recording_time of s to datetime2epoch(caller, notify_recording_time of s) of ParentScript
 		else
 			set notify_recording_time of s to 0
 		end if
@@ -575,7 +575,7 @@ on serialize_show(caller, show_rec)
 	end try
 	try
 		if (class of (notify_upnext_time of s)) is date then
-			set notify_upnext_time of s to my datetime2epoch(caller, notify_upnext_time of s)
+			set notify_upnext_time of s to datetime2epoch(caller, notify_upnext_time of s) of ParentScript
 		else
 			set notify_upnext_time of s to 0
 		end if
@@ -1423,6 +1423,8 @@ on seriesScanUpdate(caller, show_id)
 						else
 							set show_next of item show_offset of Show_info to my epoch2datetime(my cm(handlername, caller), my getTfromN(StartTime of channel_record))
 						end if
+						-- Always update show_end based on show_next + show_length
+						set show_end of item show_offset of Show_info to (show_next of item show_offset of Show_info) + (show_length of item show_offset of Show_info * minutes)
 
 						if show_time of item show_offset of Show_info is my epoch2show_time(my cm(handlername, caller), my getTfromN(StartTime of channel_record)) then
 							logger(true, handlername, caller, "DEBUG", "show_time is the same") of ParentScript

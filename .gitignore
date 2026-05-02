@@ -14,3 +14,4 @@ whatsnew.txt
 *.dmg
 *.pkg
 *claude
+/.claude
