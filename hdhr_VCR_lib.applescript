@@ -1289,15 +1289,18 @@ on seriesScanNext(caller, seriesID, hdhr_device, thechan, show_id, theoffset)
 				repeat with i from 1 to length of show_match_list of seriesScanTemp
 					set StartTime_epoch to my getTfromN(StartTime of item i of show_match_list of seriesScanTemp)
 					set EndTime_epoch to my getTfromN(EndTime of item i of show_match_list of seriesScanTemp)
+					-- Guide returns times as "local time encoded as UTC epoch", so subtract GMT offset before converting
+					set StartTime_utc_epoch to StartTime_epoch - (time to GMT)
+					set EndTime_utc_epoch to EndTime_epoch - (time to GMT)
 					my show_name_fix(my cm(handlername, caller), show_id, item i of show_match_list of seriesScanTemp) --correct, returns the whole channel object, build_channel might do this.
-					if StartTime_epoch is less than item 1 of newest_show_epoch then
-						if cd is less than my epoch2datetime(my cm(handlername, caller), EndTime_epoch) then
-							set beginning of newest_show_epoch to StartTime_epoch
+					if StartTime_utc_epoch is less than item 1 of newest_show_epoch then
+						if cd is less than my epoch2datetime(my cm(handlername, caller), EndTime_utc_epoch) then
+							set beginning of newest_show_epoch to StartTime_utc_epoch
 							set beginning of newest_show_epoch_offset to i
-							logger(true, handlername, caller, "INFO", "Offset: " & theoffset & " New Start Time: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), StartTime_epoch), false, false)) of ParentScript
+							logger(true, handlername, caller, "INFO", "Offset: " & theoffset & " New Start Time: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), StartTime_utc_epoch), false, false)) of ParentScript
 						end if
 					else
-						set end of newest_show_epoch to StartTime_epoch
+						set end of newest_show_epoch to StartTime_utc_epoch
 						set end of newest_show_epoch_offset to i
 					end if
 				end repeat
@@ -1362,7 +1365,7 @@ on seriesScanUpdate(caller, show_id)
 						if show_time of item show_offset of Show_info is my epoch2show_time(my cm(handlername, caller), StartTime_utc_epoch) then
 							set item 2 of isdupe to true
 						else
-							set show_time of item show_offset of Show_info to my epoch2show_time(my cm(handlername, caller), my getTfromN(StartTime of channel_record))
+							set show_time of item show_offset of Show_info to my epoch2show_time(my cm(handlername, caller), StartTime_utc_epoch)
 						end if
 						if (show_channel of item show_offset of Show_info) is not channel_number then
 							logger(true, handlername, caller, "INFO", "Channel updated: " & (show_channel of item show_offset of Show_info) & " → " & channel_number) of ParentScript
