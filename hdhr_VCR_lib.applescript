@@ -1414,6 +1414,27 @@ on seriesScanUpdate(caller, show_id)
 	set Show_info of ParentScript to Show_info
 end seriesScanUpdate
 
+on updateSeriesID(caller, show_id, new_seriesid)
+	set handlername to "updateSeriesID_lib"
+	if show_id is "" or new_seriesid is "" then
+		logger(true, handlername, caller, "WARN", "Cannot update SeriesID: show_id=" & quote & show_id & quote & ", new_seriesid=" & quote & new_seriesid & quote) of ParentScript
+		return false
+	end if
+	set Show_info to Show_info of ParentScript
+	set show_offset to my HDHRShowSearch(my cm(handlername, caller), show_id)
+	if show_offset is not 0 then
+		set old_seriesid to show_seriesid of item show_offset of Show_info
+		set show_title to show_title of item show_offset of Show_info
+		set show_seriesid of item show_offset of Show_info to new_seriesid
+		logger(true, handlername, caller, "INFO", "SeriesID updated for " & quote & show_title & quote & ": " & old_seriesid & " → " & new_seriesid) of ParentScript
+		set Show_info of ParentScript to Show_info
+		return true
+	else
+		logger(true, handlername, caller, "WARN", "Show not found: " & show_id) of ParentScript
+		return false
+	end if
+end updateSeriesID
+
 on seriesStatusIcons(caller, show_id)
 	set handlername to "seriesStatus_Lib"
 	set temp_series_status to {}
