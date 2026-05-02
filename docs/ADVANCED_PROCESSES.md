@@ -376,6 +376,27 @@ IF tuner online AND 5+ minutes since last guide update THEN
 http://hdhr-{device}.local:5004/guide.json?channels={channel}&hours={GuideHours}
 ```
 
+### Guide Data Timezone Handling
+
+**Important:** The HDHomeRun guide API returns episode times as "local time encoded as UTC epoch". This means the epoch value represents what the local time would be if treated as a UTC epoch, NOT the actual UTC epoch.
+
+**Example:**
+- Show scheduled for 1:30 PM CDT (local time)
+- Guide returns: `1777728600` (which appears to be 1:30 PM UTC)
+- Without correction: deserializes to 8:30 AM CDT (off by 5 hours)
+- **Fix applied:** Subtract `time to GMT` before calling `epoch2datetime()`
+  - `1777728600 - (-18000) = 1777746600` (true UTC epoch)
+  - Deserializes correctly to 1:30 PM CDT
+
+**Implementation:**
+When extracting `StartTime` or `EndTime` from guide data, always apply the GMT offset correction:
+```applescript
+set corrected_epoch to guide_time_value - (time to GMT)
+set date_object to epoch2datetime(caller, corrected_epoch)
+```
+
+This ensures `show_next` triggers recording at the correct scheduled time, not hours early.
+
 ---
 
 ## Multi-Tuner Support

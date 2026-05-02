@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Fixed
+- **CRITICAL:** Fixed guide data timezone interpretation. The HDHomeRun API returns episode times as "local time encoded as UTC epoch". Without correction, `show_next` would deserialize 5+ hours too early (one full timezone offset), causing SeriesID recordings to start before the scheduled time. Now applies GMT offset correction when extracting `StartTime`/`EndTime` from guide data. (**Impact:** SeriesID shows now trigger at the correct time, not hours early)
+
 ### Added
 - **NEW:** Added `BARS` logging level to gate progress bar display in the idle loop. Available in `Logger_levels_all` but not enabled by default. Enable in config: `"LoggerLevels": ["INFO", "WARN", "ERROR", "NEAT", "FATAL", "BARS"]` (or include with DEBUG/TRACE)
 

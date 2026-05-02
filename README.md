@@ -69,6 +69,7 @@ These improvements were made during a focused reliability and feature pass in ea
 | **False "recording in progress" warnings** — shows were flagged as actively recording when they weren't, blocking the next scheduled start. | Recordings start on time without manual intervention |
 | **Missing fields on load** — `deserialize_show` did not add fields introduced after a show was first saved, causing key errors on older config entries. | Existing configs survive upgrades without manual editing |
 | **SeriesID shows could never start** if `show_url` was empty — `record_start` now guards this early and logs an ERROR instead of attempting a malformed `curl` command. | Clear error message instead of a silent failed recording |
+| **Guide data timezone interpretation** — the HDHomeRun API returns episode times as "local time encoded as UTC epoch". Without correction, show_next would be deserialized 5+ hours too early (one full timezone offset), causing recordings to start before the scheduled time. Fixed to subtract GMT offset when extracting guide times. | SeriesID shows now trigger recording at the correct scheduled time, not hours early |
 
 ### New Behaviour
 

@@ -136,6 +136,14 @@ Shows are ONE of 4 states, determined by `is_series`, `use_seriesid`, `use_serie
 - Calculate days until air date (offset)
 - Update show_next
 
+**⚠️ CRITICAL: Guide Data Timezone Interpretation**
+
+The HDHomeRun guide API returns episode times as "local time encoded as UTC epoch":
+- Example: Show at 1:30 PM CDT (local) → API returns epoch for "1:30 PM UTC" (not the actual UTC time)
+- Without correction: would deserialize to 8:30 AM CDT (5+ hours early), causing premature recording
+- **Fix:** When extracting `StartTime`/`EndTime` from guide, subtract `time to GMT` before calling `epoch2datetime()`
+- All places where guide times are used must apply this correction (seriesScanUpdate, add_show_info, etc.)
+
 ---
 
 ## Error Handling
