@@ -538,13 +538,15 @@ on serialize_show(caller, show_rec)
 
 	try
 		if (class of (show_last of s)) is date then
-			set show_last of s to datetime2epoch(caller, show_last of s) of ParentScript
+			set show_last of s to (datetime2epoch(caller, show_last of s) of ParentScript) as text
 			logger(true, handlername, caller, "TRACE", "  show_last converted to epoch: " & show_last of s) of ParentScript
+		else if show_last of s is not "missing value" and show_last of s is not "" then
+			set show_last of s to (show_last of s) as text
 		else
-			set show_last of s to 0
+			set show_last of s to "missing value"
 		end if
 	on error
-		set show_last of s to 0
+		set show_last of s to "missing value"
 	end try
 	try
 		if (class of (show_next of s)) is date then
@@ -566,21 +568,25 @@ on serialize_show(caller, show_rec)
 	end try
 	try
 		if (class of (notify_recording_time of s)) is date then
-			set notify_recording_time of s to datetime2epoch(caller, notify_recording_time of s) of ParentScript
+			set notify_recording_time of s to (datetime2epoch(caller, notify_recording_time of s) of ParentScript) as text
+		else if notify_recording_time of s is not "missing value" and notify_recording_time of s is not "" and notify_recording_time of s is not 0 then
+			set notify_recording_time of s to (notify_recording_time of s) as text
 		else
-			set notify_recording_time of s to 0
+			set notify_recording_time of s to "missing value"
 		end if
 	on error
-		set notify_recording_time of s to 0
+		set notify_recording_time of s to "missing value"
 	end try
 	try
 		if (class of (notify_upnext_time of s)) is date then
-			set notify_upnext_time of s to datetime2epoch(caller, notify_upnext_time of s) of ParentScript
+			set notify_upnext_time of s to (datetime2epoch(caller, notify_upnext_time of s) of ParentScript) as text
+		else if notify_upnext_time of s is not "missing value" and notify_upnext_time of s is not "" and notify_upnext_time of s is not 0 then
+			set notify_upnext_time of s to (notify_upnext_time of s) as text
 		else
-			set notify_upnext_time of s to 0
+			set notify_upnext_time of s to "missing value"
 		end if
 	on error
-		set notify_upnext_time of s to 0
+		set notify_upnext_time of s to "missing value"
 	end try
 
 	try
