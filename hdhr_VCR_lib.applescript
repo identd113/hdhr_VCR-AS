@@ -1351,24 +1351,29 @@ on seriesScanNext(caller, seriesID, hdhr_device, thechan, show_id, theoffset)
 		if length of show_match_list of seriesScanTemp is greater than 0 then
 			logger(true, handlername, caller, "INFO", "Showname: " & show_title of item show_offset of Show_info) of ParentScript
 			copy (current date) to cd
-			repeat with i from 1 to length of show_match_list of seriesScanTemp
-				set StartTime_epoch to my getTfromN(StartTime of item i of show_match_list of seriesScanTemp)
-				set EndTime_epoch to my getTfromN(EndTime of item i of show_match_list of seriesScanTemp)
-				my show_name_fix(my cm(handlername, caller), show_id, item i of show_match_list of seriesScanTemp) --correct, returns the whole channel object, build_channel might do this.
-				logger(true, handlername, caller, "DEBUG", "start: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), StartTime_epoch), false, false) & ", end: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), EndTime_epoch), false, false)) of ParentScript
-				if StartTime_epoch is less than item 1 of newest_show_epoch then
-					if cd is less than my epoch2datetime(my cm(handlername, caller), StartTime_epoch) then
-						set beginning of newest_show_epoch to StartTime_epoch
-						set beginning of newest_show_epoch_offset to i
-						logger(true, handlername, caller, "INFO", "Offset: " & theoffset & " New Start Time: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), StartTime_epoch), false, false)) of ParentScript
+			try
+				repeat with i from 1 to length of show_match_list of seriesScanTemp
+					set StartTime_epoch to my getTfromN(StartTime of item i of show_match_list of seriesScanTemp)
+					set EndTime_epoch to my getTfromN(EndTime of item i of show_match_list of seriesScanTemp)
+					my show_name_fix(my cm(handlername, caller), show_id, item i of show_match_list of seriesScanTemp) --correct, returns the whole channel object, build_channel might do this.
+					logger(true, handlername, caller, "DEBUG", "start: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), StartTime_epoch), false, false) & ", end: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), EndTime_epoch), false, false)) of ParentScript
+					if StartTime_epoch is less than item 1 of newest_show_epoch then
+						if cd is less than my epoch2datetime(my cm(handlername, caller), StartTime_epoch) then
+							set beginning of newest_show_epoch to StartTime_epoch
+							set beginning of newest_show_epoch_offset to i
+							logger(true, handlername, caller, "INFO", "Offset: " & theoffset & " New Start Time: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), StartTime_epoch), false, false)) of ParentScript
+						else
+							logger(true, handlername, caller, "DEBUG", "Episode already started or in past, skipping: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), StartTime_epoch), false, false)) of ParentScript
+						end if
 					else
-						logger(true, handlername, caller, "DEBUG", "Episode already started or in past, skipping: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), StartTime_epoch), false, false)) of ParentScript
+						set end of newest_show_epoch to StartTime_epoch
+						set end of newest_show_epoch_offset to i
 					end if
-				else
-					set end of newest_show_epoch to StartTime_epoch
-					set end of newest_show_epoch_offset to i
-				end if
-			end repeat
+				end repeat
+			on error errmsg
+				logger(true, handlername, caller, "WARN", "Error processing episodes for " & show_title of item show_offset of Show_info & ": " & errmsg) of ParentScript
+				return {}
+			end try
 			--	choose from list newest_show_epoch_offset
 			if item theoffset of newest_show_epoch_offset is not 0 then
 				--	set show_offset to my HDHRShowSearch(my cm(handlername, caller), show_id of seriesScanTemp)
