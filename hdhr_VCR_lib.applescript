@@ -628,7 +628,8 @@ on deserialize_show(caller, show_rec)
 			set show_last of s to 0
 		else
 			set ep_num to ep as number
-			set show_last of s to my epoch2datetime(caller, ep_num)
+			-- Stored times are in "epoch local time" format, so subtract GMT offset like guide data
+			set show_last of s to my epoch2datetime(caller, ep_num - (time to GMT))
 		end if
 	on error
 		set show_last of s to 0
@@ -639,7 +640,8 @@ on deserialize_show(caller, show_rec)
 			set show_next of s to my epoch("")
 		else
 			set ep_num to ep as number
-			set show_next of s to my epoch2datetime(caller, ep_num)
+			-- Stored times are in "epoch local time" format, so subtract GMT offset like guide data
+			set show_next of s to my epoch2datetime(caller, ep_num - (time to GMT))
 		end if
 	on error
 		set show_next of s to my epoch("")
@@ -650,7 +652,8 @@ on deserialize_show(caller, show_rec)
 			set show_end of s to my epoch("")
 		else
 			set ep_num to ep as number
-			set show_end of s to my epoch2datetime(caller, ep_num)
+			-- Stored times are in "epoch local time" format, so subtract GMT offset like guide data
+			set show_end of s to my epoch2datetime(caller, ep_num - (time to GMT))
 		end if
 	on error
 		set show_end of s to my epoch("")
@@ -662,7 +665,8 @@ on deserialize_show(caller, show_rec)
 			set notify_recording_time of s to missing value
 		else
 			set ep_num to ep as number
-			set notify_recording_time of s to my epoch2datetime(caller, ep_num)
+			-- Stored times are in "epoch local time" format, so subtract GMT offset like guide data
+			set notify_recording_time of s to my epoch2datetime(caller, ep_num - (time to GMT))
 		end if
 	on error
 		set notify_recording_time of s to missing value
@@ -673,7 +677,8 @@ on deserialize_show(caller, show_rec)
 			set notify_upnext_time of s to missing value
 		else
 			set ep_num to ep as number
-			set notify_upnext_time of s to my epoch2datetime(caller, ep_num)
+			-- Stored times are in "epoch local time" format, so subtract GMT offset like guide data
+			set notify_upnext_time of s to my epoch2datetime(caller, ep_num - (time to GMT))
 		end if
 	on error
 		set notify_upnext_time of s to missing value
