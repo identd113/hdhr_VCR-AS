@@ -1,18 +1,36 @@
 # Timezone Correction Fix - Test Plan
 
-**Commit:** 0b5b2d3  
+**Commits:** 0b5b2d3, 548bf9a, 36e860a
 **Date:** 2026-05-02  
 **Current Time:** 6:36 PM CDT  
 
+## Architecture: All Times Are "Epoch Local Time"
+
+HDHomeRun device returns times as **"epoch local time"** - the epoch value that represents the actual local time (e.g., 6:00 PM CDT is stored as the epoch number for "6:00 PM UTC").
+
+For consistency, **all times stored in config are also in "epoch local time" format**. This is produced by `datetime2epoch()` when storing and requires the `- (time to GMT)` correction when loading or processing with `epoch2datetime()`.
+
 ## What Was Fixed
 
-Three locations where HDHomeRun guide data times were not being consistently timezone-corrected:
+**Five locations corrected:**
 
 1. **seriesScanNext** (lib) - Episode eligibility checks and logging
-2. **seriesScanUpdate show_time** (lib) - Setting show_time from guide data
+2. **seriesScanUpdate show_time** (lib) - Setting show_time from guide data  
 3. **update_show** (main) - Comparing show times during edits
+4. **deserialize_show** (lib) - Loading 5 time fields from config:
+   - show_last, show_next, show_end
+   - notify_recording_time, notify_upnext_time
 
-All now consistently apply: `getTfromN(epoch) - (time to GMT)` before conversion.
+All now consistently apply: `getTfromN(epoch) - (time to GMT)` or `(stored_epoch) - (time to GMT)` before conversion.
+
+## Why This Matters
+
+The fix ensures:
+- ✓ Times from HDHomeRun guide are correctly interpreted as "epoch local time"
+- ✓ Times stored in config preserve the same "epoch local time" format
+- ✓ When config is loaded, times are correctly restored to local date objects
+- ✓ No 5-hour shifts or other timezone offset errors between HDHomeRun and stored data
+- ✓ Recording triggers happen at the correct scheduled time
 
 ## Manual Test Scenarios (6:36 PM)
 
@@ -49,7 +67,19 @@ All now consistently apply: `getTfromN(epoch) - (time to GMT)` before conversion
 
 **Expected:** Recording should start at or very close to the scheduled time, not 5+ hours early or late.
 
-### Test 4: Log Inspection
+### Test 4: Config Persistence (Critical for consistency)
+**Setup:** Create a show, save config, restart app, and verify times are consistent.
+
+**Test Steps:**
+1. Create a new SeriesID show with an episode airing at a specific time (e.g., 8:00 PM)
+2. Note the "Next Showing" time displayed
+3. Close hdhr_VCR and restart it
+4. Re-open the show for editing - the "Next Showing" should be the SAME time
+5. Verify no 5-hour shift or other offset appears
+
+**Expected:** Times should be identical before and after restart. If they shift by 5+ hours, the config loading is still broken.
+
+### Test 5: Log Inspection
 **Check File:** `~/Library/Logs/hdhr_VCR.log`
 
 **Look For:**
