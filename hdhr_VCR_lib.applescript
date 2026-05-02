@@ -14,7 +14,7 @@ end cm
 on load_hdhrVCR_vars()
 	set handlername to "load_hdhrVCR_vars_lib"
 	-- We need to receive states from the hdhr_vcr here
-	set vers_lib to "20260501"
+	set vers_lib to "20260426"
 	return vers_lib
 end load_hdhrVCR_vars
 
@@ -508,11 +508,7 @@ on epoch2datetime(caller, epochseconds)
 			set unix_time to epochseconds
 		end try
 		set epoch_time to my epoch("")
-		-- Check if epoch() returned a list (error marker)
-		if class of epoch_time is list then
-			return {handlername, "epoch() failed: " & item 2 of epoch_time}
-		end if
-		--epoch_time is now current unix epoch time as a date object
+		--epoch_time is now current unix epoch time as a date object 
 		logger(true, handlername, caller, "TRACE", epochseconds) of ParentScript
 		set epochOFFSET to (epoch_time + (unix_time as number) + (time to GMT))
 		logger(true, handlername, caller, "TRACE", class of (epochOFFSET)) of ParentScript
@@ -525,10 +521,6 @@ end epoch2datetime
 on epoch2show_time(caller, epoch)
 	set handlername to "epoch2show_time_lib"
 	set show_time_temp to my epoch2datetime(my cm(handlername, caller), epoch)
-	if class of show_time_temp is list then
-		logger(true, handlername, caller, "ERROR", "epoch2datetime failed: " & item 2 of show_time_temp) of ParentScript
-		return "0"
-	end if
 	set show_time_temp_hours to hours of show_time_temp
 	set show_time_temp_minutes to minutes of show_time_temp
 	if show_time_temp_minutes is not 0 then
@@ -541,298 +533,290 @@ end epoch2show_time
 
 on serialize_show(caller, show_rec)
 	set handlername to "serialize_show"
-	set show_record to show_rec
-	logger(true, handlername, caller, "DEBUG", "Converting show: " & show_title of show_record) of ParentScript
+	set s to show_rec
+	logger(true, handlername, caller, "DEBUG", "Converting show: " & show_title of s) of ParentScript
 
 	try
-		if (class of (show_last of show_record)) is date then
-			set show_last of show_record to datetime2epoch(caller, show_last of show_record) of ParentScript
-			logger(true, handlername, caller, "TRACE", "  show_last converted to epoch: " & show_last of show_record) of ParentScript
+		if (class of (show_last of s)) is date then
+			set show_last of s to my datetime2epoch(caller, show_last of s)
+			logger(true, handlername, caller, "TRACE", "  show_last converted to epoch: " & show_last of s) of ParentScript
 		else
-			set show_last of show_record to 0
+			set show_last of s to 0
 		end if
 	on error
-		set show_last of show_record to 0
+		set show_last of s to 0
 	end try
 	try
-		if (class of (show_next of show_record)) is date then
-			set show_next of show_record to datetime2epoch(caller, show_next of show_record) of ParentScript
+		if (class of (show_next of s)) is date then
+			set show_next of s to my datetime2epoch(caller, show_next of s)
 		else
-			set show_next of show_record to 0
+			set show_next of s to 0
 		end if
 	on error
-		set show_next of show_record to 0
+		set show_next of s to 0
 	end try
 	try
-		if (class of (show_end of show_record)) is date then
-			set show_end of show_record to datetime2epoch(caller, show_end of show_record) of ParentScript
+		if (class of (show_end of s)) is date then
+			set show_end of s to my datetime2epoch(caller, show_end of s)
 		else
-			set show_end of show_record to 0
+			set show_end of s to 0
 		end if
 	on error
-		set show_end of show_record to 0
+		set show_end of s to 0
 	end try
 	try
-		if (class of (notify_recording_time of show_record)) is date then
-			set notify_recording_time of show_record to datetime2epoch(caller, notify_recording_time of show_record) of ParentScript
+		if (class of (notify_recording_time of s)) is date then
+			set notify_recording_time of s to my datetime2epoch(caller, notify_recording_time of s)
 		else
-			set notify_recording_time of show_record to 0
+			set notify_recording_time of s to 0
 		end if
 	on error
-		set notify_recording_time of show_record to 0
+		set notify_recording_time of s to 0
 	end try
 	try
-		if (class of (notify_upnext_time of show_record)) is date then
-			set notify_upnext_time of show_record to datetime2epoch(caller, notify_upnext_time of show_record) of ParentScript
+		if (class of (notify_upnext_time of s)) is date then
+			set notify_upnext_time of s to my datetime2epoch(caller, notify_upnext_time of s)
 		else
-			set notify_upnext_time of show_record to 0
+			set notify_upnext_time of s to 0
 		end if
 	on error
-		set notify_upnext_time of show_record to 0
+		set notify_upnext_time of s to 0
 	end try
 
 	try
-		if (class of (show_dir of show_record)) is alias then
-			set show_dir of show_record to POSIX path of (show_dir of show_record)
+		if (class of (show_dir of s)) is alias then
+			set show_dir of s to POSIX path of (show_dir of s)
 		else
-			set show_dir of show_record to (show_dir of show_record) as text
+			set show_dir of s to (show_dir of s) as text
 		end if
 	on error
 	end try
 	try
-		if (class of (show_temp_dir of show_record)) is alias then
-			set show_temp_dir of show_record to POSIX path of (show_temp_dir of show_record)
+		if (class of (show_temp_dir of s)) is alias then
+			set show_temp_dir of s to POSIX path of (show_temp_dir of s)
 		else
-			set show_temp_dir of show_record to (show_temp_dir of show_record) as text
+			set show_temp_dir of s to (show_temp_dir of s) as text
 		end if
 	on error
 	end try
 
-	return show_record
+	return s
 end serialize_show
 
 on deserialize_show(caller, show_rec)
 	set handlername to "deserialize_show"
-	set show_record to show_rec
+	set s to show_rec
 
 	try
-		set ep to show_last of show_record
+		set ep to show_last of s
 		if ep is 0 or ep is "" or ep is missing value then
-			set show_last of show_record to my epoch("")
+			set show_last of s to my epoch("")
 		else
 			if class of ep is text then
 				try
 					set ep_num to ep as number
 					set result to my epoch2datetime(caller, ep_num)
 					if class of result is not list then
-						set show_last of show_record to result
+						set show_last of s to result
 					else
-						set show_last of show_record to my epoch("")
+						set show_last of s to my epoch("")
 					end if
 				on error
 					-- Old locale-formatted date string — cannot safely parse cross-locale
-					set show_last of show_record to my epoch("")
+					set show_last of s to my epoch("")
 				end try
 			else
 				set result to my epoch2datetime(caller, ep)
 				if class of result is not list then
-					set show_last of show_record to result
+					set show_last of s to result
 				else
-					set show_last of show_record to my epoch("")
+					set show_last of s to my epoch("")
 				end if
 			end if
 		end if
 	on error
-		set show_last of show_record to (current date)
+		set show_last of s to (current date)
 	end try
 	try
-		set ep to show_next of show_record
-		logger(true, handlername, caller, "DEBUG", "show_next raw value: " & ep & ", class: " & class of ep) of ParentScript
+		set ep to show_next of s
 		if ep is 0 or ep is "" or ep is missing value then
-			set show_next of show_record to my epoch("")
-			logger(true, handlername, caller, "DEBUG", "show_next set to epoch 0") of ParentScript
+			set show_next of s to my epoch("")
 		else
 			if class of ep is text then
 				try
 					set ep_num to ep as number
 					set result to my epoch2datetime(caller, ep_num)
 					if class of result is not list then
-						set show_next of show_record to result
-						logger(true, handlername, caller, "DEBUG", "show_next converted from text: " & result) of ParentScript
+						set show_next of s to result
 					else
-						set show_next of show_record to my epoch("")
-						logger(true, handlername, caller, "ERROR", "epoch2datetime failed for show_next text: " & item 2 of result) of ParentScript
-					end if
-				on error errmsg
-					-- Old locale-formatted date string — cannot safely parse cross-locale
-					set show_next of show_record to my epoch("")
-					logger(true, handlername, caller, "ERROR", "Failed to convert show_next text: " & errmsg) of ParentScript
-				end try
-			else
-				logger(true, handlername, caller, "DEBUG", "show_next converting from non-text: " & class of ep) of ParentScript
-				set result to my epoch2datetime(caller, ep)
-				if class of result is not list then
-					set show_next of show_record to result
-					logger(true, handlername, caller, "DEBUG", "show_next converted: " & result) of ParentScript
-				else
-					set show_next of show_record to my epoch("")
-					logger(true, handlername, caller, "ERROR", "epoch2datetime failed: " & item 2 of result) of ParentScript
-				end if
-			end if
-		end if
-	on error
-		set show_next of show_record to (current date)
-	end try
-	try
-		set ep to show_end of show_record
-		if ep is 0 or ep is "" or ep is missing value then
-			set show_end of show_record to my epoch("")
-		else
-			if class of ep is text then
-				try
-					set ep_num to ep as number
-					set result to my epoch2datetime(caller, ep_num)
-					if class of result is not list then
-						set show_end of show_record to result
-					else
-						set show_end of show_record to my epoch("")
+						set show_next of s to my epoch("")
 					end if
 				on error
 					-- Old locale-formatted date string — cannot safely parse cross-locale
-					set show_end of show_record to my epoch("")
+					set show_next of s to my epoch("")
 				end try
 			else
 				set result to my epoch2datetime(caller, ep)
 				if class of result is not list then
-					set show_end of show_record to result
+					set show_next of s to result
 				else
-					set show_end of show_record to my epoch("")
+					set show_next of s to my epoch("")
 				end if
 			end if
 		end if
 	on error
-		set show_end of show_record to (current date)
+		set show_next of s to (current date)
+	end try
+	try
+		set ep to show_end of s
+		if ep is 0 or ep is "" or ep is missing value then
+			set show_end of s to my epoch("")
+		else
+			if class of ep is text then
+				try
+					set ep_num to ep as number
+					set result to my epoch2datetime(caller, ep_num)
+					if class of result is not list then
+						set show_end of s to result
+					else
+						set show_end of s to my epoch("")
+					end if
+				on error
+					-- Old locale-formatted date string — cannot safely parse cross-locale
+					set show_end of s to my epoch("")
+				end try
+			else
+				set result to my epoch2datetime(caller, ep)
+				if class of result is not list then
+					set show_end of s to result
+				else
+					set show_end of s to my epoch("")
+				end if
+			end if
+		end if
+	on error
+		set show_end of s to (current date)
 	end try
 
 	try
-		set ep to notify_recording_time of show_record
+		set ep to notify_recording_time of s
 		if ep is 0 or ep is "" or ep is missing value or ep is "missing value" then
-			set notify_recording_time of show_record to missing value
+			set notify_recording_time of s to missing value
 		else
 			if class of ep is text then
 				try
 					set ep_num to ep as number
 					set result to my epoch2datetime(caller, ep_num)
 					if class of result is not list then
-						set notify_recording_time of show_record to result
+						set notify_recording_time of s to result
 					else
-						set notify_recording_time of show_record to missing value
+						set notify_recording_time of s to missing value
 					end if
 				on error
 					-- Old locale-formatted date string — cannot safely parse cross-locale
-					set notify_recording_time of show_record to missing value
+					set notify_recording_time of s to missing value
 				end try
 			else
 				set result to my epoch2datetime(caller, ep)
 				if class of result is not list then
-					set notify_recording_time of show_record to result
+					set notify_recording_time of s to result
 				else
-					set notify_recording_time of show_record to missing value
+					set notify_recording_time of s to missing value
 				end if
 			end if
 		end if
 	on error
-		set notify_recording_time of show_record to missing value
+		set notify_recording_time of s to missing value
 	end try
 	try
-		set ep to notify_upnext_time of show_record
+		set ep to notify_upnext_time of s
 		if ep is 0 or ep is "" or ep is missing value or ep is "missing value" then
-			set notify_upnext_time of show_record to missing value
+			set notify_upnext_time of s to missing value
 		else
 			if class of ep is text then
 				try
 					set ep_num to ep as number
 					set result to my epoch2datetime(caller, ep_num)
 					if class of result is not list then
-						set notify_upnext_time of show_record to result
+						set notify_upnext_time of s to result
 					else
-						set notify_upnext_time of show_record to missing value
+						set notify_upnext_time of s to missing value
 					end if
 				on error
 					-- Old locale-formatted date string — cannot safely parse cross-locale
-					set notify_upnext_time of show_record to missing value
+					set notify_upnext_time of s to missing value
 				end try
 			else
 				set result to my epoch2datetime(caller, ep)
 				if class of result is not list then
-					set notify_upnext_time of show_record to result
+					set notify_upnext_time of s to result
 				else
-					set notify_upnext_time of show_record to missing value
+					set notify_upnext_time of s to missing value
 				end if
 			end if
 		end if
 	on error
-		set notify_upnext_time of show_record to missing value
+		set notify_upnext_time of s to missing value
 	end try
 
 	try
-		set dstr to show_dir of show_record as text
+		set dstr to show_dir of s as text
 		if dstr starts with "/" then
-			set show_dir of show_record to (dstr as alias)
+			set show_dir of s to (dstr as alias)
 		end if
 	on error errmsg
-		logger(true, handlername, caller, "WARN", "show_dir could not be aliased for " & show_title of show_record & ": " & errmsg) of ParentScript
+		logger(true, handlername, caller, "WARN", "show_dir could not be aliased for " & show_title of s & ": " & errmsg) of ParentScript
 	end try
 	try
-		set dstr to show_temp_dir of show_record as text
+		set dstr to show_temp_dir of s as text
 		if dstr starts with "/" then
-			set show_temp_dir of show_record to (dstr as alias)
+			set show_temp_dir of s to (dstr as alias)
 		end if
 	on error errmsg
-		logger(true, handlername, caller, "WARN", "show_temp_dir could not be aliased for " & show_title of show_record & ": " & errmsg) of ParentScript
+		logger(true, handlername, caller, "WARN", "show_temp_dir could not be aliased for " & show_title of s & ": " & errmsg) of ParentScript
 	end try
 
 	try
-		set show_channel of show_record to (show_channel of show_record) as text
+		set show_channel of s to (show_channel of s) as text
 	end try
 
 	try
-		set show_fail_count of show_record to show_fail_count of show_record
+		set show_fail_count of s to show_fail_count of s
 	on error
-		set show_record to show_record & {show_fail_count:0}
+		set s to s & {show_fail_count:0}
 	end try
 	try
-		set show_fail_reason of show_record to show_fail_reason of show_record
+		set show_fail_reason of s to show_fail_reason of s
 	on error
-		set show_record to show_record & {show_fail_reason:""}
+		set s to s & {show_fail_reason:""}
 	end try
 	try
-		set show_logo_url of show_record to show_logo_url of show_record
+		set show_logo_url of s to show_logo_url of s
 	on error
-		set show_record to show_record & {show_logo_url:""}
+		set s to s & {show_logo_url:""}
 	end try
 	try
-		set show_url of show_record to show_url of show_record
+		set show_url of s to show_url of s
 	on error
-		set show_record to show_record & {show_url:""}
+		set s to s & {show_url:""}
 	end try
 	try
-		set show_time_OriginalAirdate of show_record to show_time_OriginalAirdate of show_record
+		set show_time_OriginalAirdate of s to show_time_OriginalAirdate of s
 	on error
-		set show_record to show_record & {show_time_OriginalAirdate:""}
+		set s to s & {show_time_OriginalAirdate:""}
 	end try
 	try
-		set show_use_seriesid of show_record to show_use_seriesid of show_record
+		set show_use_seriesid of s to show_use_seriesid of s
 	on error
-		set show_record to show_record & {show_use_seriesid:false}
+		set s to s & {show_use_seriesid:false}
 	end try
 	try
-		set show_use_seriesid_all of show_record to show_use_seriesid_all of show_record
+		set show_use_seriesid_all of s to show_use_seriesid_all of s
 	on error
-		set show_record to show_record & {show_use_seriesid_all:false}
+		set s to s & {show_use_seriesid_all:false}
 	end try
 
-	return show_record
+	return s
 end deserialize_show
 
 on tuner_dump(caller)
@@ -1302,34 +1286,34 @@ end seriesScanRun
 on seriesScan(caller, seriesID, hdhr_device, thechan, show_id)
 	set handlername to "seriesScan_lib"
 	set HDHR_DEVICE_LIST to HDHR_DEVICE_LIST of ParentScript
-	logger(true, handlername, caller, "DEBUG", "seriesScan: searching for seriesID=" & seriesID & ", device=" & hdhr_device & ", channel=" & thechan) of ParentScript
+	logger(true, handlername, caller, "DEBUG", "seriesID: " & seriesID & ", hdhr_device: " & hdhr_device & ", thechan: " & thechan) of ParentScript
 	set show_match_list to {}
 	set show_channel_list to {}
 	set tuner_offset to HDHRDeviceSearch(my cm(handlername, caller), hdhr_device) of ParentScript
 	set hdhr_guide to hdhr_guide of item tuner_offset of HDHR_DEVICE_LIST
-	logger(true, handlername, caller, "DEBUG", "seriesScan: hdhr_guide has " & length of hdhr_guide & " channels") of ParentScript
 	try
 		repeat with i from 1 to length of hdhr_guide
 			set temp_channel to (GuideNumber of item i of hdhr_guide) as text
 			set guide_temp to Guide of item i of hdhr_guide
-			if thechan is "" or thechan is temp_channel then
-				logger(true, handlername, caller, "TRACE", "Scanning channel " & temp_channel & " with " & length of guide_temp & " episodes") of ParentScript
-				repeat with i2 from 1 to length of guide_temp
-					set guide_entry_seriesid to seriesID of item i2 of guide_temp
-					if guide_entry_seriesid is seriesID then
-						logger(true, handlername, caller, "TRACE", "Match found: " & EpisodeNumber of item i2 of guide_temp & " on " & temp_channel) of ParentScript
+			repeat with i2 from 1 to length of guide_temp
+				if seriesID of item i2 of guide_temp is seriesID then
+					if thechan is "" then
 						set end of show_channel_list to temp_channel
 						set end of show_match_list to item i2 of guide_temp
+					else
+						if thechan is temp_channel then
+							set end of show_channel_list to temp_channel
+							set end of show_match_list to item i2 of guide_temp
+						end if
 					end if
-				end repeat
-			end if
+				end if
+			end repeat
 		end repeat
 	on error errmsg
 		logger(true, handlername, caller, "ERROR", "hdhr_guide likely empty, " & errmsg) of ParentScript
 		return {}
 	end try
 	set show_match_list_length to length of show_match_list
-	logger(true, handlername, caller, "DEBUG", "seriesScan: found " & show_match_list_length & " matching episodes") of ParentScript
 	if show_match_list_length is greater than 0 then
 		if thechan is "" then
 			--	logger(true, handlername, caller, "INFO", "Total of " & show_match_list_length & " shows found, on all channels") of ParentScript
@@ -1367,58 +1351,34 @@ on seriesScanNext(caller, seriesID, hdhr_device, thechan, show_id, theoffset)
 		if length of show_match_list of seriesScanTemp is greater than 0 then
 			logger(true, handlername, caller, "INFO", "Showname: " & show_title of item show_offset of Show_info) of ParentScript
 			copy (current date) to cd
-			logger(true, handlername, caller, "INFO", "Current date/time: " & my short_date(my cm(handlername, caller), cd, false, false)) of ParentScript
-			logger(true, handlername, caller, "INFO", "Found " & length of show_match_list of seriesScanTemp & " episodes for SeriesID " & seriesID) of ParentScript
 			repeat with i from 1 to length of show_match_list of seriesScanTemp
 				set StartTime_epoch to my getTfromN(StartTime of item i of show_match_list of seriesScanTemp)
 				set EndTime_epoch to my getTfromN(EndTime of item i of show_match_list of seriesScanTemp)
 				my show_name_fix(my cm(handlername, caller), show_id, item i of show_match_list of seriesScanTemp) --correct, returns the whole channel object, build_channel might do this.
-				set StartTime_date to my epoch2datetime(my cm(handlername, caller), StartTime_epoch)
-				if class of StartTime_date is list then
-					logger(true, handlername, caller, "ERROR", "Failed to convert StartTime epoch " & StartTime_epoch & ": " & item 2 of StartTime_date) of ParentScript
-					set StartTime_date to (current date)
-				end if
-				set EndTime_date to my epoch2datetime(my cm(handlername, caller), EndTime_epoch)
-				if class of EndTime_date is list then
-					logger(true, handlername, caller, "ERROR", "Failed to convert EndTime epoch " & EndTime_epoch & ": " & item 2 of EndTime_date) of ParentScript
-					set EndTime_date to (current date)
-				end if
-				logger(true, handlername, caller, "DEBUG", "[" & i & "] " & (EpisodeNumber of item i of show_match_list of seriesScanTemp) & " " & (EpisodeTitle of item i of show_match_list of seriesScanTemp)) of ParentScript
-				logger(true, handlername, caller, "DEBUG", "  StartTime: " & my short_date(my cm(handlername, caller), StartTime_date, false, false) & " (" & StartTime_epoch & ")") of ParentScript
-				logger(true, handlername, caller, "DEBUG", "  EndTime: " & my short_date(my cm(handlername, caller), EndTime_date, false, false) & " (" & EndTime_epoch & ")") of ParentScript
-				logger(true, handlername, caller, "DEBUG", "  Newest so far: " & item 1 of newest_show_epoch) of ParentScript
+				logger(true, handlername, caller, "DEBUG", "start: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), StartTime_epoch), false, false) & ", end: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), EndTime_epoch), false, false)) of ParentScript
 				if StartTime_epoch is less than item 1 of newest_show_epoch then
-					logger(true, handlername, caller, "DEBUG", "  StartTime < newest: comparing end times...") of ParentScript
-					if cd is less than EndTime_date then
+					if cd is less than my epoch2datetime(my cm(handlername, caller), StartTime_epoch) then
 						set beginning of newest_show_epoch to StartTime_epoch
 						set beginning of newest_show_epoch_offset to i
-						logger(true, handlername, caller, "INFO", "  ✓ Selected [" & i & "] " & StartTime_date & " (cd < EndTime)") of ParentScript
+						logger(true, handlername, caller, "INFO", "Offset: " & theoffset & " New Start Time: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), StartTime_epoch), false, false)) of ParentScript
 					else
-						logger(true, handlername, caller, "DEBUG", "  ✗ Episode ended: cd (" & cd & ") >= EndTime (" & EndTime_date & ")") of ParentScript
+						logger(true, handlername, caller, "DEBUG", "Episode already started or in past, skipping: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), StartTime_epoch), false, false)) of ParentScript
 					end if
 				else
-					logger(true, handlername, caller, "DEBUG", "  StartTime >= newest: adding to past list") of ParentScript
 					set end of newest_show_epoch to StartTime_epoch
 					set end of newest_show_epoch_offset to i
 				end if
 			end repeat
-			logger(true, handlername, caller, "DEBUG", "Final state: offset list = " & newest_show_epoch_offset) of ParentScript
-			logger(true, handlername, caller, "DEBUG", "Final state: epoch list = " & newest_show_epoch) of ParentScript
 			--	choose from list newest_show_epoch_offset
 			if item theoffset of newest_show_epoch_offset is not 0 then
-				set selected_offset to item theoffset of newest_show_epoch_offset
-				set selected_episode to item selected_offset of show_match_list of seriesScanTemp
-				logger(true, handlername, caller, "INFO", "Returning future episode [" & selected_offset & "]: " & selected_episode's EpisodeNumber & " " & selected_episode's EpisodeTitle) of ParentScript
 				--	set show_offset to my HDHRShowSearch(my cm(handlername, caller), show_id of seriesScanTemp)
 				logger(true, handlername, caller, "TRACE", "Returned latest airing for " & show_title of item show_offset of Show_info) of ParentScript
-				set temp to {item selected_offset of show_match_list of seriesScanTemp, item selected_offset of show_channel_list of seriesScanTemp, show_id of seriesScanTemp}
+				set temp to {item (item theoffset of newest_show_epoch_offset) of show_match_list of seriesScanTemp, item (item theoffset of newest_show_epoch_offset) of show_channel_list of seriesScanTemp, show_id of seriesScanTemp}
 				return temp
 			else
 				if length of newest_show_epoch_offset is greater than 1 then
-					set selected_offset to item 2 of newest_show_epoch_offset
-					set selected_episode to item selected_offset of show_match_list of seriesScanTemp
-					logger(true, handlername, caller, "WARN", "No future episodes found, returning most recent [" & selected_offset & "]: " & selected_episode's EpisodeNumber & " " & selected_episode's EpisodeTitle) of ParentScript
-					set temp to {item selected_offset of show_match_list of seriesScanTemp, item selected_offset of show_channel_list of seriesScanTemp, show_id of seriesScanTemp}
+					logger(true, handlername, caller, "WARN", "No future episodes found, returning most recent: " & show_title of item show_offset of Show_info) of ParentScript
+					set temp to {item (item 2 of newest_show_epoch_offset) of show_match_list of seriesScanTemp, item (item 2 of newest_show_epoch_offset) of show_channel_list of seriesScanTemp, show_id of seriesScanTemp}
 					return temp
 				else
 					logger(true, handlername, caller, "WARN", "No episodes found for " & show_title of item show_offset of Show_info) of ParentScript
@@ -1433,10 +1393,6 @@ end seriesScanNext
 
 on seriesScanUpdate(caller, show_id)
 	set handlername to "seriesScanUpdate_lib"
-	-- SeriesID shows track by HDHomeRun-provided SeriesID only, not by air_date filter.
-	-- When a SeriesID show is added or scanned, we search the guide for that SeriesID,
-	-- find the most recent/current episode, and update the show record to match.
-	-- All days in show_air_date are valid because guide data (not the date filter) determines actual schedule.
 	set Show_info to Show_info of ParentScript
 	set show_offset to my HDHRShowSearch(my cm(handlername, caller), show_id)
 	if show_offset is not 0 then
@@ -1456,16 +1412,11 @@ on seriesScanUpdate(caller, show_id)
 				if show_offset is not 0 then
 					if show_recording of item show_offset of Show_info is false then
 						set isdupe to {false, false, false}
-						set start_time_conv to my epoch2datetime(my cm(handlername, caller), my getTfromN(StartTime of channel_record))
-						if class of start_time_conv is list then
-							logger(true, handlername, caller, "ERROR", "Failed to convert StartTime: " & item 2 of start_time_conv) of ParentScript
-							set start_time_conv to (current date)
-						end if
-						if show_next of item show_offset of Show_info is start_time_conv then
+						if show_next of item show_offset of Show_info is my epoch2datetime(my cm(handlername, caller), my getTfromN(StartTime of channel_record)) then
 							logger(true, handlername, caller, "DEBUG", "show_next is the same") of ParentScript
 							set item 1 of isdupe to true
 						else
-							set show_next of item show_offset of Show_info to start_time_conv
+							set show_next of item show_offset of Show_info to my epoch2datetime(my cm(handlername, caller), my getTfromN(StartTime of channel_record))
 						end if
 
 						if show_time of item show_offset of Show_info is my epoch2show_time(my cm(handlername, caller), my getTfromN(StartTime of channel_record)) then
@@ -1496,6 +1447,14 @@ on seriesScanUpdate(caller, show_id)
 							logger(true, handlername, caller, "INFO", "show channel: " & show_channel of item show_offset of Show_info) of ParentScript
 							
 							set show_title of item show_offset of Show_info to fixall of my show_name_fix(my cm(handlername, caller), new_showid, channel_record)
+							set show_end of item show_offset of Show_info to my epoch2datetime(my cm(handlername, caller), my getTfromN(EndTime of channel_record))
+							set show_fail_count of item show_offset of Show_info to 0
+							set show_fail_reason of item show_offset of Show_info to ""
+							try
+								set show_time_OriginalAirdate of item show_offset of Show_info to my getTfromN(OriginalAirdate of channel_record)
+							end try
+							set show_length of item show_offset of Show_info to ((EndTime of channel_record) - (StartTime of channel_record)) div 60
+							set show_url of item show_offset of Show_info to my add_record_url(my cm(handlername, caller), show_channel of item show_offset of Show_info, hdhr_record of item show_offset of Show_info)
 							--my update_show(my cm(handlername, caller), new_showid, false)
 							logger(true, handlername, caller, "INFO", "The show, " & show_title of item show_offset of Show_info & ", was updated") of ParentScript
 							--	my idle_change(my cm(handlername, caller), 1, 2)
@@ -1504,24 +1463,6 @@ on seriesScanUpdate(caller, show_id)
 								logger(true, handlername, caller, "INFO", "Title changed but StartTime unchanged; keeping existing show_id. Old: " & show_title of item show_offset of Show_info) of ParentScript
 							end if
 							logger(true, handlername, caller, "DEBUG", "Same episode, no show_id rotation needed") of ParentScript
-						end if
-
-						-- Always populate show_end, show_length, show_url when a new episode is found
-						if item 1 of isdupe is false then
-							set end_time_conv to my epoch2datetime(my cm(handlername, caller), my getTfromN(EndTime of channel_record))
-							if class of end_time_conv is list then
-								logger(true, handlername, caller, "ERROR", "Failed to convert EndTime: " & item 2 of end_time_conv) of ParentScript
-								set end_time_conv to (current date) + 1 * hours
-							end if
-							set show_end of item show_offset of Show_info to end_time_conv
-							logger(true, handlername, caller, "INFO", "Set show_end for offset " & show_offset & " to " & my short_date(my cm(handlername, caller), end_time_conv, false, false)) of ParentScript
-							set show_fail_count of item show_offset of Show_info to 0
-							set show_fail_reason of item show_offset of Show_info to ""
-							set show_length of item show_offset of Show_info to ((EndTime of channel_record) - (StartTime of channel_record)) div 60
-							try
-								set show_time_OriginalAirdate of item show_offset of Show_info to my getTfromN(OriginalAirdate of channel_record)
-							end try
-							set show_url of item show_offset of Show_info to my add_record_url(my cm(handlername, caller), show_channel of item show_offset of Show_info, hdhr_record of item show_offset of Show_info)
 						end if
 					else
 						logger(true, handlername, caller, "WARN", "The show, " & show_title of item show_offset of Show_info & " was not updated, as it was recording") of ParentScript
