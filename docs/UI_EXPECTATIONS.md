@@ -763,3 +763,41 @@ T+9:10    Title updates: S03E08, show_next updated, show_end updated
 - "Channel 11.3" (not "temp_channel")
 - "60 minutes" (not "3600 seconds")
 - Status icons, not boolean values
+
+---
+
+## SeriesID Metadata Updates - Expected Behavior
+
+**SeriesID updates should ONLY occur for DateTime and Single shows.**
+
+### Expected Log Entries
+
+**For DateTime or Single shows (guide sync):**
+```
+INFO  SeriesID updated for "Show Title": C505353ENSB1X → C184053ENSZ30
+```
+This is normal and expected when the guide's SeriesID changes for existing metadata.
+
+### Unexpected/Warning Cases
+
+**SeriesID update attempted on a SeriesID-tracking show:**
+```
+WARN  Cannot update SeriesID: SeriesID(Channel) and SeriesID(All) shows should never change SeriesID
+```
+SeriesID is the stable identifier for these shows—if it's changing, the show was misconfigured.
+
+**Blank values rejected:**
+```
+WARN  Cannot update SeriesID: show_id="", new_seriesid="C505353ENSB1X"
+```
+Handler validation prevents incomplete updates.
+
+### Why This Matters
+
+- **Single/DateTime shows**: SeriesID is optional metadata from the guide. Updates sync the metadata.
+- **SeriesID(Channel) / SeriesID(All) shows**: SeriesID IS the show. Changing it means a different show entirely.
+
+If a SeriesID show's SeriesID is changing, it indicates:
+- Wrong SeriesID was stored at add time
+- Conflicting shows in guide with same SeriesID
+- Guide data corruption

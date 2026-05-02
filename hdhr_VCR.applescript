@@ -2817,8 +2817,7 @@ on update_show(caller, the_show_id, force_update)
 
 					try
 						if show_seriesid of item show_offset of Show_info is not seriesID of hdhr_response_channel then
-							my logger(true, handlername, caller, "INFO", "SeriesID Changed from " & show_seriesid of item show_offset of Show_info & " to " & seriesID of hdhr_response_channel)
-							set show_seriesid of item show_offset of Show_info to seriesID of hdhr_response_channel
+							my updateSeriesID(my cm(handlername, caller), show_id of item show_offset of Show_info, seriesID of hdhr_response_channel) of LibScript
 						else
 							my logger(true, handlername, caller, "TRACE", "SeriesID Matched!")
 						end if
@@ -2907,6 +2906,7 @@ on update_show(caller, the_show_id, force_update)
 					set progress completed steps to 8
 				end if
 			else
+				my logger(true, handlername, caller, "WARN", "SeriesID show should never have metadata updated: " & show_title of item show_offset of Show_info)
 				set end of temp_show_progress to "SeriesID show — queuing next episode scan..."
 				set progress additional description to stringlistflip(my cm(handlername, caller), temp_show_progress, return, "string") of LibScript
 				set progress completed steps to 7
