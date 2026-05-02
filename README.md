@@ -146,6 +146,7 @@ Each mode only prompts for the fields it needs. SeriesID modes skip time, day, a
 
 ### 👤 For Users
 - **[WORKFLOWS.md](docs/WORKFLOWS.md)** — Step-by-step guides for adding/editing shows in each mode
+- **[UI_EXPECTATIONS.md](docs/UI_EXPECTATIONS.md)** — Dialog layouts, status icons, cancellation behavior, error recovery, and complete interaction flows
 - **[SHOW_STATUS.md](docs/SHOW_STATUS.md)** — 4-state convention and validation rules
 
 ### 👨‍💻 For Developers  

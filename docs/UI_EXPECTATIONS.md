@@ -1,5 +1,11 @@
 # hdhr_VCR UI/UX Expectations
 
+**Complete reference for user-facing dialogs, interactions, status states, and error flows.**
+
+> **Related Docs:** [WORKFLOWS.md](WORKFLOWS.md) — User workflows · [SHOW_STATUS.md](SHOW_STATUS.md) — State reference · [ADVANCED_PROCESSES.md](ADVANCED_PROCESSES.md) — Technical implementation
+
+---
+
 ## Main Screen - Show List
 
 ### Layout

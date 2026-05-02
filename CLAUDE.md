@@ -42,6 +42,8 @@ Shows are ONE of 4 states, determined by `is_series`, `use_seriesid`, `use_serie
 
 ## User Workflows
 
+> **📖 UI/UX Details:** [UI_EXPECTATIONS.md](docs/UI_EXPECTATIONS.md) — Dialog layouts, status icons, cancellation behavior, error states, and complete user interaction flows.
+
 ### Adding a Show
 
 **Single Episode:**
