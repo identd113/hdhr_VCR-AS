@@ -1452,6 +1452,7 @@ on seriesScanUpdate(caller, show_id)
 							logger(true, handlername, caller, "INFO", "show channel: " & show_channel of item show_offset of Show_info) of ParentScript
 							
 							set show_title of item show_offset of Show_info to fixall of my show_name_fix(my cm(handlername, caller), new_showid, channel_record)
+							set show_next of item show_offset of Show_info to my epoch2datetime(my cm(handlername, caller), my getTfromN(StartTime of channel_record))
 							set show_end of item show_offset of Show_info to my epoch2datetime(my cm(handlername, caller), my getTfromN(EndTime of channel_record))
 							set show_fail_count of item show_offset of Show_info to 0
 							set show_fail_reason of item show_offset of Show_info to ""
