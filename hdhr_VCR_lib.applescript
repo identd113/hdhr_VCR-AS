@@ -546,7 +546,7 @@ on serialize_show(caller, show_rec)
 
 	try
 		if (class of (show_last of s)) is date then
-			set show_last of s to my datetime2epoch(caller, show_last of s)
+			set show_last of s to datetime2epoch(caller, show_last of s) of ParentScript
 			logger(true, handlername, caller, "TRACE", "  show_last converted to epoch: " & show_last of s) of ParentScript
 		else
 			set show_last of s to 0
@@ -556,7 +556,7 @@ on serialize_show(caller, show_rec)
 	end try
 	try
 		if (class of (show_next of s)) is date then
-			set show_next of s to my datetime2epoch(caller, show_next of s)
+			set show_next of s to datetime2epoch(caller, show_next of s) of ParentScript
 		else
 			set show_next of s to 0
 		end if
@@ -565,7 +565,7 @@ on serialize_show(caller, show_rec)
 	end try
 	try
 		if (class of (show_end of s)) is date then
-			set show_end of s to my datetime2epoch(caller, show_end of s)
+			set show_end of s to datetime2epoch(caller, show_end of s) of ParentScript
 		else
 			set show_end of s to 0
 		end if
@@ -574,7 +574,7 @@ on serialize_show(caller, show_rec)
 	end try
 	try
 		if (class of (notify_recording_time of s)) is date then
-			set notify_recording_time of s to my datetime2epoch(caller, notify_recording_time of s)
+			set notify_recording_time of s to datetime2epoch(caller, notify_recording_time of s) of ParentScript
 		else
 			set notify_recording_time of s to 0
 		end if
@@ -583,7 +583,7 @@ on serialize_show(caller, show_rec)
 	end try
 	try
 		if (class of (notify_upnext_time of s)) is date then
-			set notify_upnext_time of s to my datetime2epoch(caller, notify_upnext_time of s)
+			set notify_upnext_time of s to datetime2epoch(caller, notify_upnext_time of s) of ParentScript
 		else
 			set notify_upnext_time of s to 0
 		end if
@@ -1317,7 +1317,7 @@ on seriesScan(caller, seriesID, hdhr_device, thechan, show_id)
 				repeat with i2 from 1 to length of guide_temp
 					set guide_entry_seriesid to seriesID of item i2 of guide_temp
 					if guide_entry_seriesid is seriesID then
-						logger(true, handlername, caller, "TRACE", "Match found: " & item i2 of guide_temp's EpisodeNumber & " on " & temp_channel) of ParentScript
+						logger(true, handlername, caller, "TRACE", "Match found: " & EpisodeNumber of item i2 of guide_temp & " on " & temp_channel) of ParentScript
 						set end of show_channel_list to temp_channel
 						set end of show_match_list to item i2 of guide_temp
 					end if
@@ -1383,7 +1383,7 @@ on seriesScanNext(caller, seriesID, hdhr_device, thechan, show_id, theoffset)
 					logger(true, handlername, caller, "ERROR", "Failed to convert EndTime epoch " & EndTime_epoch & ": " & item 2 of EndTime_date) of ParentScript
 					set EndTime_date to (current date)
 				end if
-				logger(true, handlername, caller, "DEBUG", "[" & i & "] " & item i of show_match_list of seriesScanTemp's EpisodeNumber & " " & item i of show_match_list of seriesScanTemp's EpisodeTitle) of ParentScript
+				logger(true, handlername, caller, "DEBUG", "[" & i & "] " & (EpisodeNumber of item i of show_match_list of seriesScanTemp) & " " & (EpisodeTitle of item i of show_match_list of seriesScanTemp)) of ParentScript
 				logger(true, handlername, caller, "DEBUG", "  StartTime: " & my short_date(my cm(handlername, caller), StartTime_date, false, false) & " (" & StartTime_epoch & ")") of ParentScript
 				logger(true, handlername, caller, "DEBUG", "  EndTime: " & my short_date(my cm(handlername, caller), EndTime_date, false, false) & " (" & EndTime_epoch & ")") of ParentScript
 				logger(true, handlername, caller, "DEBUG", "  Newest so far: " & item 1 of newest_show_epoch) of ParentScript
@@ -1496,19 +1496,6 @@ on seriesScanUpdate(caller, show_id)
 							logger(true, handlername, caller, "INFO", "show channel: " & show_channel of item show_offset of Show_info) of ParentScript
 							
 							set show_title of item show_offset of Show_info to fixall of my show_name_fix(my cm(handlername, caller), new_showid, channel_record)
-							set end_time_conv to my epoch2datetime(my cm(handlername, caller), my getTfromN(EndTime of channel_record))
-							if class of end_time_conv is list then
-								logger(true, handlername, caller, "ERROR", "Failed to convert EndTime: " & item 2 of end_time_conv) of ParentScript
-								set end_time_conv to (current date) + 1 * hours
-							end if
-							set show_end of item show_offset of Show_info to end_time_conv
-							set show_fail_count of item show_offset of Show_info to 0
-							set show_fail_reason of item show_offset of Show_info to ""
-							try
-								set show_time_OriginalAirdate of item show_offset of Show_info to my getTfromN(OriginalAirdate of channel_record)
-							end try
-							set show_length of item show_offset of Show_info to ((EndTime of channel_record) - (StartTime of channel_record)) div 60
-							set show_url of item show_offset of Show_info to my add_record_url(my cm(handlername, caller), show_channel of item show_offset of Show_info, hdhr_record of item show_offset of Show_info)
 							--my update_show(my cm(handlername, caller), new_showid, false)
 							logger(true, handlername, caller, "INFO", "The show, " & show_title of item show_offset of Show_info & ", was updated") of ParentScript
 							--	my idle_change(my cm(handlername, caller), 1, 2)
@@ -1517,6 +1504,24 @@ on seriesScanUpdate(caller, show_id)
 								logger(true, handlername, caller, "INFO", "Title changed but StartTime unchanged; keeping existing show_id. Old: " & show_title of item show_offset of Show_info) of ParentScript
 							end if
 							logger(true, handlername, caller, "DEBUG", "Same episode, no show_id rotation needed") of ParentScript
+						end if
+
+						-- Always populate show_end, show_length, show_url when a new episode is found
+						if item 1 of isdupe is false then
+							set end_time_conv to my epoch2datetime(my cm(handlername, caller), my getTfromN(EndTime of channel_record))
+							if class of end_time_conv is list then
+								logger(true, handlername, caller, "ERROR", "Failed to convert EndTime: " & item 2 of end_time_conv) of ParentScript
+								set end_time_conv to (current date) + 1 * hours
+							end if
+							set show_end of item show_offset of Show_info to end_time_conv
+							logger(true, handlername, caller, "INFO", "Set show_end for offset " & show_offset & " to " & my short_date(my cm(handlername, caller), end_time_conv, false, false)) of ParentScript
+							set show_fail_count of item show_offset of Show_info to 0
+							set show_fail_reason of item show_offset of Show_info to ""
+							set show_length of item show_offset of Show_info to ((EndTime of channel_record) - (StartTime of channel_record)) div 60
+							try
+								set show_time_OriginalAirdate of item show_offset of Show_info to my getTfromN(OriginalAirdate of channel_record)
+							end try
+							set show_url of item show_offset of Show_info to my add_record_url(my cm(handlername, caller), show_channel of item show_offset of Show_info, hdhr_record of item show_offset of Show_info)
 						end if
 					else
 						logger(true, handlername, caller, "WARN", "The show, " & show_title of item show_offset of Show_info & " was not updated, as it was recording") of ParentScript
