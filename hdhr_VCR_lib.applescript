@@ -540,13 +540,13 @@ on serialize_show(caller, show_rec)
 		if (class of (show_last of s)) is date then
 			set show_last of s to (datetime2epoch(caller, show_last of s) of ParentScript) as text
 			logger(true, handlername, caller, "TRACE", "  show_last converted to epoch: " & show_last of s) of ParentScript
-		else if show_last of s is not "missing value" and show_last of s is not "" then
+		else if show_last of s is not "" and show_last of s is not 0 then
 			set show_last of s to (show_last of s) as text
 		else
-			set show_last of s to "missing value"
+			set show_last of s to 0
 		end if
 	on error
-		set show_last of s to "missing value"
+		set show_last of s to 0
 	end try
 	try
 		if (class of (show_next of s)) is date then
