@@ -825,64 +825,37 @@ on deserialize_show(caller, show_rec)
 	return s
 end deserialize_show
 
-on loadConfig(caller, config_file_path)
-	set handlername to "loadConfig"
+on deserializeShows(caller, shows_list)
+	set handlername to "deserializeShows"
 	try
-		set json_data to (read JSON from config_file_path)
-		logger(true, handlername, caller, "DEBUG", "Loaded JSON from config file") of ParentScript
-
-		-- Deserialize all shows
-		if json_data is not missing value and "the_shows" of json_data is not missing value then
-			set shows to "the_shows" of json_data
-			repeat with i from 1 to length of shows
-				if item i of shows is not "" then
-					set item i of shows to deserialize_show(caller, item i of shows)
-				end if
-			end repeat
-			set json_data to json_data & {the_shows:shows}
-		end if
-
-		logger(true, handlername, caller, "INFO", "Config loaded and deserialized") of ParentScript
-		return json_data
+		repeat with i from 1 to length of shows_list
+			if item i of shows_list is not "" then
+				set item i of shows_list to deserialize_show(caller, item i of shows_list)
+			end if
+		end repeat
+		logger(true, handlername, caller, "DEBUG", "Deserialized " & length of shows_list & " shows") of ParentScript
+		return shows_list
 	on error errmsg
-		logger(true, handlername, caller, "ERROR", "Failed to load config: " & errmsg) of ParentScript
+		logger(true, handlername, caller, "ERROR", "Failed to deserialize shows: " & errmsg) of ParentScript
 		return missing value
 	end try
-end loadConfig
+end deserializeShows
 
-on saveConfig(caller, config_file_path, config_data)
-	set handlername to "saveConfig"
+on serializeShows(caller, shows_list)
+	set handlername to "serializeShows"
 	try
-		-- Serialize all shows before saving
-		if config_data is not missing value and "the_shows" of config_data is not missing value then
-			set shows to "the_shows" of config_data
-			repeat with i from 1 to length of shows
-				if item i of shows is not "" then
-					set item i of shows to serialize_show(caller, item i of shows)
-				end if
-			end repeat
-			set config_data to config_data & {the_shows:shows}
-		end if
-
-		-- Write to file
-		set json_output to (make JSON from config_data)
-		if json_output is "" then
-			logger(true, handlername, caller, "FATAL", "JSON serialization failed (blank output)") of ParentScript
-			return false
-		end if
-
-		set file_ref to open for access config_file_path with write permission
-		set eof of file_ref to 0
-		write json_output to file_ref
-		close access file_ref
-
-		logger(true, handlername, caller, "INFO", "Config saved successfully") of ParentScript
-		return true
+		repeat with i from 1 to length of shows_list
+			if item i of shows_list is not "" then
+				set item i of shows_list to serialize_show(caller, item i of shows_list)
+			end if
+		end repeat
+		logger(true, handlername, caller, "DEBUG", "Serialized " & length of shows_list & " shows") of ParentScript
+		return shows_list
 	on error errmsg
-		logger(true, handlername, caller, "ERROR", "Failed to save config: " & errmsg) of ParentScript
-		return false
+		logger(true, handlername, caller, "ERROR", "Failed to serialize shows: " & errmsg) of ParentScript
+		return missing value
 	end try
-end saveConfig
+end serializeShows
 
 on tuner_dump(caller)
 	set handlername to "tuner_dump_lib"
