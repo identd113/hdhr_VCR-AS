@@ -541,115 +541,115 @@ end epoch2show_time
 
 on serialize_show(caller, show_rec)
 	set handlername to "serialize_show"
-	set s to show_rec
-	logger(true, handlername, caller, "DEBUG", "Converting show: " & show_title of s) of ParentScript
+	set show_record to show_rec
+	logger(true, handlername, caller, "DEBUG", "Converting show: " & show_title of show_record) of ParentScript
 
 	try
-		if (class of (show_last of s)) is date then
-			set show_last of s to datetime2epoch(caller, show_last of s) of ParentScript
-			logger(true, handlername, caller, "TRACE", "  show_last converted to epoch: " & show_last of s) of ParentScript
+		if (class of (show_last of show_record)) is date then
+			set show_last of show_record to datetime2epoch(caller, show_last of show_record) of ParentScript
+			logger(true, handlername, caller, "TRACE", "  show_last converted to epoch: " & show_last of show_record) of ParentScript
 		else
-			set show_last of s to 0
+			set show_last of show_record to 0
 		end if
 	on error
-		set show_last of s to 0
+		set show_last of show_record to 0
 	end try
 	try
-		if (class of (show_next of s)) is date then
-			set show_next of s to datetime2epoch(caller, show_next of s) of ParentScript
+		if (class of (show_next of show_record)) is date then
+			set show_next of show_record to datetime2epoch(caller, show_next of show_record) of ParentScript
 		else
-			set show_next of s to 0
+			set show_next of show_record to 0
 		end if
 	on error
-		set show_next of s to 0
+		set show_next of show_record to 0
 	end try
 	try
-		if (class of (show_end of s)) is date then
-			set show_end of s to datetime2epoch(caller, show_end of s) of ParentScript
+		if (class of (show_end of show_record)) is date then
+			set show_end of show_record to datetime2epoch(caller, show_end of show_record) of ParentScript
 		else
-			set show_end of s to 0
+			set show_end of show_record to 0
 		end if
 	on error
-		set show_end of s to 0
+		set show_end of show_record to 0
 	end try
 	try
-		if (class of (notify_recording_time of s)) is date then
-			set notify_recording_time of s to datetime2epoch(caller, notify_recording_time of s) of ParentScript
+		if (class of (notify_recording_time of show_record)) is date then
+			set notify_recording_time of show_record to datetime2epoch(caller, notify_recording_time of show_record) of ParentScript
 		else
-			set notify_recording_time of s to 0
+			set notify_recording_time of show_record to 0
 		end if
 	on error
-		set notify_recording_time of s to 0
+		set notify_recording_time of show_record to 0
 	end try
 	try
-		if (class of (notify_upnext_time of s)) is date then
-			set notify_upnext_time of s to datetime2epoch(caller, notify_upnext_time of s) of ParentScript
+		if (class of (notify_upnext_time of show_record)) is date then
+			set notify_upnext_time of show_record to datetime2epoch(caller, notify_upnext_time of show_record) of ParentScript
 		else
-			set notify_upnext_time of s to 0
+			set notify_upnext_time of show_record to 0
 		end if
 	on error
-		set notify_upnext_time of s to 0
+		set notify_upnext_time of show_record to 0
 	end try
 
 	try
-		if (class of (show_dir of s)) is alias then
-			set show_dir of s to POSIX path of (show_dir of s)
+		if (class of (show_dir of show_record)) is alias then
+			set show_dir of show_record to POSIX path of (show_dir of show_record)
 		else
-			set show_dir of s to (show_dir of s) as text
+			set show_dir of show_record to (show_dir of show_record) as text
 		end if
 	on error
 	end try
 	try
-		if (class of (show_temp_dir of s)) is alias then
-			set show_temp_dir of s to POSIX path of (show_temp_dir of s)
+		if (class of (show_temp_dir of show_record)) is alias then
+			set show_temp_dir of show_record to POSIX path of (show_temp_dir of show_record)
 		else
-			set show_temp_dir of s to (show_temp_dir of s) as text
+			set show_temp_dir of show_record to (show_temp_dir of show_record) as text
 		end if
 	on error
 	end try
 
-	return s
+	return show_record
 end serialize_show
 
 on deserialize_show(caller, show_rec)
 	set handlername to "deserialize_show"
-	set s to show_rec
+	set show_record to show_rec
 
 	try
-		set ep to show_last of s
+		set ep to show_last of show_record
 		if ep is 0 or ep is "" or ep is missing value then
-			set show_last of s to my epoch("")
+			set show_last of show_record to my epoch("")
 		else
 			if class of ep is text then
 				try
 					set ep_num to ep as number
 					set result to my epoch2datetime(caller, ep_num)
 					if class of result is not list then
-						set show_last of s to result
+						set show_last of show_record to result
 					else
-						set show_last of s to my epoch("")
+						set show_last of show_record to my epoch("")
 					end if
 				on error
 					-- Old locale-formatted date string — cannot safely parse cross-locale
-					set show_last of s to my epoch("")
+					set show_last of show_record to my epoch("")
 				end try
 			else
 				set result to my epoch2datetime(caller, ep)
 				if class of result is not list then
-					set show_last of s to result
+					set show_last of show_record to result
 				else
-					set show_last of s to my epoch("")
+					set show_last of show_record to my epoch("")
 				end if
 			end if
 		end if
 	on error
-		set show_last of s to (current date)
+		set show_last of show_record to (current date)
 	end try
 	try
-		set ep to show_next of s
+		set ep to show_next of show_record
 		logger(true, handlername, caller, "DEBUG", "show_next raw value: " & ep & ", class: " & class of ep) of ParentScript
 		if ep is 0 or ep is "" or ep is missing value then
-			set show_next of s to my epoch("")
+			set show_next of show_record to my epoch("")
 			logger(true, handlername, caller, "DEBUG", "show_next set to epoch 0") of ParentScript
 		else
 			if class of ep is text then
@@ -657,182 +657,182 @@ on deserialize_show(caller, show_rec)
 					set ep_num to ep as number
 					set result to my epoch2datetime(caller, ep_num)
 					if class of result is not list then
-						set show_next of s to result
+						set show_next of show_record to result
 						logger(true, handlername, caller, "DEBUG", "show_next converted from text: " & result) of ParentScript
 					else
-						set show_next of s to my epoch("")
+						set show_next of show_record to my epoch("")
 						logger(true, handlername, caller, "ERROR", "epoch2datetime failed for show_next text: " & item 2 of result) of ParentScript
 					end if
 				on error errmsg
 					-- Old locale-formatted date string — cannot safely parse cross-locale
-					set show_next of s to my epoch("")
+					set show_next of show_record to my epoch("")
 					logger(true, handlername, caller, "ERROR", "Failed to convert show_next text: " & errmsg) of ParentScript
 				end try
 			else
 				logger(true, handlername, caller, "DEBUG", "show_next converting from non-text: " & class of ep) of ParentScript
 				set result to my epoch2datetime(caller, ep)
 				if class of result is not list then
-					set show_next of s to result
+					set show_next of show_record to result
 					logger(true, handlername, caller, "DEBUG", "show_next converted: " & result) of ParentScript
 				else
-					set show_next of s to my epoch("")
+					set show_next of show_record to my epoch("")
 					logger(true, handlername, caller, "ERROR", "epoch2datetime failed: " & item 2 of result) of ParentScript
 				end if
 			end if
 		end if
 	on error
-		set show_next of s to (current date)
+		set show_next of show_record to (current date)
 	end try
 	try
-		set ep to show_end of s
+		set ep to show_end of show_record
 		if ep is 0 or ep is "" or ep is missing value then
-			set show_end of s to my epoch("")
+			set show_end of show_record to my epoch("")
 		else
 			if class of ep is text then
 				try
 					set ep_num to ep as number
 					set result to my epoch2datetime(caller, ep_num)
 					if class of result is not list then
-						set show_end of s to result
+						set show_end of show_record to result
 					else
-						set show_end of s to my epoch("")
+						set show_end of show_record to my epoch("")
 					end if
 				on error
 					-- Old locale-formatted date string — cannot safely parse cross-locale
-					set show_end of s to my epoch("")
+					set show_end of show_record to my epoch("")
 				end try
 			else
 				set result to my epoch2datetime(caller, ep)
 				if class of result is not list then
-					set show_end of s to result
+					set show_end of show_record to result
 				else
-					set show_end of s to my epoch("")
+					set show_end of show_record to my epoch("")
 				end if
 			end if
 		end if
 	on error
-		set show_end of s to (current date)
+		set show_end of show_record to (current date)
 	end try
 
 	try
-		set ep to notify_recording_time of s
+		set ep to notify_recording_time of show_record
 		if ep is 0 or ep is "" or ep is missing value or ep is "missing value" then
-			set notify_recording_time of s to missing value
+			set notify_recording_time of show_record to missing value
 		else
 			if class of ep is text then
 				try
 					set ep_num to ep as number
 					set result to my epoch2datetime(caller, ep_num)
 					if class of result is not list then
-						set notify_recording_time of s to result
+						set notify_recording_time of show_record to result
 					else
-						set notify_recording_time of s to missing value
+						set notify_recording_time of show_record to missing value
 					end if
 				on error
 					-- Old locale-formatted date string — cannot safely parse cross-locale
-					set notify_recording_time of s to missing value
+					set notify_recording_time of show_record to missing value
 				end try
 			else
 				set result to my epoch2datetime(caller, ep)
 				if class of result is not list then
-					set notify_recording_time of s to result
+					set notify_recording_time of show_record to result
 				else
-					set notify_recording_time of s to missing value
+					set notify_recording_time of show_record to missing value
 				end if
 			end if
 		end if
 	on error
-		set notify_recording_time of s to missing value
+		set notify_recording_time of show_record to missing value
 	end try
 	try
-		set ep to notify_upnext_time of s
+		set ep to notify_upnext_time of show_record
 		if ep is 0 or ep is "" or ep is missing value or ep is "missing value" then
-			set notify_upnext_time of s to missing value
+			set notify_upnext_time of show_record to missing value
 		else
 			if class of ep is text then
 				try
 					set ep_num to ep as number
 					set result to my epoch2datetime(caller, ep_num)
 					if class of result is not list then
-						set notify_upnext_time of s to result
+						set notify_upnext_time of show_record to result
 					else
-						set notify_upnext_time of s to missing value
+						set notify_upnext_time of show_record to missing value
 					end if
 				on error
 					-- Old locale-formatted date string — cannot safely parse cross-locale
-					set notify_upnext_time of s to missing value
+					set notify_upnext_time of show_record to missing value
 				end try
 			else
 				set result to my epoch2datetime(caller, ep)
 				if class of result is not list then
-					set notify_upnext_time of s to result
+					set notify_upnext_time of show_record to result
 				else
-					set notify_upnext_time of s to missing value
+					set notify_upnext_time of show_record to missing value
 				end if
 			end if
 		end if
 	on error
-		set notify_upnext_time of s to missing value
+		set notify_upnext_time of show_record to missing value
 	end try
 
 	try
-		set dstr to show_dir of s as text
+		set dstr to show_dir of show_record as text
 		if dstr starts with "/" then
-			set show_dir of s to (dstr as alias)
+			set show_dir of show_record to (dstr as alias)
 		end if
 	on error errmsg
-		logger(true, handlername, caller, "WARN", "show_dir could not be aliased for " & show_title of s & ": " & errmsg) of ParentScript
+		logger(true, handlername, caller, "WARN", "show_dir could not be aliased for " & show_title of show_record & ": " & errmsg) of ParentScript
 	end try
 	try
-		set dstr to show_temp_dir of s as text
+		set dstr to show_temp_dir of show_record as text
 		if dstr starts with "/" then
-			set show_temp_dir of s to (dstr as alias)
+			set show_temp_dir of show_record to (dstr as alias)
 		end if
 	on error errmsg
-		logger(true, handlername, caller, "WARN", "show_temp_dir could not be aliased for " & show_title of s & ": " & errmsg) of ParentScript
+		logger(true, handlername, caller, "WARN", "show_temp_dir could not be aliased for " & show_title of show_record & ": " & errmsg) of ParentScript
 	end try
 
 	try
-		set show_channel of s to (show_channel of s) as text
+		set show_channel of show_record to (show_channel of show_record) as text
 	end try
 
 	try
-		set show_fail_count of s to show_fail_count of s
+		set show_fail_count of show_record to show_fail_count of show_record
 	on error
-		set s to s & {show_fail_count:0}
+		set show_record to show_record & {show_fail_count:0}
 	end try
 	try
-		set show_fail_reason of s to show_fail_reason of s
+		set show_fail_reason of show_record to show_fail_reason of show_record
 	on error
-		set s to s & {show_fail_reason:""}
+		set show_record to show_record & {show_fail_reason:""}
 	end try
 	try
-		set show_logo_url of s to show_logo_url of s
+		set show_logo_url of show_record to show_logo_url of show_record
 	on error
-		set s to s & {show_logo_url:""}
+		set show_record to show_record & {show_logo_url:""}
 	end try
 	try
-		set show_url of s to show_url of s
+		set show_url of show_record to show_url of show_record
 	on error
-		set s to s & {show_url:""}
+		set show_record to show_record & {show_url:""}
 	end try
 	try
-		set show_time_OriginalAirdate of s to show_time_OriginalAirdate of s
+		set show_time_OriginalAirdate of show_record to show_time_OriginalAirdate of show_record
 	on error
-		set s to s & {show_time_OriginalAirdate:""}
+		set show_record to show_record & {show_time_OriginalAirdate:""}
 	end try
 	try
-		set show_use_seriesid of s to show_use_seriesid of s
+		set show_use_seriesid of show_record to show_use_seriesid of show_record
 	on error
-		set s to s & {show_use_seriesid:false}
+		set show_record to show_record & {show_use_seriesid:false}
 	end try
 	try
-		set show_use_seriesid_all of s to show_use_seriesid_all of s
+		set show_use_seriesid_all of show_record to show_use_seriesid_all of show_record
 	on error
-		set s to s & {show_use_seriesid_all:false}
+		set show_record to show_record & {show_use_seriesid_all:false}
 	end try
 
-	return s
+	return show_record
 end deserialize_show
 
 on tuner_dump(caller)
