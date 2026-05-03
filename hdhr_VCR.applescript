@@ -2796,10 +2796,12 @@ on update_show(caller, the_show_id, force_update)
 				set progress additional description to stringlistflip(my cm(handlername, caller), temp_show_progress, return, "string") of LibScript
 				my logger(true, handlername, caller, "ERROR", "ERROR: " & errmsg)
 			end try
-			set hdhr_response_channel_title to fixall of show_name_fix(my cm(handlername, caller), show_id of item show_offset of Show_info, hdhr_response_channel) of LibScript
-			if show_title of item show_offset of Show_info is not equal to hdhr_response_channel_title then
-				my logger(true, handlername, caller, "INFO", "Title changed from " & quote & show_title of item show_offset of Show_info & quote & " to " & quote & hdhr_response_channel_title & quote)
-				set show_title of item show_offset of Show_info to hdhr_response_channel_title
+			if length of hdhr_response_channel is greater than 0 then
+				set hdhr_response_channel_title to fixall of show_name_fix(my cm(handlername, caller), show_id of item show_offset of Show_info, hdhr_response_channel) of LibScript
+				if show_title of item show_offset of Show_info is not equal to hdhr_response_channel_title then
+					my logger(true, handlername, caller, "INFO", "Title changed from " & quote & show_title of item show_offset of Show_info & quote & " to " & quote & hdhr_response_channel_title & quote)
+					set show_title of item show_offset of Show_info to hdhr_response_channel_title
+				end if
 			end if
 			if show_use_seriesid of item show_offset of Show_info is false then
 				set end of temp_show_progress to "Reading metadata..."

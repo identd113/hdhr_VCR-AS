@@ -1519,13 +1519,14 @@ on show_name_fix(caller, show_id, show_object)
 		try
 			set hdhr_response_channel_episodeTitle to EpisodeTitle of channel_record
 		end try
-		
+
 		set temp_name to {hdhr_response_channel_title, hdhr_response_channel_episodeNum, hdhr_response_channel_episodeTitle}
 		set temp_name to my emptylist(my cm(handlername, caller), temp_name)
 		set temp_name to my stringToUtf8(my cm(handlername, caller), my stringlistflip(my cm(handlername, caller), temp_name, " ", "string"))
 		logger(true, handlername, caller, "DEBUG", "hdhr_response_channel_title: " & hdhr_response_channel_title & ":" & hdhr_response_channel_episodeNum & ":" & hdhr_response_channel_episodeTitle) of ParentScript
 		return {fixTitle:hdhr_response_channel_title, fixEpisodeNum:hdhr_response_channel_episodeNum, fixEpisodeTitle:hdhr_response_channel_episodeTitle, fixall:temp_name}
-		
+	else
+		return {fixTitle:"", fixEpisodeNum:"", fixEpisodeTitle:"", fixall:""}
 	end if
 end show_name_fix
 
