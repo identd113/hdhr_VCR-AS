@@ -1748,7 +1748,8 @@ on main(caller, emulated_button_press)
 	set handlername to "main"
 	copy (current date) to cd
 	set cm to my cm(handlername, caller)
-	if length of Hdhr_device_list is 0 then
+	-- Only rediscover devices on first run, not on every reopen
+	if length of Hdhr_device_list is 0 and caller is not "reopen" then
 		my HDHRDeviceDiscovery(cm, "")
 	end if
 	my logger(true, handlername, caller, "INFO", "Main screen started")
