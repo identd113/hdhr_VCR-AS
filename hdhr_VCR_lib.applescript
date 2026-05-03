@@ -1428,7 +1428,9 @@ on updateSeriesID(caller, show_id, new_seriesid)
 		set old_seriesid to show_seriesid of item show_offset of Show_info
 		set show_title to show_title of item show_offset of Show_info
 		set show_seriesid of item show_offset of Show_info to new_seriesid
-		logger(true, handlername, caller, "INFO", "SeriesID updated for " & quote & show_title & quote & ": " & quote & old_seriesid & quote & " → " & quote & new_seriesid & quote) of ParentScript
+		if old_seriesid is not equal to new_seriesid then
+			logger(true, handlername, caller, "INFO", "SeriesID updated for " & quote & show_title & quote & ": " & quote & old_seriesid & quote & " → " & quote & new_seriesid & quote) of ParentScript
+		end if
 		set Show_info of ParentScript to Show_info
 		return true
 	else
