@@ -682,6 +682,26 @@ on deserialize_show(caller, show_rec)
 	on error
 		set s to s & {show_temp_dir:""}
 	end try
+	try
+		set show_dir of s to show_dir of s
+	on error
+		set s to s & {show_dir:""}
+	end try
+	try
+		set show_channel of s to show_channel of s
+	on error
+		set s to s & {show_channel:""}
+	end try
+	try
+		set show_next of s to show_next of s
+	on error
+		set s to s & {show_next:0}
+	end try
+	try
+		set show_end of s to show_end of s
+	on error
+		set s to s & {show_end:0}
+	end try
 
 	try
 		set ep to show_last of s
@@ -763,42 +783,6 @@ on deserialize_show(caller, show_rec)
 
 	try
 		set show_channel of s to (show_channel of s) as text
-	end try
-
-	try
-		set show_fail_count of s to show_fail_count of s
-	on error
-		set s to s & {show_fail_count:0}
-	end try
-	try
-		set show_fail_reason of s to show_fail_reason of s
-	on error
-		set s to s & {show_fail_reason:""}
-	end try
-	try
-		set show_logo_url of s to show_logo_url of s
-	on error
-		set s to s & {show_logo_url:""}
-	end try
-	try
-		set show_url of s to show_url of s
-	on error
-		set s to s & {show_url:""}
-	end try
-	try
-		set show_time_OriginalAirdate of s to show_time_OriginalAirdate of s
-	on error
-		set s to s & {show_time_OriginalAirdate:""}
-	end try
-	try
-		set show_use_seriesid of s to show_use_seriesid of s
-	on error
-		set s to s & {show_use_seriesid:false}
-	end try
-	try
-		set show_use_seriesid_all of s to show_use_seriesid_all of s
-	on error
-		set s to s & {show_use_seriesid_all:false}
 	end try
 
 	return s
