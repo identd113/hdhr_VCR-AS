@@ -1,1078 +1,186 @@
 # hdhr_VCR UI/UX Expectations
 
-**Complete reference for user-facing dialogs, interactions, status states, and error flows.**
+**Design specification for user-facing interactions and workflows. Describes WHAT the system should show and WHY — not HOW or exact button labels.**
 
-> **Related Docs:** [WORKFLOWS.md](WORKFLOWS.md) — User workflows · [SHOW_STATUS.md](SHOW_STATUS.md) — State reference · [ADVANCED_PROCESSES.md](ADVANCED_PROCESSES.md) — Technical implementation
+> **Related Docs:** [UI_SCREENS.md](UI_SCREENS.md) — Exact dialog specs with code references · [WORKFLOWS.md](WORKFLOWS.md) — User task flows · [SHOW_STATUS.md](SHOW_STATUS.md) — Show state model · [ADVANCED_PROCESSES.md](ADVANCED_PROCESSES.md) — Technical implementation
 
 ---
 
 ## Date/Time Architecture
 
-**Storage:** All dates are stored as **UTC epoch integers in string format** in the config file
-```json
-{
-  "show_next": "1777762800",
-  "show_end": "1777766400",
-  "show_last": "1777248000"
-}
-```
-This format is **timezone-portable** — the config works correctly when moved between timezones or when traveling.
+**Storage:** All times stored as **UTC epoch integers** in the config file for timezone portability.
 
-**Display:** All dates shown to users in **local time** via logs and UI elements
-- Main screen: `"Next: 05/02 6:00 PM"` (local time)
-- Edit dialog: `"Next Showing: Thursday, May 2, 2026 6:00 PM CDT"` (local time)
-- Logs: `"show_next: Thursday, May 2, 2026 6:00 PM CDT"` (local time)
+**Display:** All times shown to users in **local time** via UI dialogs and logs.
 
-**Conversion:**
-- **Storage → Display:** `epoch2datetime()` converts UTC epoch → local date object → `short_date()` formats for display
-- **Display → Storage:** User selects local time → converted to date object → `datetime2epoch()` converts to UTC epoch → stored
+**Conversion:** 
+- Storage → Display: `epoch2datetime()` converts UTC epoch to local date, then `short_date()` formats for display
+- Display → Storage: User selects local time → converted to UTC epoch → stored
 
 ---
 
 ## Main Screen - Show List
 
-### Layout
-```
-┌────────────────────────────────────────────┐
-│ hdhr_VCR                                   │
-├────────────────────────────────────────────┤
-│ ☐ Show Title                     [Status]  │
-│ ☐ Next: MM/DD HH:MM              [●●●]    │
-│ ☐ (Recorded: MM/DD HH:MM)        [!]      │
-│                                            │
-│ ☐ Another Show S01E05            [RECORD] │
-│ ☐ Next: MM/DD HH:MM              [●●●]    │
-│                                            │
-├────────────────────────────────────────────┤
-│ [Add] [Edit] [Remove] [Run] [Settings]   │
-└────────────────────────────────────────────┘
-```
+![Show List Screen](../show_list.png)
 
-### Status Icons & Legends
+The main screen displays an active show list sorted by next air date, with controls for add/edit/remove/settings operations.
 
-| Icon | Meaning | Color | Condition |
-|------|---------|-------|-----------|
-| ✓ | Active/Recording | Green | `show_active = true` AND tuner in use |
-| ⚠ | Warning | Yellow | Recording failed, retry pending, or paused after 3 failures |
-| ✗ | Paused | Gray | `show_active = false` (stopped after too many failures) |
-| ● | Signal strength | Green/Red | Tuner signal quality during recording |
-| ⓘ | Info | Blue | Recently recorded, guide data gap, or title variation |
-| 🔄 | Refreshing | Blue | SeriesID show queued for guide scan |
-| ⏱ | Time warning | Orange | Recording starts within 15 minutes |
-| 📡 | Device offline | Red | HDHomeRun device not detected |
+### Status Icon System
 
-### Show List Entry Anatomy
+| Icon | Meaning | Condition |
+|------|---------|-----------|
+| ✓ | Recording Active | Show in progress |
+| ⚠ | Warning | Failures pending retry or paused after 3 failures |
+| ✗ | Paused | Stopped, awaiting user intervention |
+| ● | Signal strength | Tuner signal quality during recording |
+| 🔄 | Refreshing | SeriesID show queued for guide scan |
+| ⏱ | Time warning | Recording starts within 15 minutes |
+| 📡 | Device offline | HDHomeRun device not detected |
 
-```
-Title Line:
-  [checkbox] Show Title [S##E##] [ICON_STATUS]
-  
-Subtitle (always visible):
-  Next Air:  MM/DD HH:MM  (or "Passed" if show_next < now)
-  Type:      Single | DateTime | SeriesID | SeriesID(All)
-  
-Optional Tertiary (conditional):
-  Recorded:  MM/DD HH:MM  (if show_recorded_today = true)
-  Last:      MM/DD HH:MM  (if show_last > 0)
-```
+### Show Entry Display
 
-### Show Title Format Examples
+Each show displays:
+- **Title** with optional episode number (S##E##) for guide-matched shows
+- **Next air date/time** (local time)
+- **Recently recorded** indicator if show recorded today
+- **Status icon** showing current state
 
-| Type | Format | Example |
-|------|--------|---------|
-| Single | `Show Name` | `Seinfeld` |
-| DateTime | `Show Name` | `60 Minutes` |
-| SeriesID | `Show Name S##E##` | `The Late Show S11E105` |
-| SeriesID(All) | `Show Name S##E##` | `The Rifleman S02E11` |
-
-**Note:** Title updates automatically when guide discovers new episode. Old title may briefly show during update.
-
-### Show List Sorting & Display Order
-
-**Active Shows (show_active = true)** appear at top, sorted by:
-1. **Show Next (primary):** Earliest upcoming air date first
-2. **Currently Recording:** Shown with 🎬 RECORD icon, pinned to top
-3. **Failures:** Shows with fail_count > 0 display ⚠ warning icon
-4. **Inactive Shows (show_active = false)** appear at bottom, grayed out
-
-```
-Example List Order:
-────────────────────────────────────────────
-[🎬] The Rockford Files S04E18    [Today 12:00 AM]
-[●●●] Saturday Night Live S51E19   [Tomorrow 10:49 PM]
-[⚠] The Good Wife S07E22           [Fri 5/3 10:00 PM] ← 2 failures
-[📺] Late Show S11E106             [Sat 5/4 11:35 PM]
-────────────────────────────────────────────
-[✗] Deactivated Show (grayed)      [Fri 4/18 8:00 PM]
-────────────────────────────────────────────
-```
-
-### Show List State Transitions
-
-**Recording in Progress:**
-```
-Before recording starts (35 min before):
-  [⏱] Show Title S##E##            [Next: Today 10:49 PM] ← orange timer
-
-At recording start:
-  [🎬] Show Title S##E##            [RECORD - 35M 5S LEFT]
-
-During recording:
-  [●●●] Show Title S##E##           [SIGNAL: 98%]
-
-After recording ends:
-  [✓] Show Title S##E##             [Next: Tomorrow 10:49 PM]
-```
-
-### Icon Combinations & Precedence
-
-When multiple states exist, icons display in priority order:
-```
-1. [🎬] RECORD  — actively recording NOW
-2. [⏱] TIMER    — starts within 15 minutes
-3. [⚠] WARNING  — failed 1-2 times (red background after 3)
-4. [📡] OFFLINE — device disconnected
-5. [🔄] REFRESH — SeriesID show queued for next scan
-6. [✓] ACTIVE   — normal, waiting to record
-7. [✗] PAUSED   — inactive, 3+ failures
-8. [ⓘ] INFO     — title just updated, or guide gap
-```
-
-### Show List Refresh Behavior
-
-**Real-time Updates (every idle cycle, ~10 seconds):**
-- Recording status changes (if curl exited)
-- Time remaining updates (MM:SS countdown)
-- Signal strength updates (during active recording)
-- Next air date recalculation (SeriesID shows after recording)
-
-**Delayed Updates (user-triggered or rare):**
-- Title changes (when guide discovers new episode)
-- State icon changes (new failures, pause state)
-- Folder changes (user edits show)
-
-**Never auto-refresh:**
-- Show removal (requires user click "Remove")
-- Activation/deactivation (user must click "Edit" dialog)
-- Recording folder (until user changes)
-
-### Error States on Show List
-
-**Recording Failures (show_fail_count):**
-```
-1st failure:  [⚠] Show Title     [Yellow warning, still active]
-2nd failure:  [⚠] Show Title     [Yellow warning]
-3rd failure:  [✗] Show Title     [Red, grayed out, deactivated]
-
-User must click "Edit" → "Reset" to re-enable
-```
-
-**Device Issues:**
-```
-No HDHR Device detected:
-  [📡] All shows display [📡 OFFLINE] icon
-  Main screen shows banner: "⚠ HDHomeRun not detected"
-  Records cannot start until device found
-
-Show's tuner disconnected:
-  [⚠] Show displays warning icon
-  Validate dialog: "Tuner XXX not found, deactivate?"
-```
-
-**Guide Data Gaps:**
-```
-SeriesID show with no upcoming episodes:
-  [ⓘ] Show Title S##E##            [No upcoming airings]
-  App auto-advances show_next +4 hours, retries later
-```
-
-### Inactive Show Display (Deactivated)
-
-```
-Appearance (grayed out):
-  ☐ Deactivated Show Title       [PAUSED]
-  ☐ Last: MM/DD HH:MM            [3 failures]
-
-Interaction:
-  - Can still select and click "Edit"
-  - Clicking "Edit" offers "Activate" button
-  - Will not record until reactivated
-  - Removed from config on next save (unless user re-activates first)
-```
+Shows remain on screen until explicitly removed. Active shows appear first (sorted by next air), inactive shows at bottom.
 
 ---
 
-## Add Show — Two Paths
+## Workflows: Adding a Show
 
-**Path 1: Guide-Based Add** → User clicks "Add.." button → browse guide → validate
-**Path 2: Manual Add** → Direct entry via validate_show_info dialogs (documented below)
+Two distinct paths exist:
 
----
+### Path 1: Guide-Based (from channel browsing)
+User selects a channel → sees available shows in guide → selects an episode → validates fields. Fast for shows in the guide, provides auto-populated metadata.
 
-## Add Show Workflow — Guide-Based Path
+### Path 2: Manual Add (direct dialogs)
+User enters all details via sequential dialogs (title, type, days, channel, time, duration, folder). Used for shows not yet in guide or for custom schedules.
 
-**Entry:** User clicks "Add.." button on main screen
-**Code Path:** Tuner selection (if multiple) → `add_show_info()` handler (hdhr_VCR.applescript:1966+)
-**Flow:** [Tuner] → Channel selection → Guide browser → Validate (manual fields)
+**See [UI_SCREENS.md](UI_SCREENS.md) for exact dialog sequence, button labels, and validation rules.**
 
-### Step 0: Tuner Selection (if multiple devices)
-```
-┌──────────────────────────────────────────────────┐
-│ Multiple HDHR Devices found, please choose one   │
-├──────────────────────────────────────────────────┤
-│ ⊙ 105404BE (Device 1)                           │
-│ ○ 105404BF (Device 2)                           │
-│ ○ 105404C0 (Device 3)                           │
-├──────────────────────────────────────────────────┤
-│  [🏃 Run]  [Select]                             │
-└──────────────────────────────────────────────────┘
-```
+### Cancellation Behavior
 
-**SKIPPED if:** Only one tuner detected (defaults to that device)
-
-### Step 1: Channel Selection
-```
-┌─────────────────────────────────────────────┐
-│ What channel does this show air on?         │
-├─────────────────────────────────────────────┤
-│ Tuner: 105404BE (1 of 1 available)          │
-│ 119 channels available                      │
-│                                             │
-│ ⊙ 2.1  Channel 2.1                          │
-│ ○ 4.1  WCCO-DT [NBC]                        │
-│ ○ 5.3  Channel 5.3                          │
-│ ○ 5.4  GREAT                                │
-│ ○ 7.1  KSTW [CBS]                           │
-│ ○ 9.2  KSTP [ABC]                           │
-│ ○ 11.1 KARE-HD [NBC]                        │
-│ ... [scrollable, 119 total] ...             │
-├─────────────────────────────────────────────┤
-│  [🏃 Run]  [Next..]                         │
-└─────────────────────────────────────────────┘
-```
-
-**Legend Icons:**
-```
-🎬 Recording  ⚠ Warning  ⭐ Favorite  🎞️ <1h  📈 <4h  📊 >4h
-```
-
-### Step 2: Guide Browser (hdhrGRID)
-```
-┌──────────────────────────────────────────────────┐
-│ Browse shows on channel 11.3                    │
-│ [fetching guide data...]                        │
-├──────────────────────────────────────────────────┤
-│ [Logo] Show Title S##E##                        │
-│ Start: MM/DD HH:MM  End: MM/DD HH:MM           │
-│                                                 │
-│ [Logo] Another Show S##E##                      │
-│ Start: MM/DD HH:MM  End: MM/DD HH:MM           │
-│                                                 │
-│ ... 41 more shows on this channel ...           │
-├──────────────────────────────────────────────────┤
-│  [🏃 Run]  [Select]                             │
-└──────────────────────────────────────────────────┘
-```
-
-**Multi-Select:** If selecting multiple shows:
-```
-You are adding multiple shows. Do you wish to use 
-the same settings for all shows?
-
-Buttons: [ No ]  [ Yes ]
-```
-
-**Guide Data Shown:**
-- Show logo (cached from API)
-- Title and episode number
-- Start/end times (from guide)
-- **Auto-extracts on selection:** SeriesID, show length
-
-### Step 3: Validate Fields (Single show or repeat for each)
-Once show selected from guide, calls `validate_show_info()` to collect remaining fields:
-- Title (pre-filled from guide, can edit)
-- Series type (Single/DateTime/SeriesID modes)
-- Days (if DateTime/Single)
-- Time (if DateTime/Single)
-- Duration (if DateTime/Single)
-- Folder selection
-
-See **Manual Add Workflow** below for exact dialogs and field validation.
+Every dialog in the add workflow has a cancel option. Pressing it at any point returns to the main screen and **discards ALL previously entered data**. The show is not added to the config.
 
 ---
 
-## Manual Add Workflow (validate_show_info path)
+## Recording Lifecycle — User Perspective
 
-**When:** User clicks "Add.." button directly, or edits existing show without guide data
+### Pre-Recording
+- User adds show with future air date
+- Show appears on list with status icon indicating next air
+- 35 minutes before air: "Up Next" notification appears (if enabled)
 
-**Code Path:** `validate_show_info()` handler (hdhr_VCR.applescript:1307+)
+### Recording Active  
+- 15.5 minutes before air: "Recording about to start" notification
+- Recording starts: Status changes to recording icon (✓)
+- Show appears with active indication on main list
+- During recording: Signal strength displayed
 
-### Step 1: Title & Series Type Dialog
-```
-┌──────────────────────────────────────────────────┐
-│ What is the title of this show, and is it a    │
-│ series??                                         │
-├──────────────────────────────────────────────────┤
-│ Title: [____________________________________]    │
-│                                                  │
-│ Next Showing: Thursday, May 2, 2026 at 6:00 PM  │
-│ SeriesID: [empty for manual add]                 │
-├──────────────────────────────────────────────────┤
-│  [🏃 Run]  [📺 Series]  [🎬 Single]             │
-└──────────────────────────────────────────────────┘
-```
+### Recording Complete
+- Recording ends: Status reverts to normal
+- Completion notification appears (if enabled)
+- For DateTime series: Next episode calculated and queued
+- For Single: Show marked inactive (paused)
+- For SeriesID: Next episode in series scanned and queued
 
-**Behavior:**
-- **Run button:** Cancel entire workflow, return to main list
-- **Single:** Record one episode only → Skip to Step 3
-- **Series:** Show type selection (Step 2)
-
----
-
-### Step 2: Series Type Selection (Series only)
-```
-┌──────────────────────────────────────────────────┐
-│ What kind of series?                            │
-├──────────────────────────────────────────────────┤
-│  [📅 Date/Time]  [📺 SeriesID(Channel)]  [🌐 SeriesID(All)]
-└──────────────────────────────────────────────────┘
-```
-
-**Selection → State Flags:**
-
-| Button | is_series | use_seriesid | use_seriesid_all | Result |
-|--------|-----------|--------------|------------------|---------|
-| Date/Time | true | false | false | DateTime |
-| SeriesID(Channel) | true | true | false | SeriesID(Ch) |
-| SeriesID(All) | true | true | true | SeriesID(All) |
+### Failure States
+- Recording fails to start or stop unexpectedly
+- User sees warning icon (⚠) on show
+- After 3 failures: Show auto-paused, requires user intervention
+- User can edit show to reset failure count and resume
 
 ---
 
-### Step 3: Days Selection (DateTime & Single only)
-```
-For DateTime Series:
-┌──────────────────────────────────────────────────┐
-│ Select the days you wish to record              │
-│ This is a series, so you can select multiple    │
-├──────────────────────────────────────────────────┤
-│ ☑ Sunday    ☐ Monday    ☐ Tuesday  ☐ Wednesday │
-│ ☐ Thursday  ☐ Friday    ☐ Saturday             │
-├──────────────────────────────────────────────────┤
-│  [🏃 Run]  [Next..]                             │
-└──────────────────────────────────────────────────┘
+## Notification Messages
 
-For Single:
-┌──────────────────────────────────────────────────┐
-│ Select the day you wish to record               │
-│ This is a single, you can only select 1 day     │
-├──────────────────────────────────────────────────┤
-│ ⊙ Wednesday                                      │
-│ ○ Thursday    ○ Friday    ○ Saturday            │
-├──────────────────────────────────────────────────┤
-│  [🏃 Run]  [Next..]                             │
-└──────────────────────────────────────────────────┘
-```
+System delivers notifications at key lifecycle points:
 
-**SKIPPED if:** SeriesID(Channel) or SeriesID(All) — auto-set to all 7 days
+| Event | Condition | Message |
+|-------|-----------|---------|
+| **Recording Up Next** | 35 min before air | "[Show Title] is up next at [time]" |
+| **Recording About to Start** | 15.5 min before air | "Recording [Show Title] in 15 minutes" |
+| **Recording Started** | At air time | "Recording [Show Title]" |
+| **Recording Complete** | After end time | "[Show Title] recorded successfully" |
+| **Recording Failed** | After failure | "[Show Title] failed to record — check logs" |
+| **Show Paused** | After 3 failures | "[Show Title] paused after 3 failures" |
 
 ---
 
-### Step 4: Channel Selection (all except SeriesID(All))
-```
-┌──────────────────────────────────────────────────┐
-│ What channel does this show air on?             │
-├──────────────────────────────────────────────────┤
-│ ⊙ 4.1   WCCO-DT [NBC]                          │
-│ ○ 5.3   Channel 5.3                             │
-│ ○ 7.1   KSTW [CBS]                              │
-│ ○ 9.2   KSTP [ABC]                              │
-│ ○ 11.1  KARE-HD [NBC]                           │
-│ ... [119 channels available] ...                 │
-├──────────────────────────────────────────────────┤
-│  [🏃 Run]  [Next..]                             │
-└──────────────────────────────────────────────────┘
-```
+## Error Handling Philosophy
 
-**SKIPPED if:** SeriesID(All) — uses all channels
+**Design principle:** Errors are informative, recoverable, and never silent.
 
----
+### Recording Failures
+- First failure: Warning icon appears, user notified
+- Subsequent failures: Retry automatically at next scheduled air
+- After 3 failures: Show paused, user must manually reset to resume
+- All failures logged with reason codes
 
-### Step 5: Time Selection (DateTime & Single only)
-```
-┌──────────────────────────────────────────────────┐
-│ What time does this show air?                  │
-│ (0-24, use decimals, ie 9.5 for 9:30)          │
-├──────────────────────────────────────────────────┤
-│ Time: [20.5_________________]                   │
-├──────────────────────────────────────────────────┤
-│  [🏃 Run]  [Next..]                             │
-└──────────────────────────────────────────────────┘
-```
+### Guide/API Failures
+- Guide unavailable: Show still appears, uses last-known air time
+- Temporary API errors: Retry automatically every 5 minutes
+- Persistent failures: Logged, user notified, manual refresh available
 
-**Validation:**
-- Input must be numeric
-- Must be 0-24 range
-- Decimals allowed (9.5 = 9:30 AM)
-
-**SKIPPED if:** SeriesID(Channel) or SeriesID(All)
+### Configuration/Storage Failures
+- Config file corrupted: Backup restored automatically
+- Config unreadable: App shows error and exits (safe)
+- Failed write: User notified, retry on next save
 
 ---
 
-### Step 6: Duration Selection (DateTime & Single only)
-```
-┌──────────────────────────────────────────────────┐
-│ How long is this show? (minutes)                │
-├──────────────────────────────────────────────────┤
-│ Duration: [60_________________]                  │
-├──────────────────────────────────────────────────┤
-│  [🏃 Run]  [Next..]                             │
-└──────────────────────────────────────────────────┘
-```
+## Edit Show Dialog
 
-**SKIPPED if:** SeriesID(Channel) or SeriesID(All) — populated from guide
+When editing an existing show:
+- All current fields pre-populated with saved values
+- Changing show type (Single → DateTime, etc.) dynamically reveals/hides relevant fields
+- [Cancel] discards all changes, reverts to saved state
+- [Save] writes changes to disk and updates main list immediately
 
 ---
 
-### Step 7: Folder Selection
-```
-┌──────────────────────────────────────────────────┐
-│ Select shows Directory for [show_title]         │
-├──────────────────────────────────────────────────┤
-│ 📁 Raid6                                         │
-│    📁 DVR Tests                                  │
-│       📁 shows...                                │
-│                                                  │
-│ Current: Raid6:DVR Tests:                        │
-│ Space: 78% full (1.3 GB free) — ✓ OK           │
-│                                                  │
-│ ⚠ Warning: >93% full prevents recording         │
-├──────────────────────────────────────────────────┤
-│  [🏃 Run]  [Choose]  [Use Last]                 │
-└──────────────────────────────────────────────────┘
-```
+## Notification Strategy
 
-**Validation:**
-- Folder must exist and be readable
-- Folder must be writable
-- Disk usage < 93%
+Notifications respect user preferences:
+- Can be disabled/suppressed globally in settings
+- "Up Next" notifications appear 35 minutes before air
+- "About to start" notifications appear 15.5 minutes before air
+- Notifications clear after 10 seconds or user dismissal
 
 ---
 
-## Manual Add Workflow — Prompt Summary by State
+## Main List Interactions
 
-| Step | Single | DateTime | SeriesID(Ch) | SeriesID(All) |
-|------|--------|----------|--------------|---------------|
-| 1. Title & Type | ✓ | ✓ | ✓ | ✓ |
-| 2. Series Type | — | ✓ | ✓ | ✓ |
-| 3. Days | ✓ (1 only) | ✓ (multi) | ✗ skip | ✗ skip |
-| 4. Channel | ✓ | ✓ | ✓ | ✗ skip |
-| 5. Time | ✓ | ✓ | ✗ skip | ✗ skip |
-| 6. Duration | ✓ | ✓ | ✗ skip | ✗ skip |
-| 7. Folder | ✓ | ✓ | ✓ | ✓ |
+### Selecting a Show
+- Clicking a show opens edit dialog (single select only)
+- Edit dialog shows all fields for that show's type
+- Fields are conditionally disabled based on show type (e.g., SeriesID shows hide time/duration)
 
-**Key:** ✓ = Shown, ✗ = Skipped, — = N/A
+### Removing a Show
+- Checkbox selection for bulk operations
+- Remove confirmation required (lists affected shows)
+- Canceling removes selection state and returns to main list
 
----
-
-## Cancel & Exit Behavior (Manual Add)
-
-Every dialog provides **"Run" button** to cancel:
-- Pressing "Run" or clicking Cancel returns to main show list
-- **ALL previously entered data is discarded**
-- Show is not added to config
-- No confirmation prompt
-
-Example abort sequence:
-```
-Step 1 (Title) → [Run] → Main list
-Step 4 (Channel) → [Run] → Main list (data lost)
-```
+### Deactivating a Show
+- Paused shows appear grayed out at bottom of list
+- Can be reactivated by editing and toggling active checkbox
+- Inactive shows don't generate notifications or attempt recordings
 
 ---
 
-## Edit Show Workflow
+## Design Constraints
 
-### Main Edit Dialog
-
-```
-┌─────────────────────────────────────────────┐
-│ Edit Show: The FBI Files S03E07             │
-├─────────────────────────────────────────────┤
-│ Title: [The FBI Files S03E07...]            │
-│ Type:  ○ Single  ⊙ DateTime  ○ SeriesID    │
-│ Active: ☑ (toggle to pause)                │
-│                                             │
-│ ── Schedule ──────────────────────────────  │
-│ Days: [Sun] [Mon] [Tue] [Wed] [Thu] [Fri]  │
-│ Time: [19:00]  Duration: [60] min          │
-│ Channel: [11.3 - Crime]                     │
-│                                             │
-│ ── Paths ──────────────────────────────────  │
-│ Folder: [Raid6:DVR Tests]  [Change]         │
-│ Transcode: [None] ▼                         │
-│                                             │
-│ ── Status ────────────────────────────────── │
-│ Next Air: Friday, May 1 at 7:00 PM          │
-│ Last Recorded: Never                        │
-│ Failures: 0 (Max 3 before pause)            │
-│ SeriesID: C505353ENSB1X [Copy]              │
-│                                             │
-├─────────────────────────────────────────────┤
-│ [Cancel] [Reset] [Save]                     │
-└─────────────────────────────────────────────┘
-```
-
-### Disabled Fields by Show Type
-
-| Field | Single | DateTime | SeriesID | SeriesID(All) |
-|-------|--------|----------|----------|---------------|
-| Days | ✓ | ✓ | ✗ disabled | ✗ disabled |
-| Time | ✓ | ✓ | ✗ disabled | ✗ disabled |
-| Channel | ✓ | ✓ | ✓ | ✗ disabled |
-| SeriesID | ✗ hidden | ✗ hidden | ✓ | ✓ |
+- **Time Input:** Decimal format (0-24 range, 9.5 = 9:30 AM)
+- **Disk Space:** Recordings blocked when disk > 93% full (warning shown)
+- **Tuner Conflicts:** Single tuner per show; no multi-tuner scheduling
+- **Locales:** English only (en_US, en_GB) due to date formatting complexity
 
 ---
 
-## Cancellation & Rejection Behavior
-
-### Add Show Workflow — Multi-Step Cancellation
-
-The add workflow is a linear progression with **Back** buttons (except Step 1) and **Cancel** buttons at each stage. Canceling at any step discards ALL previously entered data and returns to the main show list.
-
-```
-Add Show Cancellation Map:
-
-Step 1 (Type Selection)
-  [Cancel] → Back to main list (no data saved)
-  [OK] → Step 2 (for Series) or Step 3 (for Single)
-
-Step 2 (Series Sub-type: DateTime/SeriesID/SeriesID(All))
-  [Cancel] → Back to main list (no data saved)
-  [Back] → Back to Step 1 (no data saved)
-  [OK] → Step 3 (device selection)
-
-Step 3 (Device Selection)
-  [Cancel] → Back to main list (no data saved)
-  [Back] → Back to Step 2 (no data saved)
-  [OK] → Step 4 (title entry)
-
-Step 4 (Title Entry)
-  [Cancel] → Back to main list (no data saved)
-  [Back] → Back to Step 3 (no data saved)
-  [OK] → Step 5 (channel if needed) or Step 6+ per type
-
-Step 5+ (Channel / Schedule / Guide / Folder)
-  [Cancel] → Back to main list (no data saved)
-  [Back] → Back to previous step (no data saved)
-  [OK] → Advances toward final confirmation
-
-Final Step (Confirmation Dialog)
-  [Cancel] → Back to main list (NOTHING SAVED)
-  [OK] → Show added to list + saved to disk
-```
-
-**Critical Point:** Canceling at ANY stage — even after 9 of 10 steps — creates **zero artifacts**:
-- No orphaned show records in config
-- No incomplete entries in memory
-- No partial updates to existing shows
-- Entire workflow restarts fresh on next "Add"
-
-### Why Cancellation is Safe
-
-The validation flow processes user input entirely in a **temporary buffer** before saving:
-
-1. User enters data → stored in `temp_show_info` (in-memory record)
-2. User clicks [Cancel] at any point → `temp_show_info` discarded, never written to config
-3. User clicks [OK] at final step → `temp_show_info` copied to main `Show_info` list + saved to disk
-
-**Result:** Config file never sees incomplete or rejected shows.
-
-### Edit Show Workflow — Partial Changes & Reset
-
-Edit mode is different—it works with an **existing show** and must protect current state:
-
-```
-Edit Dialog Cancellation:
-
-[Cancel] Button:
-  → Discards ALL unsaved changes
-  → Returns to main list with original show values
-  → Config file unchanged
-  
-[Reset] Button:
-  → Reverts form fields to current saved values only
-  → Does NOT close dialog (user can re-edit)
-  → Clears any partial edits
-  
-[Save] Button:
-  → Writes changes to config file
-  → Updates show on main list immediately
-  → Dialog closes, returns to main list
-```
-
-**Field Behavior During Edit:**
-
-| Scenario | Behavior |
-|----------|----------|
-| Change Series type (Single→DateTime) | Enables Days/Time fields, disables SeriesID fields |
-| Change DateTime→SeriesID | Clears Days/Time, enables Channel/SeriesID fields |
-| Toggle Active checkbox | Pause/resume flag (survives cancellation as display state, but not saved unless [Save]) |
-| Manually change show_title | On [Save], triggers title-match check in seriesScanUpdate |
-
-**Example Rejection Sequence:**
-
-```
-User: Edit "The FBI Files S03E07"
-  → Form shows: Single, Channel 11.3, Time 20:00, Length 60
-  
-User: Clicks "Series" radio button
-  → Form morphs: Now shows Series sub-type options (DateTime/SeriesID)
-  → Old fields (Time, Length) hidden
-  
-User: Realizes this was a mistake, clicks [Cancel]
-  → Form closes
-  → "The FBI Files S03E07" remains unchanged in list
-  → Still shows as Single, Channel 11.3, Time 20:00, Length 60
-```
-
-### What Happens When Rejecting Type Changes
-
-When editing and changing a show's type (e.g., Single → DateTime), the validate_show_info handler **conditionally prompts** for missing data:
-
-```
-Scenario 1: Single → DateTime (adding schedule)
-  User selects "DateTime" → Handler detects type change
-  → Prompts for Days (multi-select)
-  → Prompts for Time (24-hr decimal)
-  → Prompts for Duration (minutes)
-  → Then: [Save] writes new config, [Cancel] reverts all
-
-Scenario 2: DateTime → SeriesID (removing schedule)
-  User selects "SeriesID" → Handler detects type change
-  → Skips Days/Time/Duration prompts
-  → Prompts for Channel only (if SeriesID(Channel))
-  → Then: [Save] writes, [Cancel] reverts
-
-Scenario 3: User cancels mid-prompt (e.g., hits Escape)
-  → Edit dialog closed without saving
-  → Original show type + settings preserved
-  → No partial state in config
-```
-
-### Multi-Item List Operations (Bulk Rejection)
-
-When selecting multiple shows via checkboxes and rejecting an operation:
-
-```
-Main List with Multiple Selection:
-  ☑ Show 1
-  ☑ Show 2
-  ☑ Show 3
-  ☐ Show 4
-  
-[Remove] button clicked:
-  → Confirmation dialog:
-     "Remove 3 shows?"
-     ☐ Do not show this again
-     [Cancel] [Remove]
-  
-  User clicks [Cancel]:
-    → Dialog closes
-    → Checkboxes remain selected (state preserved)
-    → No deletion occurs
-    → User can reselect or deselect and try again
-
-  User clicks [Remove]:
-    → All 3 shows deleted from config
-    → Checkboxes cleared
-    → List refreshes immediately
-```
-
-**Multi-Item Rejection Patterns:**
-
-| Operation | Rejection Outcome |
-|-----------|-------------------|
-| [Remove] 3 selected shows | Cancels all 3 removals; list unchanged |
-| [Edit] on multi-select | Usually disabled (edit requires single select) |
-| [Run] (force idle update) | Cancels; no side effects |
-| [Add] during multi-select | Creates new show independent of selection state |
-
-### Rejection at Guide Browser Step (SeriesID Workflows)
-
-When adding SeriesID show and browsing the guide:
-
-```
-Guide Browser (Step 7):
-  ┌────────────────────────────────┐
-  │ Browse shows on channel 11.3   │
-  ├────────────────────────────────┤
-  │ ☐ Show A   Start: ... End: ... │
-  │ ☑ Show B   Start: ... End: ... │  ← Selected for details
-  │ ☐ Show C   Start: ... End: ... │
-  ├────────────────────────────────┤
-  │ [Back] [Select] [Cancel]       │
-  └────────────────────────────────┘
-
-[Cancel] on Browser:
-  → Browser closes
-  → Returns to Step 5 (channel selection)
-  → User can pick different channel or cancel further
-  → No guide data cached or auto-populated yet
-
-[Back] on Browser:
-  → Returns to Step 5 (channel selection)
-  → Same as Cancel (no guide cache)
-
-[Select] on Browser (with Show B highlighted):
-  → Auto-populates: seriesID, show_length, show_next, show_end
-  → Advances to Step 9 (folder selection)
-  → [Cancel] at folder selection discards all auto-populated data
-```
-
-### Rejection After Auto-Population (SeriesID Risk)
-
-**Critical scenario:** User adds a SeriesID show up to Step 9, then cancels:
-
-```
-Step 8 (Auto-population has occurred):
-  (Auto) show_name: The FBI Files S03E07 Millionaire Murder
-  (Auto) show_length: 60 minutes
-  (Auto) show_next: Friday, May 1, 2026 at 7:00 PM
-  (Auto) show_end: Friday, May 1, 2026 at 8:00 PM
-  (Auto) show_channel: 11.3
-  (Auto) SeriesID: C505353ENSB1X
-
-User clicks [Back] to adjust channel:
-  → Returns to Step 5 (channel selection)
-  → Auto-populated fields cleared from temp buffer
-  → User can re-select guide or different channel
-  
-User clicks [Cancel] at Step 9 (folder):
-  → Dialog closes, all temp data discarded
-  → No show added
-  → Guide API call already made (cached for 5+ min)
-  → Next [Add] for same series can reuse cache
-```
-
-### Rejection With Network Failures
-
-If guide API fails during auto-population (Step 8):
-
-```
-Scenario: User selects episode from cache, but live refresh fails
-
-Step 8 (Auto-population):
-  - System attempts getTfromN(StartTime) → API fails
-  - Fallback: Show_next set to (current date) + 4 * hours
-  - Logs ERROR: "Failed to convert StartTime"
-  - Auto-population still proceeds with fallback values
-  
-User sees:
-  (Auto) show_name: [Correct - from guide]
-  (Auto) show_next: [Fallback +4 hours, not from guide]
-  (Auto) show_end: [Fallback +1 hour, not from guide]
-  
-User clicks [Cancel]:
-  → All auto-populated data (including fallback) discarded
-  → No show added
-  → User can retry (cache still valid) or manual entry
-  
-User clicks [OK] (accepts fallback):
-  → Show added with temporary times
-  → seriesScanUpdate will correct show_next/show_end on next idle cycle
-```
-
----
-
-## Recording Status Indicators
-
-### During Recording
-
-```
-Main Screen Show Entry:
-┌────────────────────────────────────────────┐
-│ ● The FBI Files S03E07 Millionaire Murder  │
-│ Recording: 41M 38S remaining                │
-│ Channel: 11.3 | Signal: ████████████ 100%  │
-│ File: /Volumes/Raid6/DVR Tests/...m2ts      │
-│ Size: 456 MB (of ~900 MB expected)          │
-└────────────────────────────────────────────┘
-```
-
-### Recording Status in Log
-```
-RECORD_START: The FBI Files S03E07 Millionaire Murder
-  show_id: 43943CACE2D743EE85DCFAD1DEA4ECBB
-  duration: 2619s (43M 39S)
-  show_end header: 05.01.26 20.00
-  transcode: none
-```
-
-### Post-Recording
-
-```
-Main Screen Show Entry:
-┌────────────────────────────────────────────┐
-│ ✓ The FBI Files S03E07 Millionaire Murder  │
-│ Recorded: 05.01.26 8:00 PM                  │
-│ File: /Volumes/Raid6/DVR Tests/...m2ts      │
-│ Size: 903 MB (completed)                    │
-└────────────────────────────────────────────┘
-```
-
----
-
-## Notification System
-
-### "Up Next" Notification (35 minutes before)
-
-```
-┌──────────────────────────────────────────┐
-│ 🎬 Up Next                               │
-├──────────────────────────────────────────┤
-│ The FBI Files S03E07 Millionaire Murder  │
-│ Channel 11.3                              │
-│ Starts in 35 minutes at 7:00 PM           │
-│                                          │
-│ [Dismiss] [Details]                      │
-└──────────────────────────────────────────┘
-```
-
-### "Recording Starting" Notification (15.5 minutes before)
-
-```
-┌──────────────────────────────────────────┐
-│ 🔴 Recording Starting                    │
-├──────────────────────────────────────────┤
-│ The FBI Files S03E07 Millionaire Murder  │
-│ Channel 11.3                              │
-│ Starts in 15 minutes at 7:00 PM           │
-│ Ends: 8:00 PM (60 minutes)                │
-│                                          │
-│ [Dismiss] [Details]                      │
-└──────────────────────────────────────────┘
-```
-
-### Error Notifications
-
-```
-Recording Failed (show_fail_count = 1):
-  ⚠ Failed to record: [Show Title]
-  Error: [Tuner busy / Signal loss / Disk full]
-  Retry: Will try next episode
-  
-After 3 Failures (show_active set to false):
-  ✗ Paused: [Show Title]
-  Reason: Recording failed 3 times
-  Action: Edit show and click [Resume] to retry
-```
-
----
-
-## Status Icons in Lists
-
-### Icon Positioning
-```
-Show Title [Status Icon] [Recording Indicator]
-  Icon appears to right of title
-  Updates every idle cycle (~10 seconds)
-  
-Examples:
-  ✓ The Late Show S11E105 [●] 
-    ^ active  ^ recording
-    
-  ⚠ Golden Girls S04E25 [!]
-    ^ warning/paused  ^ info
-    
-  🔄 Rifleman S02E11 [▲]
-    ^ refreshing  ^ queued for scan
-```
-
----
-
-## Guide Data Flow - What User Sees
-
-### Initial State (Manual Entry)
-```
-User enters: "The FBI Files"
-  ↓ (system searches guide for matching SeriesID)
-  ↓
-[Tuner 105404BE] - Guide fetched for 24 hours
-  ↓ (seriesID matched to C505353ENSB1X)
-  ↓
-hdhrGRID Browser opens with matching channel
-  ↓ (user selects episode S03E07 from guide)
-  ↓
-Auto-populated:
-  - show_next: 05.01.26 7:00 PM
-  - show_end: 05.01.26 8:00 PM
-  - show_length: 60 min
-  - show_channel: 11.3
-```
-
-### Ongoing Updates (Every Idle Cycle)
-```
-Every 10 seconds:
-  1. Check if show_next ≤ now + 35 min → "Up Next" notification
-  2. Check if show_next ≤ now + 15.5 min → "Recording Starting"
-  3. Check if show_end ≤ now → Start recording
-  
-Every hour:
-  4. Fetch fresh guide data (24 hours ahead)
-  5. For SeriesID shows: scan for new episodes
-  6. If new episode found:
-     - Update show_title to new episode
-     - Update show_next to new air date
-     - Update show_end from guide
-     - Reset show_fail_count to 0
-```
-
-### What User Sees During Episode Update
-```
-Before: 
-  The FBI Files S03E07 Millionaire Murder
-  Next: 05.01.26 7:00 PM
-  
-[Guide update finds S03E08...]
-  
-After:
-  The FBI Files S03E08 [Different Title]
-  Next: 05.02.26 7:00 PM
-  
-  Status: New episode discovered (may show ⓘ icon)
-```
-
----
-
-## Error States & Recovery
-
-### Show Recording Failed (show_fail_count = 1-2)
-
-```
-List Display:
-  ⚠ Show Title [!]
-  Next: MM/DD HH:MM (unchanged)
-  
-Edit Dialog:
-  Failures: 2 (Max 3 before pause)
-  Failure Reason: [Tuner busy / Disk full / Signal lost]
-  
-Action: Will retry next episode automatically
-```
-
-### Show Paused (show_fail_count = 3)
-
-```
-List Display:
-  ✗ Show Title [✗]
-  Next: MM/DD HH:MM (no change)
-  Status: PAUSED - Failed 3 times
-  
-Edit Dialog:
-  Active: ☐ (unchecked, show is inactive)
-  Failures: 3 / 3
-  [Reset to 0 and Resume]
-  
-User must manually:
-  1. Edit the show
-  2. Click [Reset Failures]
-  3. Click [Save]
-  4. Show becomes active again
-```
-
-### Tuner Offline
-
-```
-Main Screen:
-  📡 All shows grayed out
-  "No HDHR Device Detected"
-  
-In Background:
-  System continues checking for device
-  Retries discovery every idle cycle
-  
-When Device Returns:
-  Shows un-gray
-  "Device detected: 105404BE"
-  Normal operation resumes
-```
-
----
-
-## Expected Behavior Timeline
-
-### For a New SeriesID(Channel) Show
-
-```
-T+0:00    User clicks [Add] → Show wizard
-T+0:05    User selects from guide → "The FBI Files S03E07"
-T+0:10    App extracts: title, seriesID, show_end, channel
-T+0:15    User selects folder → Show added to list
-T+0:20    List shows: "✓ The FBI Files S03E07", Next: 05.01.26 7:00 PM
-T+0:30    App queues show for SeriesID scan
-T+1:00    App scans guide for C505353ENSB1X (first scan)
-T+1:05    Found 6 episodes, selects soonest future: S03E07 at 7:00 PM
-T+6:25    "Up Next" notification fires (35 min before 7:00 PM)
-T+6:45    "Recording Starting" notification (15.5 min before)
-T+7:00    Recording begins, show marked as "●" (recording)
-T+8:00    Recording ends, file saved, show marked as "✓" (complete)
-T+8:05    App queues for next episode scan
-T+9:00    Next hour: guide updated, finds S03E08 for next day
-T+9:10    Title updates: S03E08, show_next updated, show_end updated
-```
-
----
-
-## What Should NOT Appear
-
-❌ **Never display to user:**
-- Raw epoch timestamps (should show formatted dates)
-- Internal show_id UUIDs (unless in technical dialog)
-- Raw guide API responses
-- HTTP headers or curl commands
-- Internal flag states (isdupe, channel_record, etc)
-- Memory addresses or object references
-
-✓ **Always display as:**
-- "Friday, May 1, 2026 at 7:00 PM" (not "1777674900")
-- "Channel 11.3" (not "temp_channel")
-- "60 minutes" (not "3600 seconds")
-- Status icons, not boolean values
-
----
-
-## SeriesID Metadata Updates - Expected Behavior
-
-**SeriesID updates should ONLY occur for DateTime and Single shows.**
-
-### Expected Log Entries
-
-**For DateTime or Single shows (guide sync):**
-```
-INFO  SeriesID updated for "Show Title": C505353ENSB1X → C184053ENSZ30
-```
-This is normal and expected when the guide's SeriesID changes for existing metadata.
-
-### Unexpected/Warning Cases
-
-**SeriesID update attempted on a SeriesID-tracking show:**
-```
-WARN  Cannot update SeriesID: SeriesID(Channel) and SeriesID(All) shows should never change SeriesID
-```
-SeriesID is the stable identifier for these shows—if it's changing, the show was misconfigured.
-
-**Blank values rejected:**
-```
-WARN  Cannot update SeriesID: show_id="", new_seriesid="C505353ENSB1X"
-```
-Handler validation prevents incomplete updates.
-
-### Why This Matters
-
-- **Single/DateTime shows**: SeriesID is optional metadata from the guide. Updates sync the metadata.
-- **SeriesID(Channel) / SeriesID(All) shows**: SeriesID IS the show. Changing it means a different show entirely.
-
-If a SeriesID show's SeriesID is changing, it indicates:
-- Wrong SeriesID was stored at add time
-- Conflicting shows in guide with same SeriesID
-- Guide data corruption
+## Related Documentation
+
+- **[UI_SCREENS.md](UI_SCREENS.md)** — Every dialog with exact mockups and code references
+- **[SHOW_STATUS.md](SHOW_STATUS.md)** — 4-state model and valid state combinations  
+- **[ADVANCED_PROCESSES.md](ADVANCED_PROCESSES.md)** — Recording lifecycle, SeriesID matching, error handling
