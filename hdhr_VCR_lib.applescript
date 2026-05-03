@@ -508,10 +508,10 @@ on epoch2datetime(caller, epochseconds)
 			set unix_time to epochseconds
 		end try
 		set epoch_time to my epoch("")
-		--epoch_time is Jan 1 1970 in local time (represents the UTC epoch reference point)
-		--Add UTC seconds directly - AppleScript date arithmetic handles timezone correctly
+		--epoch_time is Jan 1 1970 in local time, which is offset from UTC by (time to GMT)
+		--Subtract the local timezone offset to get to UTC reference, then add UTC seconds
 		logger(true, handlername, caller, "TRACE", epochseconds) of ParentScript
-		set epochOFFSET to (epoch_time + (unix_time as number))
+		set epochOFFSET to (epoch_time + (unix_time as number) - (time to GMT))
 		logger(true, handlername, caller, "TRACE", class of (epochOFFSET)) of ParentScript
 		return epochOFFSET
 	on error errmsg
@@ -521,9 +521,11 @@ end epoch2datetime
 
 on datetime2epoch(caller, the_date_object)
 	set handlername to "datetime2epoch_lib"
-	-- Convert local date to UTC Unix epoch: subtract epoch base
-	-- AppleScript date arithmetic handles timezone correctly - elapsed time is absolute
-	set unix_epoch to the_date_object - (my epoch(""))
+	-- Convert local date to UTC Unix epoch
+	-- epoch("") is in local time, offset by (time to GMT) from UTC reference
+	-- Add the local timezone offset to get to UTC seconds
+	set local_seconds to the_date_object - (my epoch(""))
+	set unix_epoch to local_seconds + (time to GMT)
 	return getTfromN(unix_epoch) of me
 end datetime2epoch
 
