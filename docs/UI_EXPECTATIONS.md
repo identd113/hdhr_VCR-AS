@@ -87,6 +87,119 @@ Optional Tertiary (conditional):
 
 **Note:** Title updates automatically when guide discovers new episode. Old title may briefly show during update.
 
+### Show List Sorting & Display Order
+
+**Active Shows (show_active = true)** appear at top, sorted by:
+1. **Show Next (primary):** Earliest upcoming air date first
+2. **Currently Recording:** Shown with 🎬 RECORD icon, pinned to top
+3. **Failures:** Shows with fail_count > 0 display ⚠ warning icon
+4. **Inactive Shows (show_active = false)** appear at bottom, grayed out
+
+```
+Example List Order:
+────────────────────────────────────────────
+[🎬] The Rockford Files S04E18    [Today 12:00 AM]
+[●●●] Saturday Night Live S51E19   [Tomorrow 10:49 PM]
+[⚠] The Good Wife S07E22           [Fri 5/3 10:00 PM] ← 2 failures
+[📺] Late Show S11E106             [Sat 5/4 11:35 PM]
+────────────────────────────────────────────
+[✗] Deactivated Show (grayed)      [Fri 4/18 8:00 PM]
+────────────────────────────────────────────
+```
+
+### Show List State Transitions
+
+**Recording in Progress:**
+```
+Before recording starts (35 min before):
+  [⏱] Show Title S##E##            [Next: Today 10:49 PM] ← orange timer
+
+At recording start:
+  [🎬] Show Title S##E##            [RECORD - 35M 5S LEFT]
+
+During recording:
+  [●●●] Show Title S##E##           [SIGNAL: 98%]
+
+After recording ends:
+  [✓] Show Title S##E##             [Next: Tomorrow 10:49 PM]
+```
+
+### Icon Combinations & Precedence
+
+When multiple states exist, icons display in priority order:
+```
+1. [🎬] RECORD  — actively recording NOW
+2. [⏱] TIMER    — starts within 15 minutes
+3. [⚠] WARNING  — failed 1-2 times (red background after 3)
+4. [📡] OFFLINE — device disconnected
+5. [🔄] REFRESH — SeriesID show queued for next scan
+6. [✓] ACTIVE   — normal, waiting to record
+7. [✗] PAUSED   — inactive, 3+ failures
+8. [ⓘ] INFO     — title just updated, or guide gap
+```
+
+### Show List Refresh Behavior
+
+**Real-time Updates (every idle cycle, ~10 seconds):**
+- Recording status changes (if curl exited)
+- Time remaining updates (MM:SS countdown)
+- Signal strength updates (during active recording)
+- Next air date recalculation (SeriesID shows after recording)
+
+**Delayed Updates (user-triggered or rare):**
+- Title changes (when guide discovers new episode)
+- State icon changes (new failures, pause state)
+- Folder changes (user edits show)
+
+**Never auto-refresh:**
+- Show removal (requires user click "Remove")
+- Activation/deactivation (user must click "Edit" dialog)
+- Recording folder (until user changes)
+
+### Error States on Show List
+
+**Recording Failures (show_fail_count):**
+```
+1st failure:  [⚠] Show Title     [Yellow warning, still active]
+2nd failure:  [⚠] Show Title     [Yellow warning]
+3rd failure:  [✗] Show Title     [Red, grayed out, deactivated]
+
+User must click "Edit" → "Reset" to re-enable
+```
+
+**Device Issues:**
+```
+No HDHR Device detected:
+  [📡] All shows display [📡 OFFLINE] icon
+  Main screen shows banner: "⚠ HDHomeRun not detected"
+  Records cannot start until device found
+
+Show's tuner disconnected:
+  [⚠] Show displays warning icon
+  Validate dialog: "Tuner XXX not found, deactivate?"
+```
+
+**Guide Data Gaps:**
+```
+SeriesID show with no upcoming episodes:
+  [ⓘ] Show Title S##E##            [No upcoming airings]
+  App auto-advances show_next +4 hours, retries later
+```
+
+### Inactive Show Display (Deactivated)
+
+```
+Appearance (grayed out):
+  ☐ Deactivated Show Title       [PAUSED]
+  ☐ Last: MM/DD HH:MM            [3 failures]
+
+Interaction:
+  - Can still select and click "Edit"
+  - Clicking "Edit" offers "Activate" button
+  - Will not record until reactivated
+  - Removed from config on next save (unless user re-activates first)
+```
+
 ---
 
 ## Add Show Workflow
