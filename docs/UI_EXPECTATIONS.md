@@ -6,6 +6,29 @@
 
 ---
 
+## Date/Time Architecture
+
+**Storage:** All dates are stored as **UTC epoch integers in string format** in the config file
+```json
+{
+  "show_next": "1777762800",
+  "show_end": "1777766400",
+  "show_last": "1777248000"
+}
+```
+This format is **timezone-portable** — the config works correctly when moved between timezones or when traveling.
+
+**Display:** All dates shown to users in **local time** via logs and UI elements
+- Main screen: `"Next: 05/02 6:00 PM"` (local time)
+- Edit dialog: `"Next Showing: Thursday, May 2, 2026 6:00 PM CDT"` (local time)
+- Logs: `"show_next: Thursday, May 2, 2026 6:00 PM CDT"` (local time)
+
+**Conversion:**
+- **Storage → Display:** `epoch2datetime()` converts UTC epoch → local date object → `short_date()` formats for display
+- **Display → Storage:** User selects local time → converted to date object → `datetime2epoch()` converts to UTC epoch → stored
+
+---
+
 ## Main Screen - Show List
 
 ### Layout
