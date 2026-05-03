@@ -508,9 +508,10 @@ on epoch2datetime(caller, epochseconds)
 			set unix_time to epochseconds
 		end try
 		set epoch_time to my epoch("")
-		--epoch_time is now current unix epoch time as a date object
+		--epoch_time is Jan 1 1970 in local time (represents the UTC epoch reference point)
+		--Add UTC seconds directly - AppleScript date arithmetic handles timezone correctly
 		logger(true, handlername, caller, "TRACE", epochseconds) of ParentScript
-		set epochOFFSET to (epoch_time + (unix_time as number) + (time to GMT))
+		set epochOFFSET to (epoch_time + (unix_time as number))
 		logger(true, handlername, caller, "TRACE", class of (epochOFFSET)) of ParentScript
 		return epochOFFSET
 	on error errmsg
@@ -520,9 +521,9 @@ end epoch2datetime
 
 on datetime2epoch(caller, the_date_object)
 	set handlername to "datetime2epoch_lib"
-	-- Convert local date to Unix epoch: subtract epoch base, then subtract GMT offset
-	set local_seconds to the_date_object - (my epoch(""))
-	set unix_epoch to local_seconds - (time to GMT)
+	-- Convert local date to UTC Unix epoch: subtract epoch base
+	-- AppleScript date arithmetic handles timezone correctly - elapsed time is absolute
+	set unix_epoch to the_date_object - (my epoch(""))
 	return getTfromN(unix_epoch) of me
 end datetime2epoch
 
@@ -628,8 +629,7 @@ on deserialize_show(caller, show_rec)
 			set show_last of s to 0
 		else
 			set ep_num to ep as number
-			-- Stored times are in "epoch local time" format, so subtract GMT offset like guide data
-			set show_last of s to my epoch2datetime(caller, ep_num - (time to GMT))
+			set show_last of s to my epoch2datetime(caller, ep_num)
 		end if
 	on error
 		set show_last of s to 0
@@ -640,8 +640,7 @@ on deserialize_show(caller, show_rec)
 			set show_next of s to my epoch("")
 		else
 			set ep_num to ep as number
-			-- Stored times are in "epoch local time" format, so subtract GMT offset like guide data
-			set show_next of s to my epoch2datetime(caller, ep_num - (time to GMT))
+			set show_next of s to my epoch2datetime(caller, ep_num)
 		end if
 	on error
 		set show_next of s to my epoch("")
@@ -652,8 +651,7 @@ on deserialize_show(caller, show_rec)
 			set show_end of s to my epoch("")
 		else
 			set ep_num to ep as number
-			-- Stored times are in "epoch local time" format, so subtract GMT offset like guide data
-			set show_end of s to my epoch2datetime(caller, ep_num - (time to GMT))
+			set show_end of s to my epoch2datetime(caller, ep_num)
 		end if
 	on error
 		set show_end of s to my epoch("")
@@ -665,8 +663,7 @@ on deserialize_show(caller, show_rec)
 			set notify_recording_time of s to missing value
 		else
 			set ep_num to ep as number
-			-- Stored times are in "epoch local time" format, so subtract GMT offset like guide data
-			set notify_recording_time of s to my epoch2datetime(caller, ep_num - (time to GMT))
+			set notify_recording_time of s to my epoch2datetime(caller, ep_num)
 		end if
 	on error
 		set notify_recording_time of s to missing value
@@ -677,8 +674,7 @@ on deserialize_show(caller, show_rec)
 			set notify_upnext_time of s to missing value
 		else
 			set ep_num to ep as number
-			-- Stored times are in "epoch local time" format, so subtract GMT offset like guide data
-			set notify_upnext_time of s to my epoch2datetime(caller, ep_num - (time to GMT))
+			set notify_upnext_time of s to my epoch2datetime(caller, ep_num)
 		end if
 	on error
 		set notify_upnext_time of s to missing value
@@ -1294,18 +1290,15 @@ on seriesScanNext(caller, seriesID, hdhr_device, thechan, show_id, theoffset)
 				repeat with i from 1 to length of show_match_list of seriesScanTemp
 					set StartTime_epoch to my getTfromN(StartTime of item i of show_match_list of seriesScanTemp)
 					set EndTime_epoch to my getTfromN(EndTime of item i of show_match_list of seriesScanTemp)
-					-- Guide returns times as "local time encoded as UTC epoch", so subtract GMT offset before converting
-					set StartTime_utc_epoch to StartTime_epoch - (time to GMT)
-					set EndTime_utc_epoch to EndTime_epoch - (time to GMT)
 					my show_name_fix(my cm(handlername, caller), show_id, item i of show_match_list of seriesScanTemp) --correct, returns the whole channel object, build_channel might do this.
-					if StartTime_utc_epoch is less than item 1 of newest_show_epoch then
-						if cd is less than my epoch2datetime(my cm(handlername, caller), EndTime_utc_epoch) then
-							set beginning of newest_show_epoch to StartTime_utc_epoch
+					if StartTime_epoch is less than item 1 of newest_show_epoch then
+						if cd is less than my epoch2datetime(my cm(handlername, caller), EndTime_epoch) then
+							set beginning of newest_show_epoch to StartTime_epoch
 							set beginning of newest_show_epoch_offset to i
-							logger(true, handlername, caller, "INFO", "Offset: " & theoffset & " New Start Time: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), StartTime_utc_epoch), false, false)) of ParentScript
+							logger(true, handlername, caller, "INFO", "Offset: " & theoffset & " New Start Time: " & my short_date(my cm(handlername, caller), my epoch2datetime(my cm(handlername, caller), StartTime_epoch), false, false)) of ParentScript
 						end if
 					else
-						set end of newest_show_epoch to StartTime_utc_epoch
+						set end of newest_show_epoch to StartTime_epoch
 						set end of newest_show_epoch_offset to i
 					end if
 				end repeat
@@ -1355,22 +1348,21 @@ on seriesScanUpdate(caller, show_id)
 				if show_offset is not 0 then
 					if show_recording of item show_offset of Show_info is false then
 						set isdupe to {false, false, false}
-						-- Guide returns times as "local time encoded as UTC epoch", so subtract GMT offset to get true UTC epoch
+						-- Guide returns UTC epochs; use directly
 						set StartTime_guide_epoch to my getTfromN(StartTime of channel_record)
-						set StartTime_utc_epoch to StartTime_guide_epoch - (time to GMT)
 
-						if show_next of item show_offset of Show_info is my epoch2datetime(my cm(handlername, caller), StartTime_utc_epoch) then
+						if show_next of item show_offset of Show_info is my epoch2datetime(my cm(handlername, caller), StartTime_guide_epoch) then
 							set item 1 of isdupe to true
 						else
-							set show_next of item show_offset of Show_info to my epoch2datetime(my cm(handlername, caller), StartTime_utc_epoch)
+							set show_next of item show_offset of Show_info to my epoch2datetime(my cm(handlername, caller), StartTime_guide_epoch)
 						end if
 						-- Always update show_end based on show_next + show_length
 						set show_end of item show_offset of Show_info to (show_next of item show_offset of Show_info) + (show_length of item show_offset of Show_info * minutes)
 
-						if show_time of item show_offset of Show_info is my epoch2show_time(my cm(handlername, caller), StartTime_utc_epoch) then
+						if show_time of item show_offset of Show_info is my epoch2show_time(my cm(handlername, caller), StartTime_guide_epoch) then
 							set item 2 of isdupe to true
 						else
-							set show_time of item show_offset of Show_info to my epoch2show_time(my cm(handlername, caller), StartTime_utc_epoch)
+							set show_time of item show_offset of Show_info to my epoch2show_time(my cm(handlername, caller), StartTime_guide_epoch)
 						end if
 						if (show_channel of item show_offset of Show_info) is not channel_number then
 							logger(true, handlername, caller, "INFO", "Channel updated: " & (show_channel of item show_offset of Show_info) & " → " & channel_number) of ParentScript
@@ -1391,8 +1383,8 @@ on seriesScanUpdate(caller, show_id)
 							logger(true, handlername, caller, "INFO", "show channel: " & show_channel of item show_offset of Show_info) of ParentScript
 							
 							set show_title of item show_offset of Show_info to fixall of my show_name_fix(my cm(handlername, caller), new_showid, channel_record)
-							set show_next of item show_offset of Show_info to my epoch2datetime(my cm(handlername, caller), (my getTfromN(StartTime of channel_record)) - (time to GMT))
-							set show_end of item show_offset of Show_info to my epoch2datetime(my cm(handlername, caller), (my getTfromN(EndTime of channel_record)) - (time to GMT))
+							set show_next of item show_offset of Show_info to my epoch2datetime(my cm(handlername, caller), my getTfromN(StartTime of channel_record))
+							set show_end of item show_offset of Show_info to my epoch2datetime(my cm(handlername, caller), my getTfromN(EndTime of channel_record))
 							set show_fail_count of item show_offset of Show_info to 0
 							set show_fail_reason of item show_offset of Show_info to ""
 							try
