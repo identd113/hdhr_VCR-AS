@@ -2854,7 +2854,7 @@ on update_show(caller, the_show_id, force_update)
 
 						if (temp_show_time as number) is not equal to (show_time of item show_offset of Show_info as number) then
 							my logger(true, handlername, caller, "INFO", "Show time changed from " & show_time of item show_offset of Show_info & " to " & temp_show_time)
-							set show_time of item show_offset of Show_info to epoch2show_time("hdhrGRID(8)", getTfromN((StartTime of hdhr_response_channel)) of LibScript) of LibScript
+							set show_time of item show_offset of Show_info to temp_show_time
 
 							set show_next of item show_offset of Show_info to my nextday(my cm(handlername, caller), show_id of item show_offset of Show_info)
 							--We may be to run next_day logic

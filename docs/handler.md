@@ -57,6 +57,20 @@ idle [6743]: Started cycle (different caller ID = different execution)
 - Library handlers receive it as their first parameter (named `caller` in signature but holds `cm` value)
 - Example: `on short_date(caller, ...)` receives `cm` object when called as `short_date(cm, ...)`
 
+### Parameter Accuracy
+
+All handler calls are audited to ensure correct parameter counts and types match their definitions. When calculated values are reused (e.g., `temp_show_time`), reuse them directly rather than recalculating with potentially incorrect parameters.
+
+**Example fix in `update_show` (line 2857):**
+```applescript
+-- WRONG: Recalculates with hardcoded string instead of proper caller
+set show_time to epoch2show_time("hdhrGRID(8)", getTfromN(...)) of LibScript
+
+-- RIGHT: Reuse the correctly-calculated value from line 2853
+set temp_show_time to epoch2show_time(my cm(handlername, caller), getTfromN(...)) of LibScript
+set show_time to temp_show_time  -- Reuse, don't recalculate
+```
+
 ---
 
 Maintenance
@@ -166,6 +180,13 @@ event entry points before returning control to the scheduler.
 | `check_version` | `caller` | `missing value` | Contacts remote version metadata and retries locally on failure. |
 | `check_version_dialog` | `caller` | `text` | Formats version information for UI presentation. |
 | `recordingnow_main` | `caller` | `text` | See table above; kept here for quick reference when formatting menus. |
+| `AreWeOnline` | `caller` | `boolean` | ⚠️ **INACTIVE** — Checks reachability of tuner fleet (defined but not called). |
+
+### Logging
+
+| Handler | Inputs | Returns | Notes |
+| --- | --- | --- | --- |
+| `logger` | `log_to_console`, `handlername`, `caller`, `log_level`, `message` | `missing value` | Records log entries with context tracing (handlername + caller ID for execution tree visibility). Respects `Logger_levels` configuration. |
 
 ### Library passthroughs
 These handlers exist for compatibility with older scripts. Each simply calls the identically named library handler (passing the
@@ -208,12 +229,14 @@ The `logger` handler is implemented locally to keep log writes within the applic
 | `date2touch` | `caller`, `datetime`, `filepath` | `missing value` or `{…}` | Updates file modification times. |
 | `cleanFolder` | `caller`, `folderLoc`, `time_offset`, `ext_remove` | `missing value` | Deletes cache files older than the time boundary for a given extension. |
 | `end_jsonhelper` | `caller`, `restart` | `missing value` | Quits the JSON Helper app and optionally reopens it. |
+| `choose_folder_with_fallback` | `caller`, `prompt_text`, `fallback_path` | `alias` or `missing value` | Folder picker with fallback to default on user cancel. |
+| `choose_folder_with_fallback_v2` | `caller`, `prompt_text`, `fallback_path` | `alias` or `missing value` | ⚠️ **INACTIVE** — Alternative folder picker implementation (defined but not called). |
 
 ### State management helpers
 
 | Handler | Inputs | Returns | Notes |
 | --- | --- | --- | --- |
-| `corrupt_showinfo` | `caller` | `boolean` | Clears the parent `Show_info` list when corruption is detected. |
+| `corrupt_showinfo` | `caller` | `boolean` | ⚠️ **INACTIVE** — Clears the parent `Show_info` list when corruption is detected (defined but not called). |
 
 ### Text, list, and conversion utilities
 
@@ -228,11 +251,22 @@ The `logger` handler is implemented locally to keep log writes within the applic
 | `padnum` | `caller`, `thenum`, `splitdot` | `text` or `{…}` | Zero pads numeric strings. |
 | `is_number` | `caller`, `number_string` | `boolean` or `{…}` | Tests numeric coercion. |
 | `itemsInString` | `caller`, `listofitems`, `thestring` | `boolean` or `{…}` | Checks if any list entry appears in a string. |
-| `quoteme` | `thestring` | `text` | Wraps text in AppleScript-safe quotes. |
-| `encode_strikethrough` | `caller`, `thedata`, `decimel_char` | `text` | Adds Unicode strikethrough markers to text. |
+| `quoteme` | `thestring` | `text` | ⚠️ **INACTIVE** — Wraps text in AppleScript-safe quotes (defined but not called). |
+| `encode_strikethrough` | `caller`, `thedata`, `decimel_char` | `text` | ⚠️ **INACTIVE** — Adds Unicode strikethrough markers to text (defined but not called). |
 | `convertByteSize` | `caller`, `byteSize`, `KBSize`, `decPlaces` | `text` | Formats byte counts with human-readable suffixes. |
-| `recordSee` | `caller`, `the_record` | `text` | Produces a text representation of a record for logs. |
+| `recordSee` | `caller`, `the_record` | `text` | ⚠️ **INACTIVE** — Produces a text representation of a record for logs (defined but not called). |
+| `recordSee2` | `caller`, `the_record` | `text` | ⚠️ **INACTIVE** — Alternative record-to-text formatter (defined but not called). |
 | `show_name_fix` | `caller`, `show_id`, `show_object` | `record` | Normalises show metadata imported from the guide. |
+| `enums2icons` | `caller`, `enum_value` | `text` | ⚠️ **INACTIVE** — Converts enumeration values to icon representations (defined but not called). |
+
+### Data serialization
+
+| Handler | Inputs | Returns | Notes |
+| --- | --- | --- | --- |
+| `serialize_show` | `caller`, `show_record` | `record` | Prepares a show record for JSON serialization (epoch conversions). |
+| `deserialize_show` | `caller`, `show_record` | `record` | Restores a show record from JSON (date conversions). |
+| `serializeShows` | `caller`, `show_list` | `list` | ⚠️ **INACTIVE** — Serializes all shows in the list (defined but not called). |
+| `deserializeShows` | `caller`, `show_list` | `list` | ⚠️ **INACTIVE** — Deserializes all shows in the list (defined but not called). |
 
 ### Date, time, and scheduling helpers
 
@@ -240,9 +274,12 @@ The `logger` handler is implemented locally to keep log writes within the applic
 | --- | --- | --- | --- |
 | `epoch` | `cd` | `date` or `{…}` | Returns the Unix epoch reference as an AppleScript date. |
 | `epoch2datetime` | `caller`, `epochseconds` | `date` or `{…}` | Converts epoch seconds to AppleScript date objects. |
+| `datetime2epoch` | `caller`, `date_object` | `number` or `{…}` | Converts AppleScript date objects to epoch seconds. |
 | `epoch2show_time` | `caller`, `epoch` | `text` or `{…}` | Formats epoch seconds for UI display. |
 | `getTfromN` | `this_number` | `number` or `{…}` | Converts AppleScript date values to seconds and back. |
 | `time_set` | `caller`, `adate_object`, `time_shift` | `date` or `{…}` | Adjusts dates by a given offset. |
+| `midnight_of` | `caller`, `date_object` | `date` | ⚠️ **INACTIVE** — Returns the midnight boundary for a given date (defined but not called). |
+| `nextday2` | `caller`, `the_show_id` | `date` | ⚠️ **INACTIVE** — Alternative next-airing calculator (defined but not called). |
 | `repeatProgress` | `caller`, `loop_delay`, `loop_total` | `missing value` or `{…}` | Animates Script Editor progress bars. |
 | `ms2time` | `caller`, `totalMS`, `time_duration`, `level_precision` | `text` or `{…}` | Formats durations into readable strings. |
 | `short_date` | `caller`, `the_date_object`, `twentyfourtime`, `show_seconds` | `text` or `{…}` | Formats timestamps for logs and dialogs. |
@@ -255,14 +292,21 @@ The `logger` handler is implemented locally to keep log writes within the applic
 | --- | --- | --- | --- |
 | `tuner_dump` | `caller` | `list` | Enumerates tuners, streaming URLs, and refresh timing. |
 | `HDHRShowSearch` | `caller`, `the_show_id` | `integer` or `0` | Finds a show index by ID. |
-| `match2showid` | `caller`, `hdhr_tuner`, `channelcheck`, `start_time`, `end_time` | `integer` | Resolves guide slots to show IDs. |
+| `match2showid` | `caller`, `hdhr_tuner`, `channelcheck`, `start_time`, `end_time` | `integer` | ⚠️ **INACTIVE** — Resolves guide slots to show IDs (defined but not called). |
 | `seriesScan` | `caller`, `seriesID`, `hdhr_device`, `thechan`, `show_id` | `record` or `{}` | Scans guide data for SeriesID matches and returns candidate airings for library-managed refresh logic. Channel gate: if `thechan` is empty string, matches all channels; otherwise matches only the specified channel. |
 | `seriesScanNext` | `caller`, `seriesID`, `hdhr_device`, `thechan`, `show_id`, `theoffset` | `record` or `{}` | Chooses the next valid airing from SeriesID matches; `{}` signals no upcoming candidate. |
 | `seriesScanUpdate` | `caller`, `show_id` | `missing value` | Updates SeriesID-managed show metadata (time/channel/show_id) as part of library refresh flows. |
 | `seriesScanAdd` | `caller`, `show_id` | `missing value` | Queues show IDs for SeriesID updates. |
 | `seriesScanRun` | `caller`, `execute` | `missing value` | Processes the SeriesID refresh queue. |
+| `seriesScanList` | `caller`, `show_id`, `execute` | `list` | ⚠️ **INACTIVE** — Lists pending SeriesID refresh work (defined but not called). |
+| `seriesScanRefresh` | `caller`, `refresh_list` | `missing value` | ⚠️ **INACTIVE** — Executes a batch of SeriesID refreshes (defined but not called). |
 | `seriesStatusIcons` | `caller`, `show_id` | `record` | Maps show status values to icon enumerations for display. |
-| `iconEnumPopulate` | `caller`, `show_id` | `record` | Generates status and series enums for a specific show (unused). |
+| `iconEnumPopulate` | `caller`, `show_id` | `record` | ⚠️ **INACTIVE** — Generates status and series enums for a specific show (defined but not called). |
+| `showSeek` | `caller`, `seriesID`, `hdhr_device`, `thechan`, `show_id` | `record` or `{}` | Searches for show matches by SeriesID (variant of seriesScan). |
+| `updateSeriesID` | `caller`, `show_id`, `new_seriesid` | `missing value` | Updates a show's SeriesID value. |
+| `log_recording_complete` | `caller`, `show_title`, `show_next`, `show_channel`, `show_tuner`, `recording_result` | `missing value` | Logs recording completion with comprehensive status. |
+| `get_show_state2` | `caller`, `hdhr_tuner`, `channelcheck`, `start_time`, `end_time` | `record` | ⚠️ **INACTIVE** — Alternative show state detector (defined but not called). |
+| `show_icons` | `caller`, `show_id`, `icon_type` | `text` | ⚠️ **INACTIVE** — Returns icon glyphs for show status display (defined but not called). |
 
 ### System integration
 
