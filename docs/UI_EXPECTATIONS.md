@@ -238,6 +238,195 @@ After selecting from guide:
 
 ---
 
+## Manual Add Workflow (validate_show_info path)
+
+**When:** User clicks "Add.." button directly, or edits existing show without guide data
+
+**Code Path:** `validate_show_info()` handler (hdhr_VCR.applescript:1307+)
+
+### Step 1: Title & Series Type Dialog
+```
+┌──────────────────────────────────────────────────┐
+│ What is the title of this show, and is it a    │
+│ series??                                         │
+├──────────────────────────────────────────────────┤
+│ Title: [____________________________________]    │
+│                                                  │
+│ Next Showing: Thursday, May 2, 2026 at 6:00 PM  │
+│ SeriesID: [empty for manual add]                 │
+├──────────────────────────────────────────────────┤
+│  [🏃 Run]  [📺 Series]  [🎬 Single]             │
+└──────────────────────────────────────────────────┘
+```
+
+**Behavior:**
+- **Run button:** Cancel entire workflow, return to main list
+- **Single:** Record one episode only → Skip to Step 3
+- **Series:** Show type selection (Step 2)
+
+---
+
+### Step 2: Series Type Selection (Series only)
+```
+┌──────────────────────────────────────────────────┐
+│ What kind of series?                            │
+├──────────────────────────────────────────────────┤
+│  [📅 Date/Time]  [📺 SeriesID(Channel)]  [🌐 SeriesID(All)]
+└──────────────────────────────────────────────────┘
+```
+
+**Selection → State Flags:**
+
+| Button | is_series | use_seriesid | use_seriesid_all | Result |
+|--------|-----------|--------------|------------------|---------|
+| Date/Time | true | false | false | DateTime |
+| SeriesID(Channel) | true | true | false | SeriesID(Ch) |
+| SeriesID(All) | true | true | true | SeriesID(All) |
+
+---
+
+### Step 3: Days Selection (DateTime & Single only)
+```
+For DateTime Series:
+┌──────────────────────────────────────────────────┐
+│ Select the days you wish to record              │
+│ This is a series, so you can select multiple    │
+├──────────────────────────────────────────────────┤
+│ ☑ Sunday    ☐ Monday    ☐ Tuesday  ☐ Wednesday │
+│ ☐ Thursday  ☐ Friday    ☐ Saturday             │
+├──────────────────────────────────────────────────┤
+│  [🏃 Run]  [Next..]                             │
+└──────────────────────────────────────────────────┘
+
+For Single:
+┌──────────────────────────────────────────────────┐
+│ Select the day you wish to record               │
+│ This is a single, you can only select 1 day     │
+├──────────────────────────────────────────────────┤
+│ ⊙ Wednesday                                      │
+│ ○ Thursday    ○ Friday    ○ Saturday            │
+├──────────────────────────────────────────────────┤
+│  [🏃 Run]  [Next..]                             │
+└──────────────────────────────────────────────────┘
+```
+
+**SKIPPED if:** SeriesID(Channel) or SeriesID(All) — auto-set to all 7 days
+
+---
+
+### Step 4: Channel Selection (all except SeriesID(All))
+```
+┌──────────────────────────────────────────────────┐
+│ What channel does this show air on?             │
+├──────────────────────────────────────────────────┤
+│ ⊙ 4.1   WCCO-DT [NBC]                          │
+│ ○ 5.3   Channel 5.3                             │
+│ ○ 7.1   KSTW [CBS]                              │
+│ ○ 9.2   KSTP [ABC]                              │
+│ ○ 11.1  KARE-HD [NBC]                           │
+│ ... [119 channels available] ...                 │
+├──────────────────────────────────────────────────┤
+│  [🏃 Run]  [Next..]                             │
+└──────────────────────────────────────────────────┘
+```
+
+**SKIPPED if:** SeriesID(All) — uses all channels
+
+---
+
+### Step 5: Time Selection (DateTime & Single only)
+```
+┌──────────────────────────────────────────────────┐
+│ What time does this show air?                  │
+│ (0-24, use decimals, ie 9.5 for 9:30)          │
+├──────────────────────────────────────────────────┤
+│ Time: [20.5_________________]                   │
+├──────────────────────────────────────────────────┤
+│  [🏃 Run]  [Next..]                             │
+└──────────────────────────────────────────────────┘
+```
+
+**Validation:**
+- Input must be numeric
+- Must be 0-24 range
+- Decimals allowed (9.5 = 9:30 AM)
+
+**SKIPPED if:** SeriesID(Channel) or SeriesID(All)
+
+---
+
+### Step 6: Duration Selection (DateTime & Single only)
+```
+┌──────────────────────────────────────────────────┐
+│ How long is this show? (minutes)                │
+├──────────────────────────────────────────────────┤
+│ Duration: [60_________________]                  │
+├──────────────────────────────────────────────────┤
+│  [🏃 Run]  [Next..]                             │
+└──────────────────────────────────────────────────┘
+```
+
+**SKIPPED if:** SeriesID(Channel) or SeriesID(All) — populated from guide
+
+---
+
+### Step 7: Folder Selection
+```
+┌──────────────────────────────────────────────────┐
+│ Select shows Directory for [show_title]         │
+├──────────────────────────────────────────────────┤
+│ 📁 Raid6                                         │
+│    📁 DVR Tests                                  │
+│       📁 shows...                                │
+│                                                  │
+│ Current: Raid6:DVR Tests:                        │
+│ Space: 78% full (1.3 GB free) — ✓ OK           │
+│                                                  │
+│ ⚠ Warning: >93% full prevents recording         │
+├──────────────────────────────────────────────────┤
+│  [🏃 Run]  [Choose]  [Use Last]                 │
+└──────────────────────────────────────────────────┘
+```
+
+**Validation:**
+- Folder must exist and be readable
+- Folder must be writable
+- Disk usage < 93%
+
+---
+
+## Manual Add Workflow — Prompt Summary by State
+
+| Step | Single | DateTime | SeriesID(Ch) | SeriesID(All) |
+|------|--------|----------|--------------|---------------|
+| 1. Title & Type | ✓ | ✓ | ✓ | ✓ |
+| 2. Series Type | — | ✓ | ✓ | ✓ |
+| 3. Days | ✓ (1 only) | ✓ (multi) | ✗ skip | ✗ skip |
+| 4. Channel | ✓ | ✓ | ✓ | ✗ skip |
+| 5. Time | ✓ | ✓ | ✗ skip | ✗ skip |
+| 6. Duration | ✓ | ✓ | ✗ skip | ✗ skip |
+| 7. Folder | ✓ | ✓ | ✓ | ✓ |
+
+**Key:** ✓ = Shown, ✗ = Skipped, — = N/A
+
+---
+
+## Cancel & Exit Behavior (Manual Add)
+
+Every dialog provides **"Run" button** to cancel:
+- Pressing "Run" or clicking Cancel returns to main show list
+- **ALL previously entered data is discarded**
+- Show is not added to config
+- No confirmation prompt
+
+Example abort sequence:
+```
+Step 1 (Title) → [Run] → Main list
+Step 4 (Channel) → [Run] → Main list (data lost)
+```
+
+---
+
 ## Edit Show Workflow
 
 ### Main Edit Dialog
