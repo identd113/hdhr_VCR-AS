@@ -35,7 +35,7 @@
 
 ### Added
 - **Icon Improvements:** Added emoji icons to series type buttons (Series/Single selection dialog). Updated show type legend to reflect current icon scheme.
-- **Enhanced Error Handling:** Added breadcrumb logging for date parsing, main menu initialization, and config load failures.
+- ~~**Enhanced Error Handling:** Added breadcrumb logging for date parsing, main menu initialization, and config load failures.~~ *REVERTED: Error handling for main menu initialization (commit 6bc672b)*
 
 ### Changed
 - Improved error isolation in idle loop for per-show error handling and recovery.
