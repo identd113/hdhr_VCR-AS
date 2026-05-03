@@ -105,6 +105,12 @@ reference reflects the handlers that exist in the current sources and the values
 | `sync_config` | `caller`, `config2var` | `missing value` | Syncs configuration values between globals and the config record. |
 | `idle_change` | `caller`, `loop_delay`, `loop_delay_sec` | `missing value` | Overrides the idle delay and schedules when the override expires. |
 
+### Utility helpers
+
+| Handler | Inputs | Returns | Notes |
+| --- | --- | --- | --- |
+| `cm` | `handlername`, `caller` | `text` | Produces a `handler(caller)` tag for execution tracing in logs; enables full call-stack visibility when grepping logs. |
+
 ### Native AppleScript event handlers
 
 AppleScript invokes these handlers automatically in response to system events. The script performs setup work inside the
