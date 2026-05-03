@@ -509,9 +509,9 @@ on epoch2datetime(caller, epochseconds)
 		end try
 		set epoch_time to my epoch("")
 		--epoch_time is Jan 1 1970 in local time, which is offset from UTC by (time to GMT)
-		--Subtract the local timezone offset to get to UTC reference, then add UTC seconds
+		--Add the local timezone offset to adjust the reference point to UTC, then add UTC seconds
 		logger(true, handlername, caller, "TRACE", epochseconds) of ParentScript
-		set epochOFFSET to (epoch_time + (unix_time as number) - (time to GMT))
+		set epochOFFSET to (epoch_time + (unix_time as number) + (time to GMT))
 		logger(true, handlername, caller, "TRACE", class of (epochOFFSET)) of ParentScript
 		return epochOFFSET
 	on error errmsg
