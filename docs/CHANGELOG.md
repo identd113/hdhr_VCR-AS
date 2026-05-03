@@ -1,5 +1,19 @@
 # Changelog
 
+## 20260503 (Handler Audit & Documentation)
+
+### Fixed
+- Fixed handler parameter bug: Line 2857 removed redundant `epoch2show_time()` call with hardcoded string parameter. Now correctly reuses pre-calculated `temp_show_time`.
+
+### Added
+- **Handler Documentation:** Complete reference for all 112 handlers in `handler.md` with inputs, returns, and usage notes
+- **Inactive Handler Audit:** Identified and marked 18 unused handlers with ⚠️ **INACTIVE** flag:
+  - Main: `AreWeOnline`
+  - Library: `choose_folder_with_fallback_v2`, `corrupt_showinfo`, `deserializeShows`, `encode_strikethrough`, `enums2icons`, `get_show_state2`, `iconEnumPopulate`, `match2showid`, `midnight_of`, `nextday2`, `quoteme`, `recordSee`, `recordSee2`, `serializeShows`, `seriesScanList`, `seriesScanRefresh`, `show_icons`
+- **Parameter Accuracy Section:** Added to `handler.md` documenting correct handler parameter passing patterns
+
+---
+
 ## Unreleased
 
 ### Fixed
@@ -7,6 +21,24 @@
 
 ### Added
 - **NEW:** Added `BARS` logging level to gate progress bar display in the idle loop. Available in `Logger_levels_all` but not enabled by default. Enable in config: `"LoggerLevels": ["INFO", "WARN", "ERROR", "NEAT", "FATAL", "BARS"]` (or include with DEBUG/TRACE)
+
+---
+
+## 20260424 (Documentation & Library Handler Fixes)
+
+### Fixed
+- Fixed missing `of LibScript` delegations for library handler calls: `ms2time`, `stringlistflip`, `datetime2epoch`, and others. These handlers were missing explicit script context.
+- Fixed variable naming consistency: Standardized `LibScript`/`Lib_script` references throughout codebase. Some calls were using incorrect `Lib_script` instead of `LibScript`.
+- Fixed initialization order issues: Logger-dependent variables, `Logger_levels`, `Idle_timer_default`, and other critical globals now initialize early in run handler to prevent undefined-variable errors.
+- Added defensive error handling for date string parsing in config load and main menu initialization.
+- Fixed `next_shows` handler return type consistency for proper record handling.
+
+### Added
+- **Icon Improvements:** Added emoji icons to series type buttons (Series/Single selection dialog). Updated show type legend to reflect current icon scheme.
+- **Enhanced Error Handling:** Added breadcrumb logging for date parsing, main menu initialization, and config load failures.
+
+### Changed
+- Improved error isolation in idle loop for per-show error handling and recovery.
 
 ---
 
