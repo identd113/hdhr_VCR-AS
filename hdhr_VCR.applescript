@@ -473,27 +473,7 @@ on idle
 								my showid2PID(cm, show_id of item i of Show_info, true, true)
 								set show_recording of item i of Show_info to false
 								set show_last of item i of Show_info to show_end of item i of Show_info
-									-- Record completion summary with file details
-									try
-										set recording_duration to ((show_end of item i of Show_info) - (show_next of item i of Show_info))
-										set recording_path to show_recording_path of item i of Show_info
-										set recording_file_size to "unknown"
-										set recording_file_exists to false
-
-										if recording_path is not in {missing value, {}, ""} then
-											try
-												set file_info to (info for file recording_path)
-												set recording_file_exists to true
-												set recording_file_size to ((file size of file_info) div 1048576) & "MB"
-											on error
-												set recording_file_exists to false
-											end try
-										end if
-
-										my logger(true, handlername, caller, "INFO", "RECORD_COMPLETE: " & show_title of item i of Show_info & " | duration=" & recording_duration & "s | path=" & recording_path & " | size=" & recording_file_size & " | exists=" & recording_file_exists & " | transcode=" & show_transcode of item i of Show_info)
-									on error errmsg
-										my logger(true, handlername, caller, "WARN", "Unable to log recording completion summary for " & show_title of item i of Show_info & ": " & errmsg)
-									end try
+								log_recording_complete(cm, show_title of item i of Show_info, show_next of item i of Show_info, show_end of item i of Show_info, show_recording_path of item i of Show_info, show_transcode of item i of Show_info) of LibScript
 								set temp_guide_data to my channel_guide(cm, hdhr_record of item i of Show_info, show_channel of item i of Show_info, show_time of item i of Show_info)
 								-- FIX The show may not be done recording, so this may not be sticky.  If we could verify that the PID is gone, then we can attempt to update the file.
 								set temp_OriginalAirdate to {}

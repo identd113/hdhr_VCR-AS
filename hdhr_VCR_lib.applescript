@@ -1929,3 +1929,27 @@ on choose_folder_with_fallback_v2(caller, prompt_msg, fallback_locs)
 
 	return missing value
 end choose_folder_with_fallback_v2
+
+on log_recording_complete(caller, show_title, show_next, show_end, show_recording_path, show_transcode)
+	set handlername to "log_recording_complete"
+	try
+		set recording_duration to ((show_end) - (show_next))
+		set recording_path to show_recording_path
+		set recording_file_size to "unknown"
+		set recording_file_exists to false
+
+		if recording_path is not in {missing value, {}, ""} then
+			try
+				set file_info to (info for file recording_path)
+				set recording_file_exists to true
+				set recording_file_size to ((file size of file_info) div 1048576) & "MB"
+			on error
+				set recording_file_exists to false
+			end try
+		end if
+
+		logger(true, handlername, caller, "INFO", "RECORD_COMPLETE: " & show_title & " | duration=" & recording_duration & "s | path=" & recording_path & " | size=" & recording_file_size & " | exists=" & recording_file_exists & " | transcode=" & show_transcode) of ParentScript
+	on error errmsg
+		logger(true, handlername, caller, "WARN", "Unable to log recording completion summary for " & show_title & ": " & errmsg) of ParentScript
+	end try
+end log_recording_complete
