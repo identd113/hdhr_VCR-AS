@@ -1916,16 +1916,19 @@ on main(caller, emulated_button_press)
 					set temp_show_list_offset to item i3 of temp_show_offsets
 					my logger(true, handlername, caller, "INFO", "Pre-validate for " & show_title of item temp_show_list_offset of Show_info)
 
-					my validate_show_info(caller, show_id of item temp_show_list_offset of Show_info, true)
-					if show_active of item (temp_show_list_offset) of Show_info is true then
+					set validate_result to my validate_show_info(caller, show_id of item temp_show_list_offset of Show_info, true)
+					-- If user clicked "Run" (cancel), skip to next show in queue
+					if validate_result is false then
+						my logger(true, handlername, caller, "INFO", "User skipped " & show_title of item temp_show_list_offset of Show_info & ", continuing to next show")
+					else if show_active of item (temp_show_list_offset) of Show_info is true then
 						my update_show(cm, show_id of item temp_show_list_offset of Show_info, true)
 					end if
-					
+
 					if i3 is length of temp_show_offsets then
 						my main("shows(" & cm & ")", "Shows")
 						return
 					end if
-					
+
 				end repeat
 			else
 				my logger(true, handlername, caller, "INFO", "1User clicked " & quote & "Run" & quote)

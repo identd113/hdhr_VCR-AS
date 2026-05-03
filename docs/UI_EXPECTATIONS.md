@@ -193,7 +193,9 @@ The show list is regenerated after each operation:
 - Checkboxes enable multi-select for edit operations
 - Selecting multiple shows opens edit dialog for **each show sequentially**
 - After all edits complete, list regenerates showing updated status
-- Cancel during any edit discards changes for that show, continues with next
+- **Clicking "Run" during edit of one show skips it and continues to next show in queue**
+- After final show processed, list refreshes and returns to main screen
+- User can force-quit at any time (aborts remaining edits)
 
 ### Removing a Show
 - Delete operation available via checkbox selection

@@ -624,10 +624,15 @@ Time 0:30 — Edit dialog for Show B opens (still position 3, regardless of new 
 The script resolves selected items to their array indices before opening dialogs. Even if the display list reorders, the internal offset (array position) used for editing doesn't change. User doesn't see this — they just see that editing continues.
 
 **Checkpoint Behavior:**
-- After each show is edited and [Save] is clicked, the config is saved
-- If user [Cancel] an edit, only that show's changes are discarded
-- Script continues with next show regardless (doesn't abort the multi-select queue)
-- User can force-quit at any time during multi-select (aborts remaining edits)
+- After each show is edited and [Save] is clicked, the config is saved immediately
+- If user clicks [Run] (cancel), only that show's changes are discarded → **advances to next show in queue**
+- Script continues with next show regardless (multi-select queue continues)
+- If user clicks [Cancel] during any dialog, same behavior (skip to next show)
+- User can force-quit at any time during multi-select (aborts all remaining edits)
+
+**Key Difference from Single-Select:**
+- Single show: Click "Run" → return to main list
+- Multiple shows selected: Click "Run" → skip to next show in queue, then return to list after all processed
 
 ---
 
