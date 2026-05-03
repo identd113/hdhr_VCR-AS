@@ -2722,11 +2722,10 @@ on channel_guide(caller, hdhr_device, hdhr_channel, hdhr_time)
 		if (hdhr_time + 1) is less than hours of (cd) then
 			set Time_slide to 1
 		end if
-		-- Use the old working formula: subtract time_to_GMT before passing to datetime2epoch
-		-- The library's datetime2epoch expects a local date, but the old code was passing UTC
-		-- So we recreate the old behavior by converting back
-		set hdhr_proposed_time to getTfromN(((date (date string of ((cd) + Time_slide * days))) + hdhr_time * hours - (time to GMT)) - (epoch("") of LibScript)) of LibScript
-		my logger(true, handlername, caller, "DEBUG", "hdhr_proposed_time2: " & epoch2show_time(my cm(handlername, caller), hdhr_proposed_time) of LibScript)
+		-- Convert user-entered local time to UTC epoch for guide comparison
+		set proposed_local_date to (date (date string of ((cd) + Time_slide * days))) + hdhr_time * hours
+		set hdhr_proposed_time to my datetime2epoch(my cm(handlername, caller), proposed_local_date)
+		my logger(true, handlername, caller, "DEBUG", "hdhr_proposed_time: " & epoch2show_time(my cm(handlername, caller), hdhr_proposed_time) of LibScript)
 	end if
 	if Hdhr_device_list is not in {missing value, {}, 0, ""} then
 		repeat with i from 1 to length of hdhr_guide of item tuner_offset of Hdhr_device_list
