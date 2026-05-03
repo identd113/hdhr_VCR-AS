@@ -16,6 +16,13 @@ echo "  Source:      $REPO_DIR/hdhr_VCR.applescript"
 echo "  Destination: $DEPLOY_DIR/hdhr_VCR.app"
 osacompile -o "$DEPLOY_DIR/hdhr_VCR.app" "$REPO_DIR/hdhr_VCR.applescript"
 
+# Set stay-open flag in app bundle Info.plist
+PLIST="$DEPLOY_DIR/hdhr_VCR.app/Contents/Info.plist"
+if [ -f "$PLIST" ]; then
+	/usr/libexec/PlistBuddy -c "Add :LSStayOpen bool true" "$PLIST" 2>/dev/null || \
+	/usr/libexec/PlistBuddy -c "Set :LSStayOpen true" "$PLIST"
+fi
+
 echo "Compiling library script..."
 echo "  Source:      $REPO_DIR/hdhr_VCR_lib.applescript"
 echo "  Destination: $DOCS_DIR/hdhr_VCR_lib.scpt"
