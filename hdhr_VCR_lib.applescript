@@ -667,6 +667,21 @@ on deserialize_show(caller, show_rec)
 	on error
 		set s to s & {show_use_seriesid_all:false}
 	end try
+	try
+		set notify_recording_time of s to notify_recording_time of s
+	on error
+		set s to s & {notify_recording_time:"missing value"}
+	end try
+	try
+		set notify_upnext_time of s to notify_upnext_time of s
+	on error
+		set s to s & {notify_upnext_time:"missing value"}
+	end try
+	try
+		set show_temp_dir of s to show_temp_dir of s
+	on error
+		set s to s & {show_temp_dir:""}
+	end try
 
 	try
 		set ep to show_last of s
