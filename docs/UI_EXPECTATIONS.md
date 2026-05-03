@@ -212,8 +212,23 @@ Interaction:
 ## Add Show Workflow — Guide-Based Path
 
 **Entry:** User clicks "Add.." button on main screen
-**Code Path:** `add_show_info()` handler (hdhr_VCR.applescript:1966+)
-**Flow:** Channel selection → Guide browser → Validate (manual fields)
+**Code Path:** Tuner selection (if multiple) → `add_show_info()` handler (hdhr_VCR.applescript:1966+)
+**Flow:** [Tuner] → Channel selection → Guide browser → Validate (manual fields)
+
+### Step 0: Tuner Selection (if multiple devices)
+```
+┌──────────────────────────────────────────────────┐
+│ Multiple HDHR Devices found, please choose one   │
+├──────────────────────────────────────────────────┤
+│ ⊙ 105404BE (Device 1)                           │
+│ ○ 105404BF (Device 2)                           │
+│ ○ 105404C0 (Device 3)                           │
+├──────────────────────────────────────────────────┤
+│  [🏃 Run]  [Select]                             │
+└──────────────────────────────────────────────────┘
+```
+
+**SKIPPED if:** Only one tuner detected (defaults to that device)
 
 ### Step 1: Channel Selection
 ```
