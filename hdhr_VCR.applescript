@@ -2724,7 +2724,7 @@ on channel_guide(caller, hdhr_device, hdhr_channel, hdhr_time)
 		end if
 		-- Convert user-entered local time to UTC epoch for guide comparison
 		set proposed_local_date to (date (date string of ((cd) + Time_slide * days))) + hdhr_time * hours
-		set hdhr_proposed_time to my datetime2epoch(my cm(handlername, caller), proposed_local_date)
+		set hdhr_proposed_time to my datetime2epoch(my cm(handlername, caller), proposed_local_date) of LibScript
 		my logger(true, handlername, caller, "DEBUG", "hdhr_proposed_time: " & epoch2show_time(my cm(handlername, caller), hdhr_proposed_time) of LibScript)
 	end if
 	if Hdhr_device_list is not in {missing value, {}, 0, ""} then
