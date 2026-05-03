@@ -473,7 +473,7 @@ on idle
 								my showid2PID(cm, show_id of item i of Show_info, true, true)
 								set show_recording of item i of Show_info to false
 								set show_last of item i of Show_info to show_end of item i of Show_info
-								log_recording_complete(caller, show_title of item i of Show_info, show_next of item i of Show_info, show_end of item i of Show_info, show_recording_path of item i of Show_info, show_transcode of item i of Show_info) of LibScript
+								log_recording_complete(cm, show_title of item i of Show_info, show_next of item i of Show_info, show_end of item i of Show_info, show_recording_path of item i of Show_info, show_transcode of item i of Show_info) of LibScript
 								set temp_guide_data to my channel_guide(cm, hdhr_record of item i of Show_info, show_channel of item i of Show_info, show_time of item i of Show_info)
 								-- FIX The show may not be done recording, so this may not be sticky.  If we could verify that the PID is gone, then we can attempt to update the file.
 								set temp_OriginalAirdate to {}
