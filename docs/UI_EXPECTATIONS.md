@@ -202,152 +202,87 @@ Interaction:
 
 ---
 
-## Add Show Workflow
+## Add Show — Two Paths
 
-### Step 1: Show Type Selection
+**Path 1: Guide-Based Add** → User clicks "Add.." button → browse guide → validate
+**Path 2: Manual Add** → Direct entry via validate_show_info dialogs (documented below)
+
+---
+
+## Add Show Workflow — Guide-Based Path
+
+**Entry:** User clicks "Add.." button on main screen
+**Code Path:** `add_show_info()` handler (hdhr_VCR.applescript:1966+)
+**Flow:** Channel selection → Guide browser → Validate (manual fields)
+
+### Step 1: Channel Selection
 ```
 ┌─────────────────────────────────────────────┐
-│ What type of show do you want to add?       │
+│ What channel does this show air on?         │
 ├─────────────────────────────────────────────┤
-│ ⊙ Single Episode                            │
-│ ○ Series (Multiple Episodes)                │
-├─────────────────────────────────────────────┤
-│ [Cancel] [OK]                               │
-└─────────────────────────────────────────────┘
-```
-
-### Step 2: For Series - Sub-type Selection
-```
-┌─────────────────────────────────────────────┐
-│ What kind of series?                        │
-├─────────────────────────────────────────────┤
-│ ⊙ DateTime (Specific days/times)            │
-│ ○ SeriesID (All episodes, one channel)      │
-│ ○ SeriesID (All episodes, all channels)     │
-├─────────────────────────────────────────────┤
-│ [Cancel] [Back] [OK]                        │
-└─────────────────────────────────────────────┘
-```
-
-### Step 3: Tuner/Device Selection
-```
-┌─────────────────────────────────────────────┐
-│ Select tuner device:                        │
-├─────────────────────────────────────────────┤
-│ ⊙ HDHomeRun (105404BE)                      │
-│ ○ [Other device if multiple tuners]         │
-├─────────────────────────────────────────────┤
-│ [Cancel] [Back] [OK]                        │
-└─────────────────────────────────────────────┘
-```
-
-### Step 4: Show Title
-```
-┌─────────────────────────────────────────────┐
-│ Enter show name:                            │
-├─────────────────────────────────────────────┤
-│ [____________________________]               │
+│ Tuner: 105404BE (1 of 1 available)          │
+│ 119 channels available                      │
 │                                             │
-│ Suggestion: [Use Guide] (if from search)   │
-├─────────────────────────────────────────────┤
-│ [Cancel] [Back] [OK]                        │
-└─────────────────────────────────────────────┘
-```
-
-### Step 5: Channel Selection (if applicable)
-```
-┌─────────────────────────────────────────────┐
-│ Select channel:                             │
-├─────────────────────────────────────────────┤
-│ ⊙ 4.1  WCCO-DT (NBC)                        │
+│ ⊙ 2.1  Channel 2.1                          │
+│ ○ 4.1  WCCO-DT [NBC]                        │
 │ ○ 5.3  Channel 5.3                          │
-│ ○ 11.1 KARE-HD (NBC)                        │
-│ ... [scrollable list of 119 channels] ...   │
+│ ○ 5.4  GREAT                                │
+│ ○ 7.1  KSTW [CBS]                           │
+│ ○ 9.2  KSTP [ABC]                           │
+│ ○ 11.1 KARE-HD [NBC]                        │
+│ ... [scrollable, 119 total] ...             │
 ├─────────────────────────────────────────────┤
-│ [Cancel] [Back] [OK]                        │
+│  [🏃 Run]  [Next..]                         │
 └─────────────────────────────────────────────┘
 ```
 
-### Step 6: Schedule Details (DateTime shows only)
+**Legend Icons:**
 ```
-Select Days:
-  ☐ Sunday    ☐ Monday    ☐ Tuesday   ☐ Wednesday
-  ☐ Thursday  ☐ Friday    ☐ Saturday
-
-Enter Time (24-hour decimal):
-  [__:__] (e.g., 20.5 for 8:30 PM)
-
-Enter Duration:
-  [___] minutes
+🎬 Recording  ⚠ Warning  ⭐ Favorite  🎞️ <1h  📈 <4h  📊 >4h
 ```
 
-### Step 7: Guide Browser (if channel selected)
+### Step 2: Guide Browser (hdhrGRID)
 ```
-┌─────────────────────────────────────────────┐
-│ Browse shows on channel 11.3                │
-├─────────────────────────────────────────────┤
-│ [Show Logo]  Show Title S##E##              │
-│ Start: MM/DD HH:MM  End: MM/DD HH:MM       │
-│                                             │
-│ [Show Logo]  Show Title S##E##              │
-│ Start: MM/DD HH:MM  End: MM/DD HH:MM       │
-│                                             │
-│ ... 41 more shows on this channel ...       │
-├─────────────────────────────────────────────┤
-│ [Back] [Select] [Cancel]                    │
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────┐
+│ Browse shows on channel 11.3                    │
+│ [fetching guide data...]                        │
+├──────────────────────────────────────────────────┤
+│ [Logo] Show Title S##E##                        │
+│ Start: MM/DD HH:MM  End: MM/DD HH:MM           │
+│                                                 │
+│ [Logo] Another Show S##E##                      │
+│ Start: MM/DD HH:MM  End: MM/DD HH:MM           │
+│                                                 │
+│ ... 41 more shows on this channel ...           │
+├──────────────────────────────────────────────────┤
+│  [🏃 Run]  [Select]                             │
+└──────────────────────────────────────────────────┘
 ```
 
-**Note:** hdhrGRID browser shows:
-- Show logos (cached from guide API)
+**Multi-Select:** If selecting multiple shows:
+```
+You are adding multiple shows. Do you wish to use 
+the same settings for all shows?
+
+Buttons: [ No ]  [ Yes ]
+```
+
+**Guide Data Shown:**
+- Show logo (cached from API)
 - Title and episode number
-- Start/end times from guide
-- Automatically extracts seriesID and show length if selected
+- Start/end times (from guide)
+- **Auto-extracts on selection:** SeriesID, show length
 
-### Step 8: Auto-Population (SeriesID shows)
-```
-After selecting from guide:
+### Step 3: Validate Fields (Single show or repeat for each)
+Once show selected from guide, calls `validate_show_info()` to collect remaining fields:
+- Title (pre-filled from guide, can edit)
+- Series type (Single/DateTime/SeriesID modes)
+- Days (if DateTime/Single)
+- Time (if DateTime/Single)
+- Duration (if DateTime/Single)
+- Folder selection
 
-(Auto) show name: The FBI Files S03E07 Millionaire Murder
-(Auto) show_length: 60 minutes
-(Auto) show_next: Friday, May 1, 2026 at 7:00:00 PM
-(Auto) show_end: Friday, May 1, 2026 at 8:00:00 PM
-(Auto) show_channel: 11.3
-(Auto) SeriesID: C505353ENSB1X
-```
-
-### Step 9: Folder Selection
-```
-┌─────────────────────────────────────────────┐
-│ Select folder for recordings:               │
-├─────────────────────────────────────────────┤
-│ [Raid6] [DVR Tests] ▶ [shows...]            │
-│                                             │
-│ Current: Raid6:DVR Tests:                   │
-│ Space: 87% full (7.8 GB free)               │
-│                                             │
-│ ⚠ Warning: >93% full would prevent recording
-├─────────────────────────────────────────────┤
-│ [Cancel] [Choose] [Use Last]                │
-└─────────────────────────────────────────────┘
-```
-
-### Step 10: Show Confirmation
-```
-┌─────────────────────────────────────────────┐
-│ New Show Added                              │
-├─────────────────────────────────────────────┤
-│ ✓ The FBI Files S03E07 Millionaire Murder   │
-│   Type: SeriesID(Channel) on 11.3           │
-│   First Air: Friday, May 1, 2026 at 7:00 PM│
-│   Duration: 60 minutes                      │
-│   Location: Raid6:DVR Tests:                │
-│                                             │
-│ [Logo] [Channel Icon] [SeriesID Badge]      │
-├─────────────────────────────────────────────┤
-│ [OK]                                        │
-└─────────────────────────────────────────────┘
-```
+See **Manual Add Workflow** below for exact dialogs and field validation.
 
 ---
 
