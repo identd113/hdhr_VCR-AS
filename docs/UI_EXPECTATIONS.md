@@ -151,22 +151,61 @@ Notifications respect user preferences:
 
 ---
 
+## Multi-Selection Behavior
+
+### Guide Browser Multi-Select
+When browsing the guide for shows to add:
+- User can select **multiple episodes** from the same channel
+- Selected shows queued for adding one at a time
+- If a selected item is **already in the config** (matched by episode), edit dialog opens instead of adding
+- After processing all selections, list regenerates automatically
+
+**Important:** Show list is **dynamic during multi-select** — if a show's status changes (e.g., one completes recording or moves from active to inactive), those changes are reflected when the list regenerates after the multi-select operation completes.
+
+### Main List Multi-Select
+When selecting multiple shows from the main list:
+- Checkbox allows **bulk selection** of multiple shows
+- Edit button applies to selections
+- Script processes shows **one at a time**, opening edit dialog for each selected show
+- After completing all edits, list regenerates with current status
+- Checkboxes do NOT persist across list regeneration — new list starts fresh
+
+**Key Behavior:** If during multi-select editing, a show's status changes (e.g., recording completes while you're editing another show), the next show's display position may change. The show remains selected in your editing queue but may move positions in the list.
+
+### Show List Updates During Multi-Select
+The show list is regenerated after each operation:
+1. User selects show(s)
+2. Script processes selection (edit/add workflow)
+3. List regenerates from current Show_info config (reflecting any status changes that occurred)
+4. New list shows updated statuses, reordered positions (active → by next air date, inactive → bottom)
+5. Checkboxes reset (not carried forward)
+
+---
+
 ## Main List Interactions
 
-### Selecting a Show
-- Clicking a show opens edit dialog (single select only)
+### Selecting a Single Show
+- Clicking a single show name opens edit dialog
 - Edit dialog shows all fields for that show's type
 - Fields are conditionally disabled based on show type (e.g., SeriesID shows hide time/duration)
 
+### Bulk Operations (Multi-Select)
+- Checkboxes enable multi-select for edit operations
+- Selecting multiple shows opens edit dialog for **each show sequentially**
+- After all edits complete, list regenerates showing updated status
+- Cancel during any edit discards changes for that show, continues with next
+
 ### Removing a Show
-- Checkbox selection for bulk operations
-- Remove confirmation required (lists affected shows)
-- Canceling removes selection state and returns to main list
+- Delete operation available via checkbox selection
+- Confirmation dialog lists affected shows
+- Canceling prevents deletion, returns to main list with checkboxes preserved
+- Confirming removes all selected shows and clears checkboxes
 
 ### Deactivating a Show
 - Paused shows appear grayed out at bottom of list
 - Can be reactivated by editing and toggling active checkbox
 - Inactive shows don't generate notifications or attempt recordings
+- Deactivating during multi-select: Show remains in config but won't record until reactivated
 
 ---
 

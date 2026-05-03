@@ -517,6 +517,120 @@
 
 ---
 
+## Multi-Selection Workflows
+
+### Guide Browser Multi-Select Behavior
+**Code:** Line 734 (with multiple selections allowed)
+
+When user selects multiple episodes from the guide browser:
+
+```
+Example Scenario:
+User selects 3 episodes from Channel 11.1:
+  ☑ The Tonight Show S51E405 (tomorrow 11:35 PM)
+  ☑ Late Night with Seth S13E210 (tomorrow 12:37 AM)
+  ☑ The Rifleman S02E11 (tomorrow 1:00 AM)
+  
+Script processes sequentially:
+1. Episode 1: Check if already in config
+   → If NEW: Add to Shows, run validation workflow
+   → If EXISTING: Open edit dialog instead
+   
+2. Episode 2: Repeat (dialog may be in different position if ep1 was added)
+3. Episode 3: Repeat
+
+After all complete: Guide browser closes, main list regenerates
+```
+
+**Important Runtime Behavior:**
+
+- **Selection State:** Checkboxes persist while dialog is open — if you select, then scroll, checkboxes remain marked
+- **Already-Added Detection:** If you select an episode already in your shows, edit dialog opens instead of add workflow
+- **List Regeneration:** After all selections processed, main show list is rebuilt from current Show_info config
+  - Shows may reorder (active by next air, then inactive)
+  - Status icons update (if a show completed recording during your selections)
+  - New selections reset (checkboxes not carried forward)
+
+**Edge Case — Show Status Changes During Multi-Select:**
+
+```
+Scenario: Episode starts/completes while you're editing selections
+
+Time 0:00 — You select 3 episodes from guide
+Time 0:15 — Edit dialog opens for episode 1
+Time 0:30 — Recording of unrelated show completes
+Time 0:45 — You finish editing episode 1
+         → Main list has been updated in background
+         → Episode 2 is still queued for editing
+         → When episode 2's edit dialog opens, its position in the list may have changed
+         → (This is invisible to user — edit still proceeds normally)
+```
+
+---
+
+### Main Show List Multi-Select Behavior
+**Code:** Line 1908 (with multiple selections allowed)
+
+When user selects multiple shows from main list using checkboxes:
+
+```
+Example Scenario:
+Main List:
+  ☑ The Tonight Show S51E405    [Record icon]
+  ☐ The Rifleman S02E11         [Info icon]
+  ☑ 60 Minutes S54E30           [Timer icon]
+  ☑ SNL S51E18                  [Warning icon]
+  ☐ (4 more shows)
+  
+[Edit..]  [Remove] clicked with 3 selected
+
+Script processes:
+1. Resolve which shows are selected (by matching display text to Show_info)
+2. For [Edit..]: Open edit dialog for each show sequentially
+   → Show 1 edit dialog
+   → [Save] or [Cancel]
+   → Show 2 edit dialog
+   → [Save] or [Cancel]
+   → Show 3 edit dialog
+   → [Save] or [Cancel]
+   → Main list regenerates
+
+For [Remove]: Show confirmation dialog
+   → Lists all 3 shows being removed
+   → [Cancel] or [Remove]
+   → If [Remove]: All deleted, list regenerates with checkboxes cleared
+```
+
+**Critical Behavior — List Reorders During Multi-Select Edit:**
+
+```
+Time 0:00 — Main list shows:
+  ☑ Show A (next: tomorrow 2 PM) [Position 1]
+  ☑ Show B (next: tomorrow 8 PM) [Position 3]
+  ☑ Show C (next: in 5 minutes)  [Position 5]
+
+Time 0:05 — Edit dialog for Show A opens
+Time 0:20 — Show C STARTS RECORDING (status changes to active)
+Time 0:25 — You click [Save] for Show A
+         → Main list regenerates
+         → Show C is now at top (active/recording)
+         → Show A moved down (next air is later)
+         → BUT: Show B is still queued for editing (offsets preserved)
+
+Time 0:30 — Edit dialog for Show B opens (still position 3, regardless of new list order)
+```
+
+**Why Offsets Are Preserved:**
+The script resolves selected items to their array indices before opening dialogs. Even if the display list reorders, the internal offset (array position) used for editing doesn't change. User doesn't see this — they just see that editing continues.
+
+**Checkpoint Behavior:**
+- After each show is edited and [Save] is clicked, the config is saved
+- If user [Cancel] an edit, only that show's changes are discarded
+- Script continues with next show regardless (doesn't abort the multi-select queue)
+- User can force-quit at any time during multi-select (aborts remaining edits)
+
+---
+
 ## Setup/Settings Screens
 
 ### 17. Setup Dialog
