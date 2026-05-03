@@ -136,13 +136,15 @@ Shows are ONE of 4 states, determined by `is_series`, `use_seriesid`, `use_serie
 - Calculate days until air date (offset)
 - Update show_next
 
-**⚠️ CRITICAL: Guide Data Timezone Interpretation**
+**⚠️ CRITICAL: Epoch Format - UTC Throughout**
 
-The HDHomeRun guide API returns episode times as "local time encoded as UTC epoch":
-- Example: Show at 1:30 PM CDT (local) → API returns epoch for "1:30 PM UTC" (not the actual UTC time)
-- Without correction: would deserialize to 8:30 AM CDT (5+ hours early), causing premature recording
-- **Fix:** When extracting `StartTime`/`EndTime` from guide, subtract `time to GMT` before calling `epoch2datetime()`
-- All places where guide times are used must apply this correction (seriesScanUpdate, add_show_info, etc.)
+The HDHomeRun guide API returns episode times as **real UTC epochs** (standard Unix epoch, seconds since Jan 1 1970 UTC):
+- Example: Show at 6:00 PM CDT (local) → API returns UTC epoch 1777762800 (which represents 11:00 PM UTC)
+- Stored times in config are also UTC epochs for **timezone portability** (config works when traveling)
+- Epoch conversion uses AppleScript's built-in date arithmetic:
+  - `epoch2datetime()`: Converts UTC epoch to local date (correct conversion handling is built-in)
+  - `datetime2epoch()`: Converts local date to UTC epoch
+- Both functions work correctly without manual timezone adjustments
 
 ---
 
