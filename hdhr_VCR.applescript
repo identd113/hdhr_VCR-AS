@@ -399,10 +399,7 @@ on idle
 									set show_runtime to (show_end of item i of Show_info) - (cd)
 									set tuner_status_result to my tuner_status(cm, hdhr_record of item i of Show_info)
 									if tunermax of tuner_status_result is greater than tuneractive of tuner_status_result then
-										my logger(true, handlername, caller, "DEBUG", show_title of item i of Show_info)
-										my logger(true, handlername, caller, "DEBUG", show_next of item i of Show_info)
-										my logger(true, handlername, caller, "DEBUG", show_time of item i of Show_info)
-										my logger(true, handlername, caller, "DEBUG", show_end of item i of Show_info)
+										my logger(true, handlername, caller, "DEBUG", show_title of item i of Show_info & " | next=" & show_next of item i of Show_info & " time=" & show_time of item i of Show_info & " end=" & show_end of item i of Show_info)
 										if item 2 of my showid2PID(cm, show_id of item i of Show_info, false, true) is {} then
 											my record_start(cm, (show_id of item i of Show_info), show_runtime, true)
 											if (show_fail_count of item i of Show_info) is less than Fail_count then
@@ -451,7 +448,6 @@ on idle
 										--set notify_recording_time of item i of Show_info to (cd) + (Notify_recording * minutes)
 									end if
 									set check_showid_recording to item 2 of my showid2PID(cm, show_id of item i of Show_info, false, false)
-									my logger(true, handlername, caller, "TRACE", "check_showid_recording: " & check_showid_recording)
 									if length of check_showid_recording is 0 then
 										if (show_end of item i of Show_info) is less than or equal to cd then
 											my logger(true, handlername, caller, "INFO", show_title of item i of Show_info & " (" & show_id of item i of Show_info & ") curl exited normally after show_end, deferring to overrun handler")
@@ -472,7 +468,6 @@ on idle
 						end if
 						
 						if show_recording of item i of Show_info is true then
-							my logger(true, handlername, caller, "TRACE", "Show end for " & show_title of item i of Show_info & " is " & show_end of item i of Show_info)
 							if (show_end of item i of Show_info) is less than or equal to cd then
 								my logger(true, handlername, caller, "WARN", show_title of item i of Show_info & " is " & show_end of item i of Show_info & ", and is past due. Time now: " & cd & " | Overdue by: " & ((cd) - show_end of item i of Show_info) & "s")
 								my showid2PID(cm, show_id of item i of Show_info, true, true)
@@ -2768,7 +2763,7 @@ end channel_guide
 on update_show(caller, the_show_id, force_update)
 	set handlername to "update_show"
 	copy (current date) to cd
-	my logger(true, handlername, caller, "INFO", "showid: " & the_show_id & ", force: " & force_update)
+	my logger(true, handlername, caller, "TRACE", "showid: " & the_show_id & ", force: " & force_update)
 	if the_show_id is "" then
 		repeat with i2 from 1 to length of Show_info
 			my update_show("update_show" & padnum("update_show", i2, false) of LibScript & "(" & caller & ")", show_id of item i2 of Show_info, false)
@@ -2822,8 +2817,6 @@ on update_show(caller, the_show_id, force_update)
 					try
 						if show_seriesid of item show_offset of Show_info is not seriesID of hdhr_response_channel then
 							my updateSeriesID(my cm(handlername, caller), show_id of item show_offset of Show_info, seriesID of hdhr_response_channel) of LibScript
-						else
-							my logger(true, handlername, caller, "TRACE", "SeriesID Matched!")
 						end if
 					on error errmsg
 						my logger(true, handlername, caller, "DEBUG", "Unable to set show_seriesid, errmsg: " & errmsg)
@@ -2849,7 +2842,7 @@ on update_show(caller, the_show_id, force_update)
 						end if
 						set show_length of item show_offset of Show_info to ((EndTime of hdhr_response_channel) - (StartTime of hdhr_response_channel)) div 60
 					on error errmsg
-						my logger(true, handlername, caller, "Unable to set length of " & show_title of item show_offset of Show_info & ", errmsg: " & errmsg)
+						my logger(true, handlername, caller, "ERROR", "Unable to set length of " & show_title of item show_offset of Show_info & ", errmsg: " & errmsg)
 					end try
 
 					set end of temp_show_progress to "Updating length..."
