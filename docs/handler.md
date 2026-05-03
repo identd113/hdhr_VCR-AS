@@ -5,11 +5,65 @@ Complete reference for all handlers in `hdhr_VCR.applescript` and `hdhr_VCR_lib.
 
 > **📖 See:** [CLAUDE.md](../CLAUDE.md) for key handler overview and [APPLE_SCRIPT_STYLE.md](APPLE_SCRIPT_STYLE.md) for handler conventions.
 
+---
+
+## Logging Context & Call Tracing
+
+All handlers follow a consistent pattern for logging that enables call stack tracing through logs:
+
+### Pattern: `handlername` + `caller` for Execution Tracing
+
+**Each handler must:**
+1. Define `handlername` as its first line (string identifying the handler)
+2. Receive `caller` as its first parameter (context/trace ID)
+3. Use both in all logging calls: `logger(true, handlername, caller, "LEVEL", "message")`
+4. Pass `caller` to all handlers it calls (maintains trace through call chain)
+
+**Example:**
+```applescript
+on update_show(caller, the_show_id, force_update)
+    set handlername to "update_show"
+    set cm to my cm(handlername, caller)
+    
+    my logger(true, handlername, caller, "INFO", "Updating " & the_show_id)
+    my channel_guide(cm, hdhr_record, show_channel, show_time)
+    log_recording_complete(cm, show_title, show_next, ...) of LibScript
+end update_show
+```
+
+### Why This Matters
+
+**Entry points** (`run`, `idle`) generate a fresh **random `caller` ID** (no one calls them). That ID flows through the entire execution path:
+
+```
+idle [6742]: Started cycle
+├─ record_start [6742]: Starting recording
+│  ├─ update_show [6742]: Fetching guide
+│  │  └─ channel_guide [6742]: Query guide API
+│  └─ log_recording_complete [6742]: Recording started
+├─ seriesScanRun [6742]: Scanning episodes
+└─ idle [6742]: Cycle complete
+
+idle [6743]: Started cycle (different caller ID = different execution)
+├─ ...
+```
+
+**For debugging:** Grep logs by `[caller]` to see the entire execution tree for one operation.
+
+### Context Manager (`cm`)
+
+- Each handler calls `my cm(handlername, caller)` to bind its context
+- Returns a **context object** passed to library handlers
+- Library handlers receive it as their first parameter (named `caller` in signature but holds `cm` value)
+- Example: `on short_date(caller, ...)` receives `cm` object when called as `short_date(cm, ...)`
+
+---
+
 Maintenance
 -----------
 Update this reference whenever handlers are added, removed, or modified in
 `hdhr_VCR.applescript` or `hdhr_VCR_lib.applescript` so the inputs/returns stay
-accurate.
+accurate. **All new handlers MUST follow the handlername + caller pattern above.**
 
 Overview
 --------
