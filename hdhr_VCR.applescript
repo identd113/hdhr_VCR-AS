@@ -185,7 +185,7 @@ on setup_script(caller)
 	try
 		set cache_me to (name of me)
 		set Local_env to (name of current application)
-		set Version_local to "20260503.1"
+		set Version_local to "20260504"
 		set Version_subversion to (text 1 thru 2 of ("0" & (hours of (current date)) as text) & "." & text 1 thru 2 of ("0" & (minutes of (current date)) as text))
 		set Config_version to 1
 		set temp_info to (system info)
@@ -242,7 +242,7 @@ on setup_globals(caller)
 		set Default_transcode_setting to "None"
 		set Fail_count_setting to 3
 		set Idle_timer_setting to 10
-		set Code_version_epoch to "1777795123" -- Updated: 2026-05-03 07:58:43 UTC
+		set Code_version_epoch to "1777929103" -- Updated: 2026-05-04 21:11:43 UTC
 	on error errmsg
 		return false
 	end try
