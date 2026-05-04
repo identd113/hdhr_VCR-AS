@@ -1631,6 +1631,104 @@ on validate_show_info(caller, show_to_check, should_edit)
 	end if
 end validate_show_info
 
+on settings_dialog(caller)
+	set handlername to "settings_dialog"
+	set cm to my cm(handlername, caller)
+
+	repeat
+		set disk_check to checkDiskSpace(cm, (POSIX path of Hdhr_setup_folder)) of LibScript
+		set disk_percent to item 2 of disk_check
+		set disk_warning to ""
+		if disk_percent is greater than or equal to 85 then
+			set disk_warning to " ⚠️"
+		end if
+
+		set settings_list to {¬
+			"Guide Hours Ahead: " & Guide_hours & " hours", ¬
+			"Up Next Notification: " & Notify_upnext & " minutes", ¬
+			"Recording Notification: " & Notify_recording & " minutes", ¬
+			"Max Disk Usage Allowed: " & Max_disk_percentage & "%", ¬
+			"Default Recording Folder: " & Hdhr_setup_folder, ¬
+			"Current Disk Usage: " & disk_percent & "%" & disk_warning}
+
+		set selected_setting to choose from list settings_list with prompt "Settings" cancel button name Running_icon of Icon_record & " Done" OK button name "Edit" with title my check_version_dialog(cm) without empty selection allowed
+
+		if selected_setting is false then
+			my logger(true, handlername, caller, "INFO", "Settings dialog closed")
+			return
+		end if
+
+		set selected_text to item 1 of selected_setting
+
+		if selected_text contains "Guide Hours" then
+			set guide_hours_resp to button returned of (display dialog "Guide Hours (6-24)" default answer Guide_hours buttons {"24H", "12H", "6H", "Custom"} default button 1 with title my check_version_dialog(cm) with icon note)
+			if guide_hours_resp is "24H" then
+				set Guide_hours to 24
+			else if guide_hours_resp is "12H" then
+				set Guide_hours to 12
+			else if guide_hours_resp is "6H" then
+				set Guide_hours to 6
+			else if guide_hours_resp is "Custom" then
+				try
+					set Guide_hours to (text returned of (display dialog "Enter hours (6-24)" default answer Guide_hours buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as integer
+					if Guide_hours is less than 6 or Guide_hours is greater than 24 then
+						set Guide_hours to 24
+					end if
+				end try
+			end if
+			set GuideHours of Hdhr_config to Guide_hours
+			my save_data(cm)
+			my logger(true, handlername, caller, "INFO", "Guide hours set to " & Guide_hours)
+
+		else if selected_text contains "Up Next" then
+			try
+				set Notify_upnext to (text returned of (display dialog "Minutes before air to notify" default answer Notify_upnext buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as number
+				set Notify_upnext of Hdhr_config to Notify_upnext
+				my save_data(cm)
+				my logger(true, handlername, caller, "INFO", "Up Next notification set to " & Notify_upnext)
+			end try
+
+		else if selected_text contains "Recording Notification" then
+			try
+				set Notify_recording to (text returned of (display dialog "Minutes before recording to notify" default answer Notify_recording buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as number
+				set Notify_recording of Hdhr_config to Notify_recording
+				my save_data(cm)
+				my logger(true, handlername, caller, "INFO", "Recording notification set to " & Notify_recording)
+			end try
+
+		else if selected_text contains "Max Disk" then
+			set max_disk_resp to button returned of (display dialog "Max disk usage before blocking recording" buttons {"93%", "90%", "85%", "Custom"} default button 1 with title my check_version_dialog(cm) with icon note)
+			if max_disk_resp is "93%" then
+				set Max_disk_percentage to 93
+			else if max_disk_resp is "90%" then
+				set Max_disk_percentage to 90
+			else if max_disk_resp is "85%" then
+				set Max_disk_percentage to 85
+			else if max_disk_resp is "Custom" then
+				try
+					set Max_disk_percentage to (text returned of (display dialog "Enter percentage (80-99)" default answer Max_disk_percentage buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as integer
+					if Max_disk_percentage is less than 80 or Max_disk_percentage is greater than 99 then
+						set Max_disk_percentage to 93
+					end if
+				end try
+			end if
+			my save_data(cm)
+			my logger(true, handlername, caller, "INFO", "Max disk percentage set to " & Max_disk_percentage)
+
+		else if selected_text contains "Default Recording" then
+			try
+				set folder_fallbacks to {alias "Volumes:"}
+				set new_folder to choose_folder_with_fallback(cm, "Select default recording folder", folder_fallbacks) of LibScript
+				if new_folder is not missing value then
+					set Hdhr_setup_folder to new_folder as text
+					my save_data(cm)
+					my logger(true, handlername, caller, "INFO", "Default folder set to " & Hdhr_setup_folder)
+				end if
+			end try
+		end if
+	end repeat
+end settings_dialog
+
 on setup(caller)
 	set handlername to "setup"
 	set hdhr_setup_response to (display dialog "hdhr_VCR Setup" buttons {"Logging", "Defaults", "Run"} default button 1 cancel button 3 with title my check_version_dialog(my cm(handlername, caller)) giving up after Dialog_timeout)
@@ -1849,6 +1947,10 @@ on main(caller, emulated_button_press)
 	end if
 	--SHOWS
 	if button returned of title_response contains "Shows" then
+		if shift_down of isModifierKeyPressed(cm, "shift", "Opens Settings") of LibScript is true then
+			my settings_dialog(cm)
+			return
+		end if
 		if option_down of isModifierKeyPressed(cm, "option", "Runs Setup") of LibScript is true then
 			my setup(cm)
 			return
