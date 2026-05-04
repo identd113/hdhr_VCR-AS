@@ -21,7 +21,7 @@ end load_hdhrVCR_vars
 on checkDiskSpace(caller, the_path)
 	set handlername to "checkDiskSpace_lib"
 	try
-		set checkDiskSpace_return to do shell script "df -k '" & the_path & "'"
+		set checkDiskSpace_return to do shell script "df -k " & quoted form of the_path
 		set checkDiskSpace_temp1 to item 2 of my stringlistflip(my cm(handlername, caller), checkDiskSpace_return, return, "list")
 		set checkDiskSpace_temp2 to my emptylist(my cm(handlername, caller), my stringlistflip(my cm(handlername, caller), checkDiskSpace_temp1, space, "list"))
 		return {the_path, first word of item 5 of checkDiskSpace_temp2 as number, first word of item 4 of checkDiskSpace_temp2 as number}
@@ -523,9 +523,9 @@ on datetime2epoch(caller, the_date_object)
 	set handlername to "datetime2epoch_lib"
 	-- Convert local date to UTC Unix epoch
 	-- epoch("") is in local time, offset by (time to GMT) from UTC reference
-	-- Add the local timezone offset to get to UTC seconds
+	-- Subtract the local timezone offset to get to UTC seconds (inverse of epoch2datetime)
 	set local_seconds to the_date_object - (my epoch(""))
-	set unix_epoch to local_seconds + (time to GMT)
+	set unix_epoch to local_seconds - (time to GMT)
 	return getTfromN(unix_epoch) of me
 end datetime2epoch
 
@@ -976,12 +976,6 @@ on isModifierKeyPressed(caller, checkKey, desc)
 	return modiferKeysDOWN
 end isModifierKeyPressed
 
-on quoteme(thestring)
-	set handlername to "quoteme_lib"
-	set temp to (quote & thestring & quote) as text
-	return temp
-end quoteme
-
 on date2touch(caller, datetime, filepath)
 	set handlername to "date2touch_lib"
 	set temp_year to year of datetime
@@ -1230,7 +1224,7 @@ on seriesScanAdd(caller, show_id)
 		else
 			set show_offset to my HDHRShowSearch(my cm(handlername, caller), show_id)
 			if show_offset is not 0 then
-				if show_use_seriesid of item show_offset of Show_info is true then
+				if show_use_seriesid of item show_offset of Show_info is true and show_active of item show_offset of Show_info is true then
 					if show_id is not in RefreshSeriesID_list then
 						set end of RefreshSeriesID_list to show_id
 						logger(true, handlername, caller, "INFO", "Added " & show_id & " to seriesScan list") of ParentScript
@@ -1453,8 +1447,10 @@ on seriesScanUpdate(caller, show_id)
 					end if
 				end if
 			else
-				logger(true, handlername, caller, "WARN", "No upcoming episodes found in guide for " & quote & show_title of item show_offset of Show_info & quote & " (seriesID: " & show_seriesid of item show_offset of Show_info & "); advancing show_next by 4 hours to retry later") of ParentScript
-				set show_next of item show_offset of Show_info to (current date) + 4 * hours
+				set guide_hours_int to ((Guide_hours of ParentScript) as integer)
+				set guide_seconds to guide_hours_int * 3600
+				logger(true, handlername, caller, "WARN", "No upcoming episodes found in guide for " & quote & show_title of item show_offset of Show_info & quote & " (seriesID: " & show_seriesid of item show_offset of Show_info & "); advancing show_next by guide window (" & guide_hours_int & "h)") of ParentScript
+				set show_next of item show_offset of Show_info to (current date) + guide_seconds
 			end if
 		else
 		end if
@@ -1985,13 +1981,15 @@ on log_recording_complete(caller, show_title, show_next, show_end, show_recordin
 		set recording_file_exists to false
 
 		if recording_path is not in {missing value, {}, ""} then
-			try
-				set file_info to (info for file recording_path)
-				set recording_file_exists to true
-				set recording_file_size to ((file size of file_info) div 1048576) & "MB"
-			on error
-				set recording_file_exists to false
-			end try
+			set recording_file_exists to checkfileexists(my cm(handlername, caller), recording_path) of ParentScript
+			if recording_file_exists is true then
+				try
+					set file_info to (info for (POSIX file recording_path))
+					set recording_file_size to ((file size of file_info) div 1048576) & "MB"
+				on error
+					-- File exists but can't get size, leave as "unknown"
+				end try
+			end if
 		end if
 
 		logger(true, handlername, caller, "INFO", "RECORD_COMPLETE: " & show_title & " | duration=" & recording_duration & "s | path=" & recording_path & " | size=" & recording_file_size & " | exists=" & recording_file_exists & " | transcode=" & show_transcode) of ParentScript

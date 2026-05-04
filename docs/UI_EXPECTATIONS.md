@@ -35,6 +35,7 @@ The main screen displays an active show list sorted by next air date, with contr
 | 🔄 | Refreshing | SeriesID show queued for guide scan |
 | ⏱ | Time warning | Recording starts within 15 minutes |
 | 📡 | Device offline | HDHomeRun device not detected |
+| 🔍 | Not in guide | SeriesID show with no upcoming episodes in guide |
 
 ### Show Entry Display
 

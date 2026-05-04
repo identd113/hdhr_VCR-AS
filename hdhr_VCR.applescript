@@ -87,8 +87,8 @@ on setup_icons(caller)
 	set handlername to "setup_icons"
 	set Base_icon_path to POSIX path of (path to home folder) & "Library/Caches/hdhr_VCR/" as text
 	try
-		set Icon_record to {Warning_icon:character id {9888, 65039}, Record_icon:character id 128308, Recordsoon_icon:character id 11093, Tv_icon:character id 128250, Plus_icon:character id 10133, Single_icon:character id {49, 65039, 8419}, Series_icon:character id 128256, Series1_icon:character id 128258, Edit_icon:character id {9999, 65039}, Disk_icon:character id 128190, Update_icon:character id 8682, Stop_icon:character id 9726, Up_icon:character id 128316, Up2_icon:character id 9195, Check_icon:character id 9989, Uncheck_icon:character id 10060, Futureshow_icon:character id {9197, 65039}, Hourglass_icon:character id 9203, Film_icon:character id 127910, Back_icon:character id 8592, Running_icon:character id {127939, 8205, 9794, 65039}, Add_icon:character id 127381, Series3_icon:character id 128257, Star_icon:character id 9733, Eject_icon:character id 9167}
-		set Icon_list to {Warning_icon of Icon_record, Record_icon of Icon_record, Recordsoon_icon of Icon_record, Tv_icon of Icon_record, Plus_icon of Icon_record, Single_icon of Icon_record, Series_icon of Icon_record, Series1_icon of Icon_record, Edit_icon of Icon_record, Disk_icon of Icon_record, Update_icon of Icon_record, Stop_icon of Icon_record, Up_icon of Icon_record, Up2_icon of Icon_record, Check_icon of Icon_record, Uncheck_icon of Icon_record, Futureshow_icon of Icon_record, Hourglass_icon of Icon_record, Film_icon of Icon_record, Back_icon of Icon_record, Running_icon of Icon_record, Add_icon of Icon_record, Series3_icon of Icon_record, Star_icon of Icon_record, Eject_icon of Icon_record}
+		set Icon_record to {Warning_icon:character id {9888, 65039}, Record_icon:character id 128308, Recordsoon_icon:character id 11093, Tv_icon:character id 128250, Plus_icon:character id 10133, Single_icon:character id {49, 65039, 8419}, Series_icon:character id 128256, Series1_icon:character id 128258, Edit_icon:character id {9999, 65039}, Disk_icon:character id 128190, Update_icon:character id 8682, Stop_icon:character id 9726, Up_icon:character id 128316, Up2_icon:character id 9195, Check_icon:character id 9989, Uncheck_icon:character id 10060, Futureshow_icon:character id {9197, 65039}, Hourglass_icon:character id 9203, Film_icon:character id 127910, Back_icon:character id 8592, Running_icon:character id {127939, 8205, 9794, 65039}, Add_icon:character id 127381, Series3_icon:character id 128257, Star_icon:character id 9733, Eject_icon:character id 9167, Magnify_icon:character id 128270}
+		set Icon_list to {Warning_icon of Icon_record, Record_icon of Icon_record, Recordsoon_icon of Icon_record, Tv_icon of Icon_record, Plus_icon of Icon_record, Single_icon of Icon_record, Series_icon of Icon_record, Series1_icon of Icon_record, Edit_icon of Icon_record, Disk_icon of Icon_record, Update_icon of Icon_record, Stop_icon of Icon_record, Up_icon of Icon_record, Up2_icon of Icon_record, Check_icon of Icon_record, Uncheck_icon of Icon_record, Futureshow_icon of Icon_record, Hourglass_icon of Icon_record, Film_icon of Icon_record, Back_icon of Icon_record, Running_icon of Icon_record, Add_icon of Icon_record, Series3_icon of Icon_record, Star_icon of Icon_record, Eject_icon of Icon_record, Magnify_icon of Icon_record}
 	on error errmsg
 		return false
 	end try
@@ -137,7 +137,7 @@ on setup_script(caller)
 	try
 		set cache_me to (name of me)
 		set Local_env to (name of current application)
-		set Version_local to "20260503"
+		set Version_local to "20260503.1"
 		set Version_subversion to (text 1 thru 2 of ("0" & (hours of (current date)) as text) & "." & text 1 thru 2 of ("0" & (minutes of (current date)) as text))
 		set Config_version to 1
 		set temp_info to (system info)
@@ -233,19 +233,30 @@ on run {}
 	set Log_dir to alias ((path to library folder from user domain) & "Logs" as text)
 	set First_open to true
 	copy (current date) to Idle_timer_dateobj
+
+	set progress total steps to -1
+	set progress description to "Opening hdhr_VCR" & return & return & "Version: 20260503" & return & "Subversion: 10.09"
+	delay 0.1
+
 	set Lib_script_version to "0"
 	set progress description to "Loading hdhr_VCR_lib..."
+	delay 0.1
 	if my setup_lib(cmi) is true then
 		set progress description to "Setting up script..."
+		delay 0.1
 		if my setup_script(cmi) is true then
 			set progress description to "Setting up globals..."
+			delay 0.1
 			if my setup_globals(cmi) is true then
 				set progress description to "Setting up logging..."
+				delay 0.1
 				if my setup_logging(cmi) is true then
 					set progress description to "Setting up icons..."
+					delay 0.1
 					if my setup_icons(cmi) is true then
 						set startup_success to true
 						set progress description to "Loading " & name of me & " " & Version_local
+						delay 0.1
 					else
 						set Errloc to "setup_icons"
 					end if
@@ -271,6 +282,7 @@ on run {}
 		quit {}
 		return
 	end if
+
 	if startup_success is true then
 		my logger(true, handlername, caller, "INFO", "***** Starting " & name of me & " " & Version_local & "." & Version_subversion & " *****")
 		my logger(true, handlername, caller, "INFO", "Code version epoch: " & Code_version_epoch)
@@ -299,9 +311,11 @@ on run {}
 		--my build_channel_list(my cm(handlername, caller), "", cd)
 		my idle_change(cmi, 1, 4)
 		seriesScanAdd(cmi, "") of LibScript
-		if Hdhr_detected is true then seriesScanRun(cmi, true) of LibScript
+		-- seriesScanRun deferred to idle loop to avoid duplicate "Updating Show:" dialogs
+		-- if Hdhr_detected is true then seriesScanRun(cmi, true) of LibScript
 		if Local_env is in Debugger_apps then
 			my main(cmi, "run")
+			set First_open to false
 		end if
 	end if
 	my logger(true, handlername, caller, "INFO", "Idle_loop: 0")
@@ -727,7 +741,7 @@ on hdhrGRID(caller, hdhr_device, hdhr_channel)
 		set time_range to padnum(my cm(handlername, caller), word 2 of short_date(my cm(handlername, caller), temp_start, false, false) of LibScript, true) of LibScript & "-" & padnum(my cm(handlername, caller), word 2 of short_date(my cm(handlername, caller), temp_end, false, false) of LibScript, true) of LibScript
 		set end of hdhrGRID_sort to col1 & col2 & " " & time_range & " " & temp_title
 	end repeat
-	set hdhrGRID_selected to choose from list hdhrGRID_sort with prompt ("Channel " & hdhr_channel & " (" & GuideName of hdhrGRID_temp & ")" & return & "Current Time: " & word 2 of short_date(my cm(handlername, caller), (current date), false, false) of LibScript & return & return & Record_icon of Icon_record & " Recording  " & Warning_icon of Icon_record & " Error  " & Film_icon of Icon_record & " <1h  " & Up_icon of Icon_record & " <4h  " & Up2_icon of Icon_record & " >4h  " & Futureshow_icon of Icon_record & " Future day  " & Check_icon of Icon_record & " Recorded today") cancel button name "Manual Add" OK button name "Next.." with title my check_version_dialog(caller) default items item 1 of hdhrGRID_sort with multiple selections allowed
+	set hdhrGRID_selected to choose from list hdhrGRID_sort with prompt ("Channel " & hdhr_channel & " (" & GuideName of hdhrGRID_temp & ")" & return & "Current Time: " & word 2 of short_date(my cm(handlername, caller), (current date), false, false) of LibScript & return & return & Record_icon of Icon_record & "Recording  " & Warning_icon of Icon_record & "Error  " & Film_icon of Icon_record & "<1h  " & Up_icon of Icon_record & "<4h  " & Up2_icon of Icon_record & ">4h  " & Series_icon of Icon_record & "SeriesID  " & Update_icon of Icon_record & "Scanning  " & Futureshow_icon of Icon_record & "Future  " & Check_icon of Icon_record & "Done") cancel button name "Manual Add" OK button name "Next.." with title my check_version_dialog(caller) default items item 1 of hdhrGRID_sort with multiple selections allowed
 
 	if hdhrGRID_selected is false then
 		my logger(true, handlername, caller, "INFO", "User exited")
@@ -1869,6 +1883,22 @@ on main(caller, emulated_button_press)
 			try
 				if show_recording of item i of Show_info is true then
 					set col2 to Record_icon of Icon_record
+				else if (show_is_series of item i of Show_info is true) and ((show_use_seriesid of item i of Show_info is true) or (show_use_seriesid_all of item i of Show_info is true)) then
+					-- SeriesID show: check if no episodes found in guide (show_next at or beyond guide window)
+					set guide_end_epoch to (cd) + (Guide_hours * 3600)
+					if (show_next of item i of Show_info) is greater than or equal to (guide_end_epoch - 3600) then
+						set col2 to Magnify_icon of Icon_record
+					else if ((show_next of item i of Show_info) - (cd)) is less than 0 then
+						set col2 to Warning_icon of Icon_record
+					else if ((show_next of item i of Show_info) - (cd)) is less than 1 * hours then
+						set col2 to Film_icon of Icon_record
+					else if ((show_next of item i of Show_info) - (cd)) is less than 4 * hours then
+						set col2 to Up_icon of Icon_record
+					else if (date (date string of (cd))) is (date (date string of (show_next of item i of Show_info))) then
+						set col2 to Up2_icon of Icon_record
+					else
+						set col2 to Futureshow_icon of Icon_record
+					end if
 				else if ((show_next of item i of Show_info) - (cd)) is less than 0 then
 					set col2 to Warning_icon of Icon_record
 				else if ((show_next of item i of Show_info) - (cd)) is less than 1 * hours then
@@ -1895,6 +1925,43 @@ on main(caller, emulated_button_press)
 				my logger(true, handlername, caller, "ERROR", "Error with show_recorded_today, errmsg: " & errmsg)
 			end try
 
+			-- Log icon IDs assigned to this show
+			set col1_id to "Unknown"
+			if col1 = Check_icon of Icon_record then
+				set col1_id to "Check"
+			else if col1 = "      " then
+				set col1_id to "Blank"
+			end if
+			set col2_id to "Unknown"
+			if col2 = Record_icon of Icon_record then
+				set col2_id to "Record"
+			else if col2 = Warning_icon of Icon_record then
+				set col2_id to "Warning"
+			else if col2 = Film_icon of Icon_record then
+				set col2_id to "Film"
+			else if col2 = Up_icon of Icon_record then
+				set col2_id to "Up"
+			else if col2 = Up2_icon of Icon_record then
+				set col2_id to "Up2"
+			else if col2 = Futureshow_icon of Icon_record then
+				set col2_id to "Future"
+			else if col2 = Magnify_icon of Icon_record then
+				set col2_id to "Magnify"
+			end if
+			set col3_id to "Unknown"
+			if col3 = Single_icon of Icon_record then
+				set col3_id to "Single"
+			else if col3 = Series1_icon of Icon_record then
+				set col3_id to "SeriesID(Ch)"
+			else if col3 = Series3_icon of Icon_record then
+				set col3_id to "SeriesID(All)"
+			else if col3 = Series_icon of Icon_record then
+				set col3_id to "DateTime"
+			else if col3 = Uncheck_icon of Icon_record then
+				set col3_id to "Inactive"
+			end if
+			my logger(true, handlername, caller, "INFO", "Icons: " & show_title of item i of Show_info & " | Col1:" & col1_id & ",Col2:" & col2_id & ",Col3:" & col3_id)
+
 			set temp_show_line to col1 & col2 & col3 & " " & temp_show_line
 			set end of show_list to temp_show_line
 			if show_list_length is i then
@@ -1902,7 +1969,7 @@ on main(caller, emulated_button_press)
 			end if
 		end repeat
 		if length of show_list is not 0 then
-			set temp_show_list to (choose from list show_list with title my check_version_dialog(caller) with prompt "" & length of show_list & " shows to edit:" & return & "Icon 1 (recorded today): " & Check_icon of Icon_record & " Recorded today" & return & "Icon 2 (next airing): " & Record_icon of Icon_record & " Recording  " & Warning_icon of Icon_record & " Error  " & Film_icon of Icon_record & " <1h  " & Up_icon of Icon_record & " <4h  " & Up2_icon of Icon_record & " >4h  " & Futureshow_icon of Icon_record & " Future day" & return & "Icon 3 (show type): " & Single_icon of Icon_record & " Single  " & Series1_icon of Icon_record & " SeriesID(Channel)  " & Series_icon of Icon_record & " Date/Time  " & Series3_icon of Icon_record & " SeriesID(All)  " & Uncheck_icon of Icon_record & " Deactivated" OK button name Edit_icon of Icon_record & " Edit.." cancel button name Running_icon of Icon_record & " Run" default items item 1 of show_list with multiple selections allowed without empty selection allowed)
+			set temp_show_list to (choose from list show_list with title my check_version_dialog(caller) with prompt "" & length of show_list & " shows to edit:" & return & Check_icon of Icon_record & " Recorded today" & return & Record_icon of Icon_record & " Recording  " & Warning_icon of Icon_record & " Error  " & Film_icon of Icon_record & " <1h  " & Up_icon of Icon_record & " <4h  " & Up2_icon of Icon_record & " >4h  " & Futureshow_icon of Icon_record & " Future day" & return & Single_icon of Icon_record & " Single  " & Series1_icon of Icon_record & " SeriesID(Channel)  " & Series3_icon of Icon_record & " SeriesID(All)  " & Series_icon of Icon_record & " Date/Time  " & Magnify_icon of Icon_record & " Not in guide  " & Uncheck_icon of Icon_record & " Deactivated" OK button name Edit_icon of Icon_record & " Edit.." cancel button name Running_icon of Icon_record & " Run" default items item 1 of show_list with multiple selections allowed without empty selection allowed)
 			if temp_show_list is not false then
 				set temp_show_offsets to my resolve_selected_offsets(cm, temp_show_list, show_list)
 				if length of temp_show_offsets is 0 then
@@ -2466,8 +2533,7 @@ on record_start(caller, the_show_id, opt_show_length, force_update)
 					do shell script "caffeinate -i curl --connect-timeout 10 --max-time " & (temp_show_length) & " -H 'show_id:" & show_id of item i of Show_info & "' -H \"show_end:" & temp_show_end & "\" -H 'appname:" & name of me & "' '" & show_url of item i of Show_info & "?duration=" & (temp_show_length) & "&transcode=" & show_transcode of item i of Show_info & "' -o \"" & temp_save_path & "\"> /dev/null 2>&1 &"
 					set show_recording of item i of Show_info to true
 					set show_recording_path of item i of Show_info to temp_save_path
-					my logger(true, handlername, caller, "INFO", "RECORD_START: " & show_title of item i of Show_info & " | show_id: " & show_id of item i of Show_info & " | duration: " & temp_show_length & "s | show_end: " & temp_show_end & " | show_length: " & show_length of item i of Show_info)
-					my logger(true, handlername, caller, "INFO", ("\"" & show_title of item i of Show_info & "\" started recording for " & ms2time(my cm(handlername, caller), temp_show_length, "s", 3) of LibScript & " with transcode profile, " & show_transcode of item i of Show_info))
+					my logger(true, handlername, caller, "INFO", "RECORD_START: " & quote & show_title of item i of Show_info & quote & ", show_id: " & show_id of item i of Show_info & ", duration: " & ms2time(my cm(handlername, caller), temp_show_length, "s", 2) of LibScript & ", show_end: " & temp_show_end & ", show_length: " & show_length of item i of Show_info & ", status: started recording with transcode profile, " & show_transcode of item i of Show_info)
 				else
 					my logger(true, handlername, caller, "INFO", "Record function surpressed in DEV")
 				end if
@@ -2765,7 +2831,7 @@ end channel_guide
 on update_show(caller, the_show_id, force_update)
 	set handlername to "update_show"
 	copy (current date) to cd
-	my logger(true, handlername, caller, "TRACE", "showid: " & the_show_id & ", force: " & force_update)
+	my logger(true, handlername, caller, "INFO", ">>> UPDATE_SHOW ENTRY: " & the_show_id & " (force: " & force_update & ", caller: " & caller & ")")
 	if the_show_id is "" then
 		repeat with i2 from 1 to length of Show_info
 			my update_show("update_show" & padnum("update_show", i2, false) of LibScript & "(" & caller & ")", show_id of item i2 of Show_info, false)
@@ -2775,19 +2841,17 @@ on update_show(caller, the_show_id, force_update)
 		-- NOTE: Edge case—if show_id changes (e.g., SeriesID migration), this lookup may fail. Verify ID stability.
 		if show_offset is 0 then
 			my logger(true, handlername, caller, "WARN", "Unable to find show with ID: " & the_show_id)
+			my logger(true, handlername, caller, "INFO", "<<< UPDATE_SHOW EXIT: show not found")
 			return false
 		end if
-		set progress description to "Updating Show: " & show_title of item show_offset of Show_info
-		set progress total steps to 8
 		set time2show_next to (show_next of item show_offset of Show_info) - (cd)
 		set progress additional description to ""
 		set temp_show_progress to {}
 
 		if time2show_next is less than or equal to 6 * hours and time2show_next is greater than or equal to -60 and show_active of item show_offset of Show_info is true or force_update is true then
+			set progress total steps to -1
+			set progress description to "Updating Show" & return & return & quote & show_title of item show_offset of Show_info & quote & return & return & "Fetching guide data..."
 			try
-				set end of temp_show_progress to "Fetching guide data..."
-				set progress additional description to stringlistflip(my cm(handlername, caller), temp_show_progress, return, "string") of LibScript
-				set progress completed steps to 1
 				my logger(true, handlername, caller, "INFO", "Updating " & quote & show_title of item show_offset of Show_info & quote & " " & the_show_id & "...")
 				set hdhr_response_channel to {}
 				set hdhr_response_channel to my channel_guide(my cm(handlername, caller), hdhr_record of item show_offset of Show_info, show_channel of item show_offset of Show_info, show_time of item show_offset of Show_info)
@@ -2806,7 +2870,6 @@ on update_show(caller, the_show_id, force_update)
 			if show_use_seriesid of item show_offset of Show_info is false then
 				set end of temp_show_progress to "Reading metadata..."
 				set progress additional description to stringlistflip(my cm(handlername, caller), temp_show_progress, return, "string") of LibScript
-				set progress completed steps to 2
 				if length of hdhr_response_channel is greater than 0 then
 					try
 						set hdhr_response_OriginalAirdate to OriginalAirdate of hdhr_response_channel
@@ -2837,7 +2900,6 @@ on update_show(caller, the_show_id, force_update)
 					end try
 					set end of temp_show_progress to "Updating tags & logo..."
 					set progress additional description to stringlistflip(my cm(handlername, caller), temp_show_progress, return, "string") of LibScript
-					set progress completed steps to 3
 					try
 						if (show_length of item show_offset of Show_info as number) is not equal to (((EndTime of hdhr_response_channel) - (StartTime of hdhr_response_channel)) div 60 as number) then
 							my logger(true, handlername, caller, "INFO", "Show length changed to " & ((EndTime of hdhr_response_channel) - (StartTime of hdhr_response_channel)) div 60 & " minutes")
@@ -2849,7 +2911,6 @@ on update_show(caller, the_show_id, force_update)
 
 					set end of temp_show_progress to "Updating length..."
 					set progress additional description to stringlistflip(my cm(handlername, caller), temp_show_progress, return, "string") of LibScript
-					set progress completed steps to 4
 					try
 						set temp_show_time to epoch2show_time(my cm(handlername, caller), getTfromN((StartTime of hdhr_response_channel)) of LibScript) of LibScript
 
@@ -2919,8 +2980,10 @@ on update_show(caller, the_show_id, force_update)
 			set progress additional description to stringlistflip(my cm(handlername, caller), temp_show_progress, return, "string") of LibScript
 			set progress completed steps to 8
 			my logger(true, handlername, caller, "DEBUG", "Did not update the show " & show_title of item show_offset of Show_info & ", next_show in " & ms2time("update_show1", ((show_next of item show_offset of Show_info) - (current date)), "s", 4) of LibScript)
+			my logger(true, handlername, caller, "INFO", "<<< UPDATE_SHOW EXIT: outside update window")
 		end if
 	end if
+	my logger(true, handlername, caller, "INFO", "<<< UPDATE_SHOW EXIT: complete")
 end update_show
 
 on save_data(caller)
@@ -3429,7 +3492,7 @@ on idle_change(caller, loop_delay, loop_delay_sec)
 			my logger(true, handlername, caller, "INFO", "SET Idle_timer: " & Idle_timer & ", End: " & (Idle_timer_dateobj as text))
 		end if
 	else
-		
+
 		set temp_time to Idle_timer_dateobj + loop_delay_sec
 		my logger(true, handlername, caller, "INFO", "ADD Idle_timer: " & Idle_timer & ", End: " & (temp_time as text) & ", was " & (Idle_timer_dateobj as text))
 		set Idle_timer_dateobj to temp_time
