@@ -53,6 +53,11 @@ global Code_version_epoch
 global RefreshSeriesID_list
 global Idle_loop
 global Guide_hours
+global Fail_count_setting
+global Idle_timer_setting
+global Min_disk_free_setting
+global Series_scan_retry_hours_setting
+global Default_transcode_setting
 
 ## Since we use JSON helper to do some of the work, we should declare it, so we dont end up having to use tell blocks everywhere.  If we declare 1 thing, we have to declare everything we are using.
 use AppleScript version "2.4"
@@ -98,6 +103,7 @@ end setup_icons
 on sync_config(caller, config2var)
 	set handlername to "sync_config"
 	if config2var is true then
+		-- Load from config to globals
 		try
 			set Notify_recording to Notify_recording of Hdhr_config
 		end try
@@ -113,7 +119,23 @@ on sync_config(caller, config2var)
 		try
 			set Logger_levels to LoggerLevels of Hdhr_config
 		end try
+		try
+			set Series_scan_retry_hours_setting to Series_scan_retry_hours of Hdhr_config
+		end try
+		try
+			set Min_disk_free_setting to Min_disk_free_gb of Hdhr_config
+		end try
+		try
+			set Default_transcode_setting to Default_transcode of Hdhr_config
+		end try
+		try
+			set Fail_count to Fail_count_setting of Hdhr_config
+		end try
+		try
+			set Idle_timer_default to Idle_timer_interval of Hdhr_config
+		end try
 	else
+		-- Save from globals to config
 		try
 			set Notify_recording of Hdhr_config to Notify_recording
 		end try
@@ -127,6 +149,31 @@ on sync_config(caller, config2var)
 		end try
 		try
 			set Hdhr_setup_folder of Hdhr_config to Hdhr_setup_folder
+		end try
+		try
+			set Series_scan_retry_hours of Hdhr_config to Series_scan_retry_hours_setting
+		on error
+			set Hdhr_config to Hdhr_config & {Series_scan_retry_hours:Series_scan_retry_hours_setting}
+		end try
+		try
+			set Min_disk_free_gb of Hdhr_config to Min_disk_free_setting
+		on error
+			set Hdhr_config to Hdhr_config & {Min_disk_free_gb:Min_disk_free_setting}
+		end try
+		try
+			set Default_transcode of Hdhr_config to Default_transcode_setting
+		on error
+			set Hdhr_config to Hdhr_config & {Default_transcode:Default_transcode_setting}
+		end try
+		try
+			set Fail_count_setting of Hdhr_config to Fail_count
+		on error
+			set Hdhr_config to Hdhr_config & {Fail_count_setting:Fail_count}
+		end try
+		try
+			set Idle_timer_interval of Hdhr_config to Idle_timer_default
+		on error
+			set Hdhr_config to Hdhr_config & {Idle_timer_interval:Idle_timer_default}
 		end try
 	end if
 end sync_config
@@ -188,6 +235,11 @@ on setup_globals(caller)
 		set Icon_record to {}
 		set Icon_list to {}
 		set Guide_hours to 6
+		set Series_scan_retry_hours_setting to 4
+		set Min_disk_free_setting to 10
+		set Default_transcode_setting to "None"
+		set Fail_count_setting to 3
+		set Idle_timer_setting to 10
 		set Code_version_epoch to "1777795123" -- Updated: 2026-05-03 07:58:43 UTC
 	on error errmsg
 		return false
@@ -1645,9 +1697,6 @@ on settings_dialog(caller)
 	if not (exists Min_disk_free_setting) then
 		set Min_disk_free_setting to 10
 	end if
-	if not (exists Guide_cache_minutes_setting) then
-		set Guide_cache_minutes_setting to 5
-	end if
 	if not (exists Series_scan_retry_hours_setting) then
 		set Series_scan_retry_hours_setting to 4
 	end if
@@ -1669,7 +1718,6 @@ on settings_dialog(caller)
 			"  Recording Notification: " & Notify_recording & " minutes", ¬
 			"GUIDE & DISCOVERY", ¬
 			"  Guide Hours Ahead: " & Guide_hours & " hours", ¬
-			"  Guide Cache Time: " & Guide_cache_minutes_setting & " minutes", ¬
 			"  Series Scan Retry: " & Series_scan_retry_hours_setting & " hours", ¬
 			"DISK & STORAGE", ¬
 			"  Max Disk Usage Allowed: " & Max_disk_percentage & "%", ¬
@@ -1737,21 +1785,15 @@ on settings_dialog(caller)
 			my save_data(cm)
 			my logger(true, handlername, caller, "INFO", "Guide hours set to " & Guide_hours)
 
-		else if selected_text contains "Guide Cache" then
-			try
-				set Guide_cache_minutes_setting to (text returned of (display dialog "Guide Cache Time" & return & return & "How long to keep guide data before refreshing from device" & return & "Lower = more frequent updates (uses more bandwidth)" & return & "Higher = fewer updates (may miss new episodes)" & return & "Range: 3-10 minutes (default: 5)" & return & return & "Current value:" default answer Guide_cache_minutes_setting buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as integer
-				if Guide_cache_minutes_setting is less than 3 or Guide_cache_minutes_setting is greater than 10 then
-					set Guide_cache_minutes_setting to 5
-				end if
-				my logger(true, handlername, caller, "INFO", "Guide cache set to " & Guide_cache_minutes_setting & " minutes")
-			end try
-
 		else if selected_text contains "Series Scan Retry" then
 			try
 				set Series_scan_retry_hours_setting to (text returned of (display dialog "Series Scan Retry Interval" & return & return & "How often to retry finding new episodes when none available" & return & "Useful when show is on hiatus or between seasons" & return & "Lower = more frequent checks (uses more resources)" & return & "Range: 2-8 hours (default: 4)" & return & return & "Current value:" default answer Series_scan_retry_hours_setting buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as integer
 				if Series_scan_retry_hours_setting is less than 2 or Series_scan_retry_hours_setting is greater than 8 then
 					set Series_scan_retry_hours_setting to 4
 				end if
+				set Series_scan_retry_hours of Hdhr_config to Series_scan_retry_hours_setting
+				my sync_config(handlername, false)
+				my save_data(cm)
 				my logger(true, handlername, caller, "INFO", "Series scan retry set to " & Series_scan_retry_hours_setting & " hours")
 			end try
 
@@ -1780,6 +1822,9 @@ on settings_dialog(caller)
 				if Min_disk_free_setting is less than 5 or Min_disk_free_setting is greater than 20 then
 					set Min_disk_free_setting to 10
 				end if
+				set Min_disk_free_gb of Hdhr_config to Min_disk_free_setting
+				my sync_config(handlername, false)
+				my save_data(cm)
 				my logger(true, handlername, caller, "INFO", "Minimum free disk set to " & Min_disk_free_setting & " GB")
 			end try
 
@@ -1801,12 +1846,18 @@ on settings_dialog(caller)
 					set Fail_count_setting to 3
 				end if
 				set Fail_count to Fail_count_setting
+				set Fail_count_setting of Hdhr_config to Fail_count_setting
+				my sync_config(handlername, false)
+				my save_data(cm)
 				my logger(true, handlername, caller, "INFO", "Recording failure threshold set to " & Fail_count_setting)
 			end try
 
 		else if selected_text contains "Transcode" then
 			set transcode_resp to button returned of (display dialog "Default Transcode Profile" & return & return & "Compress recordings on HDHomeRun device before saving" & return & "None = raw MPEG2 (largest files, best quality)" & return & "Heavy = same resolution, AVC compression" & return & "Mobile/Internet* = smaller files, lower quality" & return & return & "Choose:" buttons {"None", "Heavy", "Mobile", "Internet720", "Internet480", "Internet360"} default button 1 with title my check_version_dialog(cm) with icon note)
 			set Default_transcode_setting to transcode_resp
+			set Default_transcode of Hdhr_config to Default_transcode_setting
+			my sync_config(handlername, false)
+			my save_data(cm)
 			my logger(true, handlername, caller, "INFO", "Default transcode set to " & Default_transcode_setting)
 
 		else if selected_text contains "Idle Check" then
@@ -1816,6 +1867,9 @@ on settings_dialog(caller)
 					set Idle_timer_setting to 10
 				end if
 				set Idle_timer_default to Idle_timer_setting
+				set Idle_timer_interval of Hdhr_config to Idle_timer_setting
+				my sync_config(handlername, false)
+				my save_data(cm)
 				my logger(true, handlername, caller, "INFO", "Idle timer set to " & Idle_timer_setting & " seconds")
 			end try
 
