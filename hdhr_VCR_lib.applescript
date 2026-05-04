@@ -1997,3 +1997,210 @@ on log_recording_complete(caller, show_title, show_next, show_end, show_recordin
 		logger(true, handlername, caller, "WARN", "Unable to log recording completion summary for " & show_title & ": " & errmsg) of ParentScript
 	end try
 end log_recording_complete
+
+on settings_dialog(caller)
+	set handlername to "settings_dialog_lib"
+	set cm to cm(handlername, caller) of ParentScript
+
+	-- Backward compat: init extra settings if missing
+	try
+		set Fail_count_setting of ParentScript to Fail_count_setting of ParentScript
+	on error
+		set Fail_count_setting of ParentScript to Fail_count of ParentScript
+	end try
+	try
+		set Idle_timer_setting of ParentScript to Idle_timer_setting of ParentScript
+	on error
+		set Idle_timer_setting of ParentScript to Idle_timer_default of ParentScript
+	end try
+	try
+		set Min_disk_free_setting of ParentScript to Min_disk_free_setting of ParentScript
+	on error
+		set Min_disk_free_setting of ParentScript to 10
+	end try
+	try
+		set Series_scan_retry_hours_setting of ParentScript to Series_scan_retry_hours_setting of ParentScript
+	on error
+		set Series_scan_retry_hours_setting of ParentScript to 4
+	end try
+	try
+		set Default_transcode_setting of ParentScript to Default_transcode_setting of ParentScript
+	on error
+		set Default_transcode_setting of ParentScript to "None"
+	end try
+
+	repeat
+		set disk_check to checkDiskSpace(cm, (POSIX path of Hdhr_setup_folder of ParentScript))
+		set disk_percent to item 2 of disk_check
+		set disk_warning to ""
+		if disk_percent is greater than or equal to 85 then
+			set disk_warning to " ⚠️"
+		end if
+
+		set settings_list to {¬
+			"NOTIFICATIONS", ¬
+			"  Up Next Notification: " & Notify_upnext of ParentScript & " minutes", ¬
+			"  Recording Notification: " & Notify_recording of ParentScript & " minutes", ¬
+			"GUIDE & DISCOVERY", ¬
+			"  Guide Hours Ahead: " & Guide_hours of ParentScript & " hours", ¬
+			"  Series Scan Retry: " & Series_scan_retry_hours_setting of ParentScript & " hours", ¬
+			"DISK & STORAGE", ¬
+			"  Max Disk Usage Allowed: " & Max_disk_percentage of ParentScript & "%", ¬
+			"  Minimum Free Disk Space: " & Min_disk_free_setting of ParentScript & " GB", ¬
+			"  Default Recording Folder: " & Hdhr_setup_folder of ParentScript, ¬
+			"  Current Disk Usage: " & disk_percent & "%" & disk_warning, ¬
+			"RECORDING", ¬
+			"  Recording Failure Threshold: " & Fail_count_setting of ParentScript & " attempts", ¬
+			"  Default Transcode Profile: " & Default_transcode_setting of ParentScript, ¬
+			"  Idle Check Interval: " & Idle_timer_setting of ParentScript & " seconds", ¬
+			"SYSTEM", ¬
+			"  Test Recording (verify setup)…"}
+
+		set selected_setting to choose from list settings_list with prompt "Settings" cancel button name Running_icon of Icon_record of ParentScript & " Done" OK button name "Edit" with title check_version_dialog(cm) of ParentScript without empty selection allowed
+
+		if selected_setting is false then
+			logger(true, handlername, caller, "INFO", "Settings dialog closed") of ParentScript
+			return
+		end if
+
+		set selected_text to item 1 of selected_setting
+
+		if selected_text contains "NOTIFICATIONS" or selected_text contains "GUIDE" or selected_text contains "DISK" or selected_text contains "RECORDING" or selected_text contains "SYSTEM" then
+			-- Section headers are not selectable
+
+		else if selected_text contains "Up Next" then
+			try
+				set new_val to (text returned of (display dialog "Up Next Notification" & return & return & "Minutes before a show airs to send 'up next' notification" & return & "Higher = earlier warning, Lower = closer to air time" & return & "Range: 15-120 minutes (default: 35)" & return & return & "Current value:" default answer Notify_upnext of ParentScript buttons {"OK"} default button 1 with title check_version_dialog(cm) of ParentScript)) as number
+				if new_val is less than 15 or new_val is greater than 120 then set new_val to 35
+				set Notify_upnext of ParentScript to new_val
+				set Notify_upnext of Hdhr_config of ParentScript to new_val
+				sync_config(handlername, false) of ParentScript
+				save_data(cm) of ParentScript
+				logger(true, handlername, caller, "INFO", "Up Next notification set to " & new_val) of ParentScript
+			end try
+
+		else if selected_text contains "Recording Notification" then
+			try
+				set new_val to (text returned of (display dialog "Recording Notification" & return & return & "Minutes before recording starts to send notification" & return & "Alerts you that recording is about to begin" & return & "Range: 5-30 minutes (default: 15.5)" & return & return & "Current value:" default answer Notify_recording of ParentScript buttons {"OK"} default button 1 with title check_version_dialog(cm) of ParentScript)) as number
+				if new_val is less than 5 or new_val is greater than 30 then set new_val to 15.5
+				set Notify_recording of ParentScript to new_val
+				set Notify_recording of Hdhr_config of ParentScript to new_val
+				sync_config(handlername, false) of ParentScript
+				save_data(cm) of ParentScript
+				logger(true, handlername, caller, "INFO", "Recording notification set to " & new_val) of ParentScript
+			end try
+
+		else if selected_text contains "Guide Hours" then
+			set guide_hours_resp to button returned of (display dialog "Guide Hours (6-24)" default answer Guide_hours of ParentScript buttons {"24H", "12H", "6H", "Custom"} default button 1 with title check_version_dialog(cm) of ParentScript with icon note)
+			set new_val to Guide_hours of ParentScript
+			if guide_hours_resp is "24H" then
+				set new_val to 24
+			else if guide_hours_resp is "12H" then
+				set new_val to 12
+			else if guide_hours_resp is "6H" then
+				set new_val to 6
+			else if guide_hours_resp is "Custom" then
+				try
+					set new_val to (text returned of (display dialog "Enter hours (6-24)" default answer Guide_hours of ParentScript buttons {"OK"} default button 1 with title check_version_dialog(cm) of ParentScript)) as integer
+					if new_val is less than 6 or new_val is greater than 24 then set new_val to 24
+				end try
+			end if
+			set Guide_hours of ParentScript to new_val
+			set GuideHours of Hdhr_config of ParentScript to new_val
+			sync_config(handlername, false) of ParentScript
+			save_data(cm) of ParentScript
+			logger(true, handlername, caller, "INFO", "Guide hours set to " & new_val) of ParentScript
+
+		else if selected_text contains "Series Scan Retry" then
+			try
+				set new_val to (text returned of (display dialog "Series Scan Retry Interval" & return & return & "How often to retry finding new episodes when none available" & return & "Useful when show is on hiatus or between seasons" & return & "Lower = more frequent checks (uses more resources)" & return & "Range: 2-8 hours (default: 4)" & return & return & "Current value:" default answer Series_scan_retry_hours_setting of ParentScript buttons {"OK"} default button 1 with title check_version_dialog(cm) of ParentScript)) as integer
+				if new_val is less than 2 or new_val is greater than 8 then set new_val to 4
+				set Series_scan_retry_hours_setting of ParentScript to new_val
+				set Series_scan_retry_hours of Hdhr_config of ParentScript to new_val
+				sync_config(handlername, false) of ParentScript
+				save_data(cm) of ParentScript
+				logger(true, handlername, caller, "INFO", "Series scan retry set to " & new_val & " hours") of ParentScript
+			end try
+
+		else if selected_text contains "Max Disk" then
+			set max_disk_resp to button returned of (display dialog "Max disk usage before blocking recording" buttons {"93%", "90%", "85%", "Custom"} default button 1 with title check_version_dialog(cm) of ParentScript with icon note)
+			set new_val to Max_disk_percentage of ParentScript
+			if max_disk_resp is "93%" then
+				set new_val to 93
+			else if max_disk_resp is "90%" then
+				set new_val to 90
+			else if max_disk_resp is "85%" then
+				set new_val to 85
+			else if max_disk_resp is "Custom" then
+				try
+					set new_val to (text returned of (display dialog "Enter percentage (80-99)" default answer Max_disk_percentage of ParentScript buttons {"OK"} default button 1 with title check_version_dialog(cm) of ParentScript)) as integer
+					if new_val is less than 80 or new_val is greater than 99 then set new_val to 93
+				end try
+			end if
+			set Max_disk_percentage of ParentScript to new_val
+			save_data(cm) of ParentScript
+			logger(true, handlername, caller, "INFO", "Max disk percentage set to " & new_val) of ParentScript
+
+		else if selected_text contains "Minimum Free" then
+			try
+				set new_val to (text returned of (display dialog "Minimum Free Disk Space" & return & return & "Never record if less than this amount of free space remains" & return & "Protects against filling your drive completely" & return & "Works with Max Disk % setting - uses whichever is stricter" & return & "Range: 5-20 GB (default: 10)" & return & return & "Current value:" default answer Min_disk_free_setting of ParentScript buttons {"OK"} default button 1 with title check_version_dialog(cm) of ParentScript)) as integer
+				if new_val is less than 5 or new_val is greater than 20 then set new_val to 10
+				set Min_disk_free_setting of ParentScript to new_val
+				set Min_disk_free_gb of Hdhr_config of ParentScript to new_val
+				sync_config(handlername, false) of ParentScript
+				save_data(cm) of ParentScript
+				logger(true, handlername, caller, "INFO", "Minimum free disk set to " & new_val & " GB") of ParentScript
+			end try
+
+		else if selected_text contains "Default Recording" then
+			try
+				set folder_fallbacks to {alias "Volumes:"}
+				set new_folder to choose_folder_with_fallback(cm, "Select default recording folder", folder_fallbacks)
+				if new_folder is not missing value then
+					set Hdhr_setup_folder of ParentScript to new_folder as text
+					save_data(cm) of ParentScript
+					logger(true, handlername, caller, "INFO", "Default folder set to " & Hdhr_setup_folder of ParentScript) of ParentScript
+				end if
+			end try
+
+		else if selected_text contains "Recording Failure" then
+			try
+				set new_val to (text returned of (display dialog "Recording Failure Threshold" & return & return & "Automatically pause a show after this many consecutive failures" & return & "Prevents endless retry loops for broken shows" & return & "You can reactivate by editing the show and resetting" & return & "Range: 1-5 attempts (default: 3)" & return & return & "Current value:" default answer Fail_count_setting of ParentScript buttons {"OK"} default button 1 with title check_version_dialog(cm) of ParentScript)) as integer
+				if new_val is less than 1 or new_val is greater than 5 then set new_val to 3
+				set Fail_count_setting of ParentScript to new_val
+				set Fail_count of ParentScript to new_val
+				set Fail_count_setting of Hdhr_config of ParentScript to new_val
+				sync_config(handlername, false) of ParentScript
+				save_data(cm) of ParentScript
+				logger(true, handlername, caller, "INFO", "Recording failure threshold set to " & new_val) of ParentScript
+			end try
+
+		else if selected_text contains "Transcode" then
+			set transcode_resp to button returned of (display dialog "Default Transcode Profile" & return & return & "Compress recordings on HDHomeRun device before saving" & return & "None = raw MPEG2 (largest files, best quality)" & return & "Heavy = same resolution, AVC compression" & return & "Mobile/Internet* = smaller files, lower quality" & return & return & "Choose:" buttons {"None", "Heavy", "Mobile", "Internet720", "Internet480", "Internet360"} default button 1 with title check_version_dialog(cm) of ParentScript with icon note)
+			set Default_transcode_setting of ParentScript to transcode_resp
+			set Default_transcode of Hdhr_config of ParentScript to transcode_resp
+			sync_config(handlername, false) of ParentScript
+			save_data(cm) of ParentScript
+			logger(true, handlername, caller, "INFO", "Default transcode set to " & transcode_resp) of ParentScript
+
+		else if selected_text contains "Idle Check" then
+			try
+				set new_val to (text returned of (display dialog "Idle Check Interval" & return & return & "How often to check for shows that need to record" & return & "Lower = more responsive (uses more CPU)" & return & "Higher = less frequent checks (may miss recordings)" & return & "Automatically speeds up when recording is near" & return & "Range: 5-30 seconds (default: 10)" & return & return & "Current value:" default answer Idle_timer_setting of ParentScript buttons {"OK"} default button 1 with title check_version_dialog(cm) of ParentScript)) as integer
+				if new_val is less than 5 or new_val is greater than 30 then set new_val to 10
+				set Idle_timer_setting of ParentScript to new_val
+				set Idle_timer_default of ParentScript to new_val
+				set Idle_timer_interval of Hdhr_config of ParentScript to new_val
+				sync_config(handlername, false) of ParentScript
+				save_data(cm) of ParentScript
+				logger(true, handlername, caller, "INFO", "Idle timer set to " & new_val & " seconds") of ParentScript
+			end try
+
+		else if selected_text contains "Test Recording" then
+			display dialog "Test Recording: Record 30 seconds from a live channel to verify everything works" buttons {"Cancel", "Start Test"} default button 2 with title check_version_dialog(cm) of ParentScript with icon note
+			if button returned of result is "Start Test" then
+				logger(true, handlername, caller, "INFO", "Test recording requested by user") of ParentScript
+				display dialog "Test recording feature coming soon - will allow you to verify setup works correctly" buttons {"OK"} default button 1 with title check_version_dialog(cm) of ParentScript
+			end if
+		end if
+	end repeat
+end settings_dialog
