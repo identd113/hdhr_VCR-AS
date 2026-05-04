@@ -1635,6 +1635,26 @@ on settings_dialog(caller)
 	set handlername to "settings_dialog"
 	set cm to my cm(handlername, caller)
 
+	-- Initialize extra settings if not in globals (backward compatibility)
+	if not (exists Fail_count_setting) then
+		set Fail_count_setting to Fail_count
+	end if
+	if not (exists Idle_timer_setting) then
+		set Idle_timer_setting to Idle_timer_default
+	end if
+	if not (exists Min_disk_free_setting) then
+		set Min_disk_free_setting to 10
+	end if
+	if not (exists Guide_cache_minutes_setting) then
+		set Guide_cache_minutes_setting to 5
+	end if
+	if not (exists Series_scan_retry_hours_setting) then
+		set Series_scan_retry_hours_setting to 4
+	end if
+	if not (exists Default_transcode_setting) then
+		set Default_transcode_setting to "None"
+	end if
+
 	repeat
 		set disk_check to checkDiskSpace(cm, (POSIX path of Hdhr_setup_folder)) of LibScript
 		set disk_percent to item 2 of disk_check
@@ -1644,12 +1664,24 @@ on settings_dialog(caller)
 		end if
 
 		set settings_list to {¬
-			"Guide Hours Ahead: " & Guide_hours & " hours", ¬
-			"Up Next Notification: " & Notify_upnext & " minutes", ¬
-			"Recording Notification: " & Notify_recording & " minutes", ¬
-			"Max Disk Usage Allowed: " & Max_disk_percentage & "%", ¬
-			"Default Recording Folder: " & Hdhr_setup_folder, ¬
-			"Current Disk Usage: " & disk_percent & "%" & disk_warning}
+			"NOTIFICATIONS", ¬
+			"  Up Next Notification: " & Notify_upnext & " minutes", ¬
+			"  Recording Notification: " & Notify_recording & " minutes", ¬
+			"GUIDE & DISCOVERY", ¬
+			"  Guide Hours Ahead: " & Guide_hours & " hours", ¬
+			"  Guide Cache Time: " & Guide_cache_minutes_setting & " minutes", ¬
+			"  Series Scan Retry: " & Series_scan_retry_hours_setting & " hours", ¬
+			"DISK & STORAGE", ¬
+			"  Max Disk Usage Allowed: " & Max_disk_percentage & "%", ¬
+			"  Minimum Free Disk Space: " & Min_disk_free_setting & " GB", ¬
+			"  Default Recording Folder: " & Hdhr_setup_folder, ¬
+			"  Current Disk Usage: " & disk_percent & "%" & disk_warning, ¬
+			"RECORDING", ¬
+			"  Recording Failure Threshold: " & Fail_count_setting & " attempts", ¬
+			"  Default Transcode Profile: " & Default_transcode_setting, ¬
+			"  Idle Check Interval: " & Idle_timer_setting & " seconds", ¬
+			"SYSTEM", ¬
+			"  Test Recording (verify setup)…"}
 
 		set selected_setting to choose from list settings_list with prompt "Settings" cancel button name Running_icon of Icon_record & " Done" OK button name "Edit" with title my check_version_dialog(cm) without empty selection allowed
 
@@ -1660,7 +1692,32 @@ on settings_dialog(caller)
 
 		set selected_text to item 1 of selected_setting
 
-		if selected_text contains "Guide Hours" then
+		if selected_text contains "NOTIFICATIONS" or selected_text contains "GUIDE" or selected_text contains "DISK" or selected_text contains "RECORDING" or selected_text contains "SYSTEM" then
+			-- Section headers are not selectable
+
+		else if selected_text contains "Up Next" then
+			try
+				set Notify_upnext to (text returned of (display dialog "Minutes before show airs to notify (15-120)" default answer Notify_upnext buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as number
+				if Notify_upnext is less than 15 or Notify_upnext is greater than 120 then
+					set Notify_upnext to 35
+				end if
+				set Notify_upnext of Hdhr_config to Notify_upnext
+				my save_data(cm)
+				my logger(true, handlername, caller, "INFO", "Up Next notification set to " & Notify_upnext)
+			end try
+
+		else if selected_text contains "Recording Notification" then
+			try
+				set Notify_recording to (text returned of (display dialog "Minutes before recording to notify (5-30)" default answer Notify_recording buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as number
+				if Notify_recording is less than 5 or Notify_recording is greater than 30 then
+					set Notify_recording to 15.5
+				end if
+				set Notify_recording of Hdhr_config to Notify_recording
+				my save_data(cm)
+				my logger(true, handlername, caller, "INFO", "Recording notification set to " & Notify_recording)
+			end try
+
+		else if selected_text contains "Guide Hours" then
 			set guide_hours_resp to button returned of (display dialog "Guide Hours (6-24)" default answer Guide_hours buttons {"24H", "12H", "6H", "Custom"} default button 1 with title my check_version_dialog(cm) with icon note)
 			if guide_hours_resp is "24H" then
 				set Guide_hours to 24
@@ -1680,20 +1737,22 @@ on settings_dialog(caller)
 			my save_data(cm)
 			my logger(true, handlername, caller, "INFO", "Guide hours set to " & Guide_hours)
 
-		else if selected_text contains "Up Next" then
+		else if selected_text contains "Guide Cache" then
 			try
-				set Notify_upnext to (text returned of (display dialog "Minutes before air to notify" default answer Notify_upnext buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as number
-				set Notify_upnext of Hdhr_config to Notify_upnext
-				my save_data(cm)
-				my logger(true, handlername, caller, "INFO", "Up Next notification set to " & Notify_upnext)
+				set Guide_cache_minutes_setting to (text returned of (display dialog "Guide cache time in minutes (3-10)" default answer Guide_cache_minutes_setting buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as integer
+				if Guide_cache_minutes_setting is less than 3 or Guide_cache_minutes_setting is greater than 10 then
+					set Guide_cache_minutes_setting to 5
+				end if
+				my logger(true, handlername, caller, "INFO", "Guide cache set to " & Guide_cache_minutes_setting & " minutes")
 			end try
 
-		else if selected_text contains "Recording Notification" then
+		else if selected_text contains "Series Scan Retry" then
 			try
-				set Notify_recording to (text returned of (display dialog "Minutes before recording to notify" default answer Notify_recording buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as number
-				set Notify_recording of Hdhr_config to Notify_recording
-				my save_data(cm)
-				my logger(true, handlername, caller, "INFO", "Recording notification set to " & Notify_recording)
+				set Series_scan_retry_hours_setting to (text returned of (display dialog "Hours between retries when no episodes found (2-8)" default answer Series_scan_retry_hours_setting buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as integer
+				if Series_scan_retry_hours_setting is less than 2 or Series_scan_retry_hours_setting is greater than 8 then
+					set Series_scan_retry_hours_setting to 4
+				end if
+				my logger(true, handlername, caller, "INFO", "Series scan retry set to " & Series_scan_retry_hours_setting & " hours")
 			end try
 
 		else if selected_text contains "Max Disk" then
@@ -1715,6 +1774,15 @@ on settings_dialog(caller)
 			my save_data(cm)
 			my logger(true, handlername, caller, "INFO", "Max disk percentage set to " & Max_disk_percentage)
 
+		else if selected_text contains "Minimum Free" then
+			try
+				set Min_disk_free_setting to (text returned of (display dialog "Minimum free disk space in GB (5-20)" default answer Min_disk_free_setting buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as integer
+				if Min_disk_free_setting is less than 5 or Min_disk_free_setting is greater than 20 then
+					set Min_disk_free_setting to 10
+				end if
+				my logger(true, handlername, caller, "INFO", "Minimum free disk set to " & Min_disk_free_setting & " GB")
+			end try
+
 		else if selected_text contains "Default Recording" then
 			try
 				set folder_fallbacks to {alias "Volumes:"}
@@ -1725,6 +1793,38 @@ on settings_dialog(caller)
 					my logger(true, handlername, caller, "INFO", "Default folder set to " & Hdhr_setup_folder)
 				end if
 			end try
+
+		else if selected_text contains "Recording Failure" then
+			try
+				set Fail_count_setting to (text returned of (display dialog "Pause show after N consecutive failures (1-5)" default answer Fail_count_setting buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as integer
+				if Fail_count_setting is less than 1 or Fail_count_setting is greater than 5 then
+					set Fail_count_setting to 3
+				end if
+				set Fail_count to Fail_count_setting
+				my logger(true, handlername, caller, "INFO", "Recording failure threshold set to " & Fail_count_setting)
+			end try
+
+		else if selected_text contains "Transcode" then
+			set transcode_resp to button returned of (display dialog "Default transcode profile" buttons {"None", "Heavy", "Mobile", "Internet720", "Internet480", "Internet360"} default button 1 with title my check_version_dialog(cm) with icon note)
+			set Default_transcode_setting to transcode_resp
+			my logger(true, handlername, caller, "INFO", "Default transcode set to " & Default_transcode_setting)
+
+		else if selected_text contains "Idle Check" then
+			try
+				set Idle_timer_setting to (text returned of (display dialog "Idle check interval in seconds (5-30)" default answer Idle_timer_setting buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as integer
+				if Idle_timer_setting is less than 5 or Idle_timer_setting is greater than 30 then
+					set Idle_timer_setting to 10
+				end if
+				set Idle_timer_default to Idle_timer_setting
+				my logger(true, handlername, caller, "INFO", "Idle timer set to " & Idle_timer_setting & " seconds")
+			end try
+
+		else if selected_text contains "Test Recording" then
+			display dialog "Test Recording: Record 30 seconds from a live channel to verify everything works" buttons {"Cancel", "Start Test"} default button 2 with title my check_version_dialog(cm) with icon note
+			if button returned of result is "Start Test" then
+				my logger(true, handlername, caller, "INFO", "Test recording requested by user")
+				display dialog "Test recording feature coming soon - will allow you to verify setup works correctly" buttons {"OK"} default button 1 with title my check_version_dialog(cm)
+			end if
 		end if
 	end repeat
 end settings_dialog
