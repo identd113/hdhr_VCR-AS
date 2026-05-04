@@ -1697,7 +1697,7 @@ on settings_dialog(caller)
 
 		else if selected_text contains "Up Next" then
 			try
-				set Notify_upnext to (text returned of (display dialog "Minutes before show airs to notify (15-120)" default answer Notify_upnext buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as number
+				set Notify_upnext to (text returned of (display dialog "Up Next Notification" & return & return & "Minutes before a show airs to send 'up next' notification" & return & "Higher = earlier warning, Lower = closer to air time" & return & "Range: 15-120 minutes (default: 35)" & return & return & "Current value:" default answer Notify_upnext buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as number
 				if Notify_upnext is less than 15 or Notify_upnext is greater than 120 then
 					set Notify_upnext to 35
 				end if
@@ -1708,7 +1708,7 @@ on settings_dialog(caller)
 
 		else if selected_text contains "Recording Notification" then
 			try
-				set Notify_recording to (text returned of (display dialog "Minutes before recording to notify (5-30)" default answer Notify_recording buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as number
+				set Notify_recording to (text returned of (display dialog "Recording Notification" & return & return & "Minutes before recording starts to send notification" & return & "Alerts you that recording is about to begin" & return & "Range: 5-30 minutes (default: 15.5)" & return & return & "Current value:" default answer Notify_recording buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as number
 				if Notify_recording is less than 5 or Notify_recording is greater than 30 then
 					set Notify_recording to 15.5
 				end if
@@ -1739,7 +1739,7 @@ on settings_dialog(caller)
 
 		else if selected_text contains "Guide Cache" then
 			try
-				set Guide_cache_minutes_setting to (text returned of (display dialog "Guide cache time in minutes (3-10)" default answer Guide_cache_minutes_setting buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as integer
+				set Guide_cache_minutes_setting to (text returned of (display dialog "Guide Cache Time" & return & return & "How long to keep guide data before refreshing from device" & return & "Lower = more frequent updates (uses more bandwidth)" & return & "Higher = fewer updates (may miss new episodes)" & return & "Range: 3-10 minutes (default: 5)" & return & return & "Current value:" default answer Guide_cache_minutes_setting buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as integer
 				if Guide_cache_minutes_setting is less than 3 or Guide_cache_minutes_setting is greater than 10 then
 					set Guide_cache_minutes_setting to 5
 				end if
@@ -1748,7 +1748,7 @@ on settings_dialog(caller)
 
 		else if selected_text contains "Series Scan Retry" then
 			try
-				set Series_scan_retry_hours_setting to (text returned of (display dialog "Hours between retries when no episodes found (2-8)" default answer Series_scan_retry_hours_setting buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as integer
+				set Series_scan_retry_hours_setting to (text returned of (display dialog "Series Scan Retry Interval" & return & return & "How often to retry finding new episodes when none available" & return & "Useful when show is on hiatus or between seasons" & return & "Lower = more frequent checks (uses more resources)" & return & "Range: 2-8 hours (default: 4)" & return & return & "Current value:" default answer Series_scan_retry_hours_setting buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as integer
 				if Series_scan_retry_hours_setting is less than 2 or Series_scan_retry_hours_setting is greater than 8 then
 					set Series_scan_retry_hours_setting to 4
 				end if
@@ -1776,7 +1776,7 @@ on settings_dialog(caller)
 
 		else if selected_text contains "Minimum Free" then
 			try
-				set Min_disk_free_setting to (text returned of (display dialog "Minimum free disk space in GB (5-20)" default answer Min_disk_free_setting buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as integer
+				set Min_disk_free_setting to (text returned of (display dialog "Minimum Free Disk Space" & return & return & "Never record if less than this amount of free space remains" & return & "Protects against filling your drive completely" & return & "Works with Max Disk % setting - uses whichever is stricter" & return & "Range: 5-20 GB (default: 10)" & return & return & "Current value:" default answer Min_disk_free_setting buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as integer
 				if Min_disk_free_setting is less than 5 or Min_disk_free_setting is greater than 20 then
 					set Min_disk_free_setting to 10
 				end if
@@ -1796,7 +1796,7 @@ on settings_dialog(caller)
 
 		else if selected_text contains "Recording Failure" then
 			try
-				set Fail_count_setting to (text returned of (display dialog "Pause show after N consecutive failures (1-5)" default answer Fail_count_setting buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as integer
+				set Fail_count_setting to (text returned of (display dialog "Recording Failure Threshold" & return & return & "Automatically pause a show after this many consecutive failures" & return & "Prevents endless retry loops for broken shows" & return & "You can reactivate by editing the show and resetting" & return & "Range: 1-5 attempts (default: 3)" & return & return & "Current value:" default answer Fail_count_setting buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as integer
 				if Fail_count_setting is less than 1 or Fail_count_setting is greater than 5 then
 					set Fail_count_setting to 3
 				end if
@@ -1805,13 +1805,13 @@ on settings_dialog(caller)
 			end try
 
 		else if selected_text contains "Transcode" then
-			set transcode_resp to button returned of (display dialog "Default transcode profile" buttons {"None", "Heavy", "Mobile", "Internet720", "Internet480", "Internet360"} default button 1 with title my check_version_dialog(cm) with icon note)
+			set transcode_resp to button returned of (display dialog "Default Transcode Profile" & return & return & "Compress recordings on HDHomeRun device before saving" & return & "None = raw MPEG2 (largest files, best quality)" & return & "Heavy = same resolution, AVC compression" & return & "Mobile/Internet* = smaller files, lower quality" & return & return & "Choose:" buttons {"None", "Heavy", "Mobile", "Internet720", "Internet480", "Internet360"} default button 1 with title my check_version_dialog(cm) with icon note)
 			set Default_transcode_setting to transcode_resp
 			my logger(true, handlername, caller, "INFO", "Default transcode set to " & Default_transcode_setting)
 
 		else if selected_text contains "Idle Check" then
 			try
-				set Idle_timer_setting to (text returned of (display dialog "Idle check interval in seconds (5-30)" default answer Idle_timer_setting buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as integer
+				set Idle_timer_setting to (text returned of (display dialog "Idle Check Interval" & return & return & "How often to check for shows that need to record" & return & "Lower = more responsive (uses more CPU)" & return & "Higher = less frequent checks (may miss recordings)" & return & "Automatically speeds up when recording is near" & return & "Range: 5-30 seconds (default: 10)" & return & return & "Current value:" default answer Idle_timer_setting buttons {"OK"} default button 1 with title my check_version_dialog(cm))) as integer
 				if Idle_timer_setting is less than 5 or Idle_timer_setting is greater than 30 then
 					set Idle_timer_setting to 10
 				end if
