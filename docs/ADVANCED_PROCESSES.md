@@ -97,8 +97,10 @@ Episodes matching the recording criteria are added to a task queue:
    
 3. CHECK FOR READY-TO-RECORD
    - For each show in config
-   - Is show_end <= now?  (Time to start recording)
+   - Is show_next <= now? (Show is due)
+   - Is show_end > now? (Show hasn't ended yet)
    - Is show_active = true?
+   - Is show_recording = false? (Not already recording)
    
 4. START RECORDING
    - If yes to #3, move to Phase 2
@@ -127,9 +129,9 @@ Episodes matching the recording criteria are added to a task queue:
    - If disk > 93% full: ABORT (configurable)
    - Calculate space needed for recording
    
-3. SEND "RECORDING" NOTIFICATION
-   - "Recording Started: [show_title]"
-   - Shown 15 minutes before start (Notify_recording)
+3. SEND "RECORDING ABOUT TO START" NOTIFICATION
+   - "Recording about to start: [show_title]"
+   - Shown 15.5 minutes before start (Notify_recording = 15.5)
    
 4. EXECUTE RECORDING COMMAND
    - Build curl command to HDHomeRun:

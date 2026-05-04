@@ -4,6 +4,8 @@ Guide to adding, editing, and managing shows with the 4-state recording system.
 
 > **📖 Reference:** [SHOW_STATUS.md](SHOW_STATUS.md) — State reference · [UI_EXPECTATIONS.md](UI_EXPECTATIONS.md) — Dialogs, icons, user flows · [CLAUDE.md](../CLAUDE.md) — Technical implementation
 
+**Note:** "Prompts:" sequences below describe the logical flow of decisions and inputs per show type. For the actual UI sequence when adding shows, see [CLAUDE.md - Adding a Show](../CLAUDE.md#adding-a-show), which describes the guide-first flow (Channel → Guide Grid → Series Type → Conditional Prompts).
+
 ---
 
 ## State Details
