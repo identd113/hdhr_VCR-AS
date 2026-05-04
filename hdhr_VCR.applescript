@@ -473,7 +473,8 @@ on idle
 												set notify_recording_time of item i of Show_info to (cd) + (2 * minutes)
 											end if
 										else
-											my logger(true, handlername, caller, "WARN", "Recording already in progeress, marking " & show_id of item i of Show_info & " as recording")
+											set flag_flip_pid to item 2 of my showid2PID(cm, show_id of item i of Show_info, false, false)
+											my logger(true, handlername, caller, "WARN", "FLAG_FLIP(false→true): " & show_title of item i of Show_info & " | show_id=" & show_id of item i of Show_info & " | PID=" & flag_flip_pid & " | show_next=" & show_next of item i of Show_info & " | now=" & cd & " | show_is_series=" & show_is_series of item i of Show_info)
 											set show_recording of item i of Show_info to true
 										end if
 									else
@@ -518,8 +519,10 @@ on idle
 										if (show_end of item i of Show_info) is less than or equal to cd then
 											my logger(true, handlername, caller, "INFO", show_title of item i of Show_info & " (" & show_id of item i of Show_info & ") curl exited normally after show_end, deferring to overrun handler")
 										else
+											set time_elapsed to (cd) - (show_next of item i of Show_info)
+											set time_remaining to (show_end of item i of Show_info) - (cd)
 											my idle_change(cm, 1, 3)
-											my logger(true, handlername, caller, "WARN", show_title of item i of Show_info & " (" & show_id of item i of Show_info & ") is marked as recording, but we do not have a valid PID, setting show_recording to false")
+											my logger(true, handlername, caller, "WARN", "FLAG_FLIP(true→false): " & show_title of item i of Show_info & " | show_id=" & show_id of item i of Show_info & " | no_PID_found | show_next=" & show_next of item i of Show_info & " | now=" & cd & " | elapsed=" & time_elapsed & "s | remaining=" & time_remaining & "s | show_is_series=" & show_is_series of item i of Show_info & " | use_seriesid=" & show_use_seriesid of item i of Show_info)
 											set show_recording of item i of Show_info to false
 										end if
 									end if
