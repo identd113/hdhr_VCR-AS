@@ -1,7 +1,8 @@
 # hdhr_VCR
 
-Smart VCR for HDHomeRun devices. Guide-based, zero-setup TV recording on macOS.  
-**No cloud. No subscriptions. No accounts.** Just local, AppleScript-powered automation.
+**Smart TV recording for HDHomeRun devices on macOS.** One app. One-click recording. No subscriptions, no cloud, no drama.
+
+We built hdhr_VCR because traditional DVRs are overpriced, clunky, and bound to your hardware. This is different: it's local-first, fully automatic, and works with any HDHomeRun tuner on your network.
 
 ---
 
@@ -11,79 +12,76 @@ Smart VCR for HDHomeRun devices. Guide-based, zero-setup TV recording on macOS.
 curl -fsSL https://raw.githubusercontent.com/m-woodfill/hdhr_VCR/main/install.sh | bash
 ```
 
-This script will:
-- Download the latest app and library scripts
-- Offer to install [JSONHelper](https://apps.apple.com/us/app/json-helper-for-applescript/id453114608) (required, free)
-- Compile everything and place it in the right locations
-- Main app → `/Applications/hdhr_VCR.app`
-- Library → `~/Documents/hdhr_VCR_lib.scpt`
+---
+
+## The 4 Recording Modes
+
+**Pick the one that fits your show:**
+
+### 1. **Single** — One episode, one time
+Record a specific episode on a specific day/time/channel. Set it and forget it.
+
+### 2. **DateTime Series** — Same time, multiple days
+Record "Monday and Wednesday at 8 PM on Channel 5." Perfect for weekly shows with predictable schedules.
+
+### 3. **SeriesID(Channel)** — All episodes on one channel
+Tell it your show and which channel. The app watches the guide and records *every new episode* on that channel—automatically. No setup needed; it finds the air time, duration, and episode info from the guide.
+
+### 4. **SeriesID(All)** — All episodes, any channel
+The ultimate set-it-and-forget-it mode. Record a show title, and hdhr_VCR finds it *everywhere* it airs. When a syndicated show moves channels or preempts for a special, the app rolls with it. When it goes on hiatus with no upcoming guide data, it quietly waits and picks up the moment it returns.
 
 ---
 
-## What It Does
+## Why SeriesID is Different
 
-- **Automatic discovery** – Finds all HDHomeRun tuners on your network
-- **Guide-based series recording** – SeriesID tracking finds episodes on any channel, any day
-- **4 flexible modes:**
-  - Single episode on a specific day/time/channel
-  - Multiple days/times on one channel
-  - All episodes on one channel (guide-driven)
-  - All episodes on any channel (fully automatic)
-- **Smart queuing** – Episodes are queued at the end of each cycle; on completion, the show immediately rescans for the next episode
-- **Self-healing** – When a show has no upcoming guide data, it retries every 4 hours. It picks up automatically when the show returns
-- **Locale-safe** – Dates stored as Unix epoch; works on both `en_US` and `en_GB` systems
-- **Resilient** – Detects and cleans up stale recordings, monitors disk space (blocks at 93% or <10GB), auto-pauses after 3 failures
-- **Transparent** – Full structured logging with handler context; every decision is traceable
-- **Modular** – Core logic in a separate library; library updates don't require recompiling the app
+Traditional DVRs tie you to a timeslot. If your show moves nights or preempts, you miss episodes. 
+
+**hdhr_VCR uses SeriesID**—the same system cable providers use to identify shows. Instead of recording "Monday 8 PM," it records "this specific series." The guide tells us where and when the next episode airs, and we record it. If a show moves to a new channel, preempts for a special, or goes on hiatus, hdhr_VCR adapts automatically.
+
+No manual intervention. No missed episodes. Just the show you asked for, whenever it airs.
 
 
 ---
 
-## Requirements
+## Key Features
 
-- macOS 10.13+
-- [JSONHelper](https://apps.apple.com/us/app/json-helper-for-applescript/id453114608) (free, installed by the installer)
-- A configured HDHomeRun device with static IP
-- Read/write access to `~/Documents/` and `~/Library/Logs/`
+- **Automatic HDHomeRun discovery** – Finds all tuners on your network instantly
+- **Guide-powered scheduling** – Pulls air times, durations, and episode titles from the live guide
+- **Self-healing** – When a show has no upcoming episodes, it retries every 4 hours. Picks up automatically when the show returns
+- **Resilient** – Detects stale recordings, monitors disk space, auto-pauses after 3 consecutive failures
+- **Locale-safe** – Works correctly on both US and UK systems; no locale-specific date bugs
+- **Transparent** – Full structured logging; every decision is traceable and debuggable
+- **Modular design** – Library updates don't require recompiling the app
 
 ---
 
-## Usage
+## What You Need
 
-Launch `/Applications/hdhr_VCR.app`. On first run, grant the necessary macOS permissions.
+- macOS 10.13 or later
+- [JSONHelper](https://apps.apple.com/us/app/json-helper-for-applescript/id453114608) (free app, installed automatically)
+- A configured HDHomeRun tuner with a static IP
+- About 30 seconds to install
 
-**Add a show:**  
-Click "Add" → Pick tuner → Enter title → Choose mode (Single, DateTime, SeriesID(Channel), or SeriesID(All)) → Answer the prompts
+---
 
-**Edit a show:**  
-Click "Edit" → Select show → Modify and save
+## How to Use It
 
-**Modes explained:**
-- **Single**: One episode, specific day/time/channel
-- **DateTime**: Multiple days/times on one channel (you specify all details)
-- **SeriesID(Channel)**: All episodes on one channel; guide supplies time/date/length
-- **SeriesID(All)**: All episodes on any channel; fully automatic
+1. **Install:** Run the curl command above (or clone and run `./install.sh`)
+2. **Launch:** Open `/Applications/hdhr_VCR.app`
+3. **Add a show:** Click "Add" → Pick your tuner → Enter the show title → Choose a mode → Done
+
+That's it. The app runs in the background and handles the rest.
 
 ---
 
 ## Documentation
 
-- **[WORKFLOWS.md](docs/WORKFLOWS.md)** — Step-by-step add/edit guides for each mode
-- **[SHOW_STATUS.md](docs/SHOW_STATUS.md)** — 4-state model and validation rules
-- **[ADVANCED_PROCESSES.md](docs/ADVANCED_PROCESSES.md)** — SeriesID matching, recording lifecycle, error handling
-- **[CLAUDE.md](CLAUDE.md)** — Architecture, key handlers, design decisions (for developers)
-- **[TESTING.md](docs/TESTING.md)** — Test procedures and validation checklist
-- **[CHANGELOG.md](docs/CHANGELOG.md)** — Release history
+- **[WORKFLOWS.md](docs/WORKFLOWS.md)** — Step-by-step guides for adding and editing shows
+- **[SHOW_STATUS.md](docs/SHOW_STATUS.md)** — Details on the 4-state model
+- **[ADVANCED_PROCESSES.md](docs/ADVANCED_PROCESSES.md)** — SeriesID matching and episode detection
+- **[CHANGELOG.md](docs/CHANGELOG.md)** — Release history and what's new
 
----
-
-## How It Works
-
-- Discovers tuners via local HDHomeRun API, fetches lineup and guide data on startup
-- Stores all show config in `~/Documents/hdhr_VCR-{hostname}.json`
-- Uses `curl` for all network transfers and recording
-- Wraps recordings in `caffeinate -i` to prevent sleep during capture
-- Main idle loop every ~10 seconds (accelerates to 1 second when recording is imminent)
+For developers: See [CLAUDE.md](CLAUDE.md) for architecture and design decisions.
 
 ---
 
