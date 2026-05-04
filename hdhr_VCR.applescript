@@ -48,6 +48,7 @@ global Lib_script_version
 global Log_ignored
 global Errloc
 global Max_disk_percentage
+global Config_load_failed
 global Full_week_days
 global Code_version_epoch
 global RefreshSeriesID_list
@@ -236,6 +237,7 @@ on setup_globals(caller)
 		set Icon_list to {}
 		set Guide_hours to 6
 		set Series_scan_retry_hours_setting to 4
+		set Config_load_failed to false
 		set Min_disk_free_setting to 10
 		set Default_transcode_setting to "None"
 		set Fail_count_setting to 3
@@ -3248,6 +3250,13 @@ end update_show
 on save_data(caller)
 	set handlername to "save_data"
 	my logger(true, handlername, caller, "INFO", "save_data started...")
+	if Config_load_failed is true then
+		my logger(true, handlername, caller, "ERROR", "save_data blocked: config failed to load correctly, saving is disabled to prevent overwriting potentially valid data")
+		set config_file_path to POSIX path of ((Config_dir) & Configfilename_json as text)
+		set config_bak_path to config_file_path & ".bak"
+		display dialog "⚠️ Saving is disabled because the config file could not be loaded correctly." & return & return & "This protects your data from being overwritten." & return & return & "To repair manually:" & return & "1. Quit the app" & return & "2. Check: " & config_file_path & return & "3. If empty or invalid, restore from: " & config_bak_path & return & "4. Validate JSON at jsonlint.com before restarting" & return & return & "Log: ~/Library/Logs/hdhr_VCR.log" buttons {"OK"} with title "Config Load Error" with icon caution
+		return false
+	end if
 	copy Show_info to temp_show_info
 	set save_data_error to false
 	if Local_env is not in Debugger_apps then
@@ -3507,6 +3516,7 @@ on read_data(caller)
 		my logger(true, handlername, caller, "INFO", "Loaded " & read_show_count & " shows from config")
 	on error errmsg
 		my logger(true, handlername, caller, "FATAL", "Unable to read config file: " & errmsg)
+		set Config_load_failed to true
 	end try
 	close access ref_num
 	-- Note: validate_show_info is called later during idle loop, not during initial load
