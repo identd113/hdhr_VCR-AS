@@ -7,9 +7,9 @@ Smart VCR for HDHomeRun devices. Records TV shows on macOS with guide-based, zer
 ## Core Architecture
 
 **Files:**
-- `hdhr_VCR.applescript` (184KB) - Main app with UI and recording logic
-- `hdhr_VCR_lib.applescript` (66KB) - Shared library utilities
-- Config: `~/Documents/hdhr_VCR-{hostname}.json` (25+ shows stored as JSON)
+- `hdhr_VCR.applescript` (190KB) - Main app with UI and recording logic (51 handlers)
+- `hdhr_VCR_lib.applescript` (80KB) - Shared library utilities
+- Config: `~/Documents/hdhr_VCR-{hostname}.json` (shows stored as JSON)
 - Logs: `~/Library/Logs/hdhr_VCR.log`
 
 **Languages:** AppleScript, JSON, shell scripts (curl, bash)
@@ -46,45 +46,43 @@ Shows are ONE of 4 states, determined by `is_series`, `use_seriesid`, `use_serie
 
 ### Adding a Show
 
-**Single Episode:**
-1. Choose tuner
-2. Enter title, click "Single"
-3. Pick day (1 only)
-4. Pick channel
-5. Enter time (0-24 decimal)
-6. Enter length (minutes)
-7. Choose folder
+**Flow from Guide (most common):**
+1. Click "Add" in main dialog
+2. **Select channel** (shows available channels/tuners)
+3. **Select show from guide grid** (auto-populated with guide data)
+4. **Confirm Single/Series** (shows title, synopsis, times from guide)
+   - If Series: Select type (DateTime / SeriesID(Channel) / SeriesID(All))
+5. **Prompt for days** (if DateTime or Single only; auto-set to all days for SeriesID modes)
+6. **Prompt for transcode settings** (if tuner supports it)
+7. **Choose folder**
 
-**DateTime Series:**
-1. Choose tuner
-2. Enter title, click "Series" → "DateTime"
-3. Pick days (multiple allowed)
-4. Pick channel
-5. Enter time (0-24 decimal)
-6. Enter length (minutes)
-7. Choose folder
+**Result after guide selection:**
+- Title, time, length, show_next, show_end: **auto-filled from guide**
+- SeriesID, logo, show_url: **auto-filled from guide**
+- Days: **user-selected (DateTime/Single) or auto-set (SeriesID)**
+- Channel: **user-selected or guide-detected**
 
-**SeriesID(Channel):**
-1. Choose tuner
-2. Enter title, click "Series" → "SeriesID(Channel)"
-3. Pick channel (ONLY prompt)
-4. [No time/days/length prompts - auto from guide]
-5. Choose folder
+**Flow for Manual Add (rare):**
+1. Click "Add" → Select channel → Click "Manual Add" button
+2. **Enter title**, click "Single" or "Series"
+3. If **Single**: Enter time, length, day, transcode, folder
+4. If **DateTime Series**: Enter time, length, days, transcode, folder
+5. SeriesID modes not available in manual add; use guide selection instead
 
-**SeriesID(All):**
-1. Choose tuner
-2. Enter title, click "Series" → "SeriesID(All)"
-3. [No channel/time/days/length - all auto]
-4. Choose folder
+**Key Difference from Edit:**
+- Adding always shows guide data first (channel → guide grid → series type decision)
+- Editing works on existing show record; may require re-prompting based on state changes
 
 ### Editing a Show
 
-- Show title dialog always appears
-- If user changes Series/Single status, recalculate state and reset fields
-- SeriesID shows only ask for channel (if SeriesID(Channel)) on edit
-- All other prompts conditional on current state
-- Changing SeriesID(Channel) to DateTime must re-prompt for days/time/length
-- Changing DateTime to SeriesID(Channel) skips days/time/length prompts
+- Show title dialog always appears first
+- User can switch Series/Single via Series Type dialog
+- If user changes Series/Single status, `validate_show_info` recalculates state and resets fields accordingly
+- **For SeriesID(Channel):** Only prompts for channel if missing/invalid
+- **For SeriesID(All):** Skips channel prompt entirely; days auto-set to all 7
+- **For DateTime/Single:** Prompts for days, time, length (based on should_edit flag and state)
+- **State transitions trigger re-prompts:** Changing from DateTime → SeriesID(Channel) skips time/length; Changing SeriesID → DateTime re-prompts for all fields
+- Folder selection always prompted if missing or when explicitly editing
 
 ---
 
@@ -92,26 +90,30 @@ Shows are ONE of 4 states, determined by `is_series`, `use_seriesid`, `use_serie
 
 > **📖 See:** [ADVANCED_PROCESSES.md](docs/ADVANCED_PROCESSES.md#recording-lifecycle) for phase details.
 
-**Pre-Recording (idle loop):**
-- Check if show_next <= now + 35 minutes → Send "Up Next" notification
-- Check if show_end <= now and show_active=true → Start recording
+**Pre-Recording (idle loop checks):**
+- Check if show_next <= now → Show is due
+  - If show_end > now: **Start recording** (line 418: `record_start`)
+  - If show_end <= now: Show has already passed; handle post-recording
+- Check if (show_next - now) <= 35 minutes → Send "Up Next" notification (line 476)
 
 **Recording Phase:**
-- Verify tuner available and disk < 93% full
+- Verify tuner available (tuner_status check, line 415)
+- Verify disk < 93% full
 - Build curl command with headers: show_id, show_end, appname
 - Wrap in `caffeinate -i` to prevent sleep
 - Log recording path and process ID
 
 **Progress Monitoring:**
-- Every idle cycle, verify process running
-- Check tuner signal strength > 75%
-- Update guide data every 5 minutes at :00/:30 mark
+- Every idle cycle, verify process still running via PID
+- Update guide data every 5 minutes at :00/:30 mark (when guide_refresh is due)
+- Monitor for orphaned curl processes that exceed show_end time
 
 **Post-Recording:**
+- When show_end <= now and show_recording=true
 - Verify file created and non-empty
-- For DateTime Series: Calculate show_next
-- For Single: Set show_active=false
-- For SeriesID: Queue seriesScanNext to find next episode
+- For DateTime Series: Calculate show_next via `nextday()` (line 393)
+- For Single: Set show_active=false (line 407)
+- For SeriesID: Queue `seriesScanAdd()` to find next episode (line 397)
 
 ---
 
@@ -119,32 +121,35 @@ Shows are ONE of 4 states, determined by `is_series`, `use_seriesid`, `use_serie
 
 > **📖 See:** [ADVANCED_PROCESSES.md](docs/ADVANCED_PROCESSES.md#seriesid-episode-matching) for detailed matching process.
 
-**SeriesID Acquisition:**
-- When adding SeriesID show, query guide for matching entries
-- Extract and store show_seriesid (e.g., "C472160EN1BDK")
+**SeriesID Acquisition (during Add/Edit):**
+- When user adds a show from guide: extract `seriesID` from guide entry (line 2247)
+- Store in `show_seriesid` field (e.g., "C472160EN1BDK")
+- This enables automatic episode matching in future guide scans
 
 **Episode Discovery (seriesScanRun):**
-- Every idle cycle, find guide entries with matching seriesid
-- Filter by recording rules:
-  - DateTime: Only selected days
-  - SeriesID(Channel): Only selected channel
-  - SeriesID(All): Any channel, any day
-- Queue new episodes for recording
+- Called at startup (line 313) and after recording completes (line 397)
+- Scans current guide for entries matching `show_seriesid`
+- Filter by recording rules (lines 128-131):
+  - **DateTime**: Only match episodes on selected `show_air_date` days
+  - **SeriesID(Channel)**: Only match episodes on selected `show_channel`
+  - **SeriesID(All)**: Match any episode, any channel, any day
+- Queue matching episodes via `seriesScanAdd()` for future recording
 
 **Next Episode Calculation (seriesScanNext):**
-- Find next airing of series
-- Calculate days until air date (offset)
-- Update show_next
+- Called after recording completes (line 521) or when no episodes found (line 396)
+- Searches guide for next matching episode
+- Calculates `show_next` based on first future match
+- If no upcoming episodes: Set `show_next = current date + 4 hours` for retry (line 396)
 
 **⚠️ CRITICAL: Epoch Format - UTC Throughout**
 
-The HDHomeRun guide API returns episode times as **real UTC epochs** (standard Unix epoch, seconds since Jan 1 1970 UTC):
-- Example: Show at 6:00 PM CDT (local) → API returns UTC epoch 1777762800 (which represents 11:00 PM UTC)
-- Stored times in config are also UTC epochs for **timezone portability** (config works when traveling)
-- Epoch conversion uses AppleScript's built-in date arithmetic:
-  - `epoch2datetime()`: Converts UTC epoch to local date (correct conversion handling is built-in)
-  - `datetime2epoch()`: Converts local date to UTC epoch
-- Both functions work correctly without manual timezone adjustments
+The HDHomeRun guide API returns times as **real UTC epochs** (Unix timestamp, seconds since Jan 1 1970 UTC):
+- Example: Show scheduled 6:00 PM CDT (UTC-5) → API returns epoch 1777762800 (which is 11:00 PM UTC)
+- Config stores all times as epoch integers (not date strings) for **timezone portability**
+- Conversion functions:
+  - `epoch2datetime()`: UTC epoch → AppleScript local date (handles timezone automatically)
+  - `datetime2epoch()`: AppleScript local date → UTC epoch (handles timezone automatically)
+- Both functions work correctly without manual timezone adjustments (verified on en_US and en_GB)
 
 ---
 
@@ -169,28 +174,29 @@ The HDHomeRun guide API returns episode times as **real UTC epochs** (standard U
 
 ---
 
-## Prompt Filtering (SMART LOGIC)
+## Prompt Filtering Logic (validate_show_info handler)
 
-**Key Implementation (validate_show_info handler):**
+**How prompts are determined by show state:**
 
-1. Track original `show_is_series` status
-2. User selects Series/Single button
-3. If Series selected: Show series type dialog (DateTime/SeriesID(Channel)/SeriesID(All))
-4. Set flags based on user choice
-5. Determine show_state:
-   ```applescript
-   if is_series == true
-     if use_seriesid_all == true: state = "SeriesID(All)"
-     else if use_seriesid == true: state = "SeriesID(Channel)"
-     else: state = "DateTime"
-   else
-     state = "Single"
+1. **Show title + Series/Single decision** (always shown on edit)
+2. **If user clicks "Series":** Show "What kind of series?" dialog (line 1413)
+   - Sets flags: `show_use_seriesid`, `show_use_seriesid_all`
+   - Determines `should_edit` flag based on type (line 1420-1430)
+3. **If user clicks "Single":** Reset all series flags, set `should_edit=true`
+4. **Calculate show_state** based on flags (lines 1444-1454):
    ```
-6. Filter prompts by state:
-   - Days: if (state != "SeriesID(All)" && state != "SeriesID(Channel)")
-   - Channel: if (state != "SeriesID(All)")
-   - Time: if (state == "DateTime" || state == "Single")
-   - Length: if (state == "DateTime" || state == "Single")
+   if is_series: 
+     if use_seriesid_all: state = "SeriesID(All)"
+     else if use_seriesid: state = "SeriesID(Channel)"  
+     else: state = "DateTime"
+   else: state = "Single"
+   ```
+5. **Filter prompts by state** (lines 1457-1530):
+   - **Days:** Prompted if DateTime/Single (line 1462); auto-set Full_week for SeriesID (line 1460)
+   - **Channel:** Prompted if NOT SeriesID(All) and missing/invalid (line 1485)
+   - **Time:** Prompted only if DateTime/Single (line 1511)
+   - **Length:** Prompted only if DateTime/Single (line 1526)
+   - **Folder:** Always prompted if missing or when should_edit=true (line 1533)
 
 ---
 
@@ -202,34 +208,49 @@ The HDHomeRun guide API returns episode times as **real UTC epochs** (standard U
 ```json
 {
   "config": {
-    "Notify_recording": 15.5,    // Minutes before to alert
-    "Notify_upnext": 35,          // Minutes before to alert
-    "GuideHours": 4,              // How far ahead to fetch guide
-    "Hdhr_setup_folder": "..."    // Default recording folder
+    "Notify_recording": 15.5,      // Minutes before recording starts
+    "Notify_upnext": 35,           // Minutes before show airs
+    "GuideHours": 24,              // How far ahead to fetch guide
+    "Config_version": "1"          // Internal version tracking
   },
   "the_shows": [
     {
-      "show_id": "unique-id",
-      "show_title": "Show Name",
+      "show_id": "unique-uuid",
+      "show_title": "Show Name S01E01",
       "show_is_series": true,
       "show_use_seriesid": false,
       "show_use_seriesid_all": false,
       "show_air_date": ["Monday", "Wednesday"],
       "show_channel": "5.4",
-      "show_time": 20,            // 0-24 decimal
-      "show_length": 60,          // minutes
-      "show_next": "datetime",
-      "show_end": "datetime",
+      "show_time": 20.5,            // 0-24 decimal (UTC)
+      "show_length": 60,            // minutes
+      "show_next": "1777953798",    // Unix epoch (UTC) — string format
+      "show_end": "1776776580",     // Unix epoch (UTC) — string format
       "show_active": true,
-      "hdhr_record": "105404BE",  // Device ID
+      "hdhr_record": "105404BE",    // Device ID
       "show_url": "http://...",
-      "show_seriesid": "...",     // For SeriesID modes
+      "show_seriesid": "C183890ENY0BD", // SeriesID for auto-matching
       "show_fail_count": 0,
-      "show_fail_reason": ""
+      "show_fail_reason": "",
+      "show_logo_url": "https://...",   // Show artwork URL
+      "show_transcode": "none",         // Transcoding profile
+      "show_tags": "Comedy",            // Genre/category from guide
+      "show_recording": false,          // Is actively recording
+      "show_last": "1776776580",        // Last recorded epoch
+      "notify_upnext_time": "missing value",   // Notification time (string or "missing value")
+      "notify_recording_time": "1776815791",    // Notification time (string epoch)
+      "show_dir": "Raid6:DVR Tests:",   // Recording folder (Mac alias path)
+      "show_temp_dir": "Raid6:DVR Tests:"      // Backup folder reference
     }
   ]
 }
 ```
+
+**Notes:**
+- All timestamps (`show_next`, `show_end`, `show_last`, etc.) are **stored as epoch integer strings** for timezone portability
+- Notification times use string format or the literal string `"missing value"` (not JSON null)
+- `show_dir` uses Mac alias paths (colon-separated, e.g. `"Raid6:DVR Tests:"`) for local reference
+- Config is automatically backed up before write (`hdhr_VCR-{hostname}.json.bak`)
 
 ---
 
@@ -250,52 +271,65 @@ The HDHomeRun guide API returns episode times as **real UTC epochs** (standard U
 > **📖 See:** [handler.md](docs/handler.md) for complete handler reference with inputs/returns.
 
 **Main Flow:**
-- `run` - Startup, discovery, initial setup
-- `idle` - Main loop (every ~10 sec): checks, updates, recordings
-- `validate_show_info` - Edit/add show flow with smart prompts
+- `run` - Startup (line 219): HDHomeRun discovery, initial setup, config load
+- `idle` - Main loop (line 338, every ~10 sec): checks for due shows, handles recordings, monitors progress
+- `main` - UI dialog handler: displays tuner list, add/edit dialogs, guide selection
+- `validate_show_info` - Edit/add show flow (line 1317): smart prompts based on show state
 
 **Recording:**
-- `record_start` - Initiate recording with curl
-- `update_show` - Verify/update show during recording
-- `recording_complete` - Finalize recording
+- `record_start` - Initiate curl recording (line 1938): builds curl command, wraps in caffeinate, logs PID
+- `update_show` - Verify/update show during recording: checks process, monitors disk, handles timeouts
+- `recordingnow_main` - Display recording status in main dialog
 
-**Series Management:**
-- `seriesScanRun` - Find upcoming episodes
-- `seriesScanNext` - Calculate next air date
-- `seriesScanAdd` - Queue episodes
+**Series Management (mostly in lib):**
+- `seriesScanRun` - Entry point for series scanning: checks all SeriesID shows for new episodes
+- `seriesScanAdd` - Queue a show for scanning: adds to scan queue for batch processing
+- `seriesScan` - Core matching logic: find guide entries matching seriesID
+- `seriesScanNext` - Calculate next air date: finds next episode after current time
+- `seriesScanUpdate` - Update show record after match found: refresh channel/time from guide
 
-**Library (hdhr_VCR_lib.applescript):**
-- `checkDiskSpace` - Monitor disk usage
-- `checkfileexists` - Validate paths
-- `stringlistflip` - String/list conversion
-- `logger` - Logging with levels
+**Utility Handlers (hdhr_VCR_lib.applescript):**
+- `checkDiskSpace` - Monitor disk usage: returns percent full, absolute free space
+- `HDHRShowSearch` / `HDHRDeviceSearch` - Search config for shows/tuners by ID
+- `stringlistflip` - Convert between text and list formats
+- `logger` - Structured logging with TRACE/DEBUG/INFO/WARN/ERROR/FATAL levels
+- `epoch2datetime` / `datetime2epoch` - Timezone-safe date conversion
 
 ---
 
 ## Testing & Validation
 
 **Config Validation:**
-- Check all 25 shows load without error
+- All shows load without JSON parse errors
 - Verify no invalid state combinations (see SHOW_STATUS.md)
-- SeriesID shows should have all 7 days
+- SeriesID shows should have Full_week_days (all 7 days) in show_air_date
+- Epoch values are valid Unix timestamps (positive integers as strings)
 
 **Prompt Testing:**
-- Add/edit show in each state
-- Verify correct prompts appear (use WORKFLOWS.md)
-- Verify skipped prompts don't appear
-- Test state transitions (Single→DateTime, DateTime→SeriesID, etc)
+- Add show from guide: verify channel → guide grid → series type flow
+- Add show manually: verify manual prompt sequence
+- Edit show and change state: verify re-prompting behavior
+- Verify skipped prompts don't appear (e.g., no time prompt for SeriesID)
+- Test all 4 mode transitions (Single→DateTime, DateTime→SeriesID, etc.)
 
 **Recording Test:**
-- Create test show in future time
-- Verify notification appears at -35 minutes
-- Verify recording starts at -15.5 minutes
-- Check logs for curl command execution
-- Verify show_next recalculated after recording
+- Create test show with future show_next time
+- Verify "Up Next" notification appears at show_next - 35 minutes (line 476)
+- Verify recording starts when show_next <= now (line 374)
+- Verify recording stops when show_end <= now (line 389)
+- Check `~/Library/Logs/hdhr_VCR.log` for curl command execution
+- Verify show_next recalculated after recording completes (line 521)
+
+**Series Scanning Test:**
+- Create SeriesID show with valid seriesid from guide
+- Verify seriesScanRun finds upcoming episodes
+- Verify episodes queue for recording
+- Verify channel auto-updates if episode moves channels
 
 **Code Quality:**
-- Run `/scripts/run_time_tests.sh` for date/locale handling
-- Check logs for ERROR/WARN levels before release
-- Verify disk space checks work at > 90% full
+- Run `./scripts/run_time_tests.sh` for date/locale handling (en_US, en_GB)
+- Check logs for ERROR/WARN levels before release (log level: DEBUG filtered at release)
+- Verify disk space checks work: block recording at >93% full or <10GB free
 
 ---
 
