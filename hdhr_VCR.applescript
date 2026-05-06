@@ -66,8 +66,8 @@ use scripting additions
 use application "JSON Helper"
 
 ##########    This sets up the script.  If we fail here, the script will cease loading    ##########
-on setup_lib(caller)
-	set handlername to "setup_lib"
+on setupLibrary(caller)
+	set handlername to "setupLibrary"
 	try
 		
 		set loaded_script_path to (path to documents folder as text) & "hdhr_VCR_lib.scpt"
@@ -87,7 +87,7 @@ on setup_lib(caller)
 	set Lib_script_version to load_hdhrVCR_vars() of LibScript
 	set ParentScript of LibScript to me
 	return true
-end setup_lib
+end setupLibrary
 
 on setup_icons(caller)
 	set handlername to "setup_icons"
@@ -295,7 +295,7 @@ on run {}
 	set Lib_script_version to "0"
 	set progress description to "Loading hdhr_VCR_lib..."
 	delay 0.1
-	if my setup_lib(cmi) is true then
+	if my setupLibrary(cmi) is true then
 		set progress description to "Setting up script..."
 		delay 0.1
 		if my setup_script(cmi) is true then
@@ -856,10 +856,9 @@ end hdhrGRID
 on tuner_overview(caller)
 	set handlername to "tuner_overview"
 	my logger(true, handlername, caller, "INFO", "tuner_overview started")
-	my tuner_mismatch(my cm(handlername, caller), "")
 	set main_tuners_list to {}
 	repeat with i from 1 to length of Hdhr_device_list
-		set tuner_status2_result to my tuner_status(my cm(handlername, caller), device_id of item i of Hdhr_device_list)
+		set tuner_status2_result to my tuner_mismatch(my cm(handlername, caller), device_id of item i of Hdhr_device_list)
 		if hdhr_model of item i of Hdhr_device_list is not missing value then
 			set end of main_tuners_list to (hdhr_model of item i of Hdhr_device_list & " " & (device_id of item i of Hdhr_device_list) & " " & tuneractive of tuner_status2_result & " of " & tunermax of tuner_status2_result & " in use") as text
 		else
@@ -871,15 +870,11 @@ end tuner_overview
 
 on tuner_ready_time(caller, hdhr_model)
 	set handlername to "tuner_ready_time"
-	set temp to {}
-	set lowest_number to 99999999
-	copy (current date) to cd
 	if length of Show_info is greater than 0 then
-		repeat with i from 1 to length of Show_info
-			if show_recording of item i of Show_info is true and hdhr_record of item i of Show_info is hdhr_model then
-				set end of temp to ((show_end of item i of Show_info) - (cd))
-			end if
-		end repeat
+		set scan_result to tuner_shows_recording_lib(my cm(handlername, caller), hdhr_model) of LibScript
+		if item 1 of scan_result is 0 then return 0
+		set temp to item 2 of scan_result
+		set lowest_number to 99999999
 		if length of temp is greater than 0 then
 			repeat with i2 from 1 to length of temp
 				if item i2 of temp is less than lowest_number and item i2 of temp is greater than 0 then
@@ -895,12 +890,9 @@ end tuner_ready_time
 
 on tuner_inuse(caller, device_id)
 	set handlername to "tuner_inuse"
-	-- Add channel to handler?
-	set tuner_offset to my HDHRDeviceSearch(my cm(handlername, caller), device_id)
+	set hdhr_discover_temp to tuner_fetch_status_lib(my cm(handlername, caller), device_id) of LibScript
+	if hdhr_discover_temp is {} then return ""
 	try
-		with timeout of 8 seconds
-			set hdhr_discover_temp to my hdhr_api(my cm(handlername, caller), statusURL of item tuner_offset of Hdhr_device_list)
-		end timeout
 		repeat with i from 1 to length of hdhr_discover_temp
 			repeat 1 times
 				set local_ip_list to {}
@@ -937,9 +929,6 @@ on tuner_inuse(caller, device_id)
 				end try
 			end repeat
 		end repeat
-	on error errmsg
-		my logger(true, handlername, caller, "WARN", "Timeout, errmsg: " & errmsg)
-		return ""
 	end try
 	return local_ip_list
 end tuner_inuse
@@ -947,20 +936,10 @@ end tuner_inuse
 on tuner_status(caller, device_id)
 	set handlername to "tuner_status"
 	set tuneractive to 0
-	set tuner_offset to my HDHRDeviceSearch(my cm(handlername, caller), device_id)
-	if tuner_offset is 0 then
-		my logger(true, handlername, caller, "ERROR", "Tuner " & device_id & " is invalid")
+	set hdhr_discover_temp to tuner_fetch_status_lib(my cm(handlername, caller), device_id) of LibScript
+	if hdhr_discover_temp is {} then
 		return {tunermax:0, tuneractive:0}
 	end if
-	try
-		with timeout of 8 seconds
-			set hdhr_discover_temp to my hdhr_api(my cm(handlername, caller), statusURL of item tuner_offset of Hdhr_device_list)
-		end timeout
-	on error errmsg
-		my logger(true, handlername, caller, "WARN", "Timeout, errmsg: " & errmsg)
-		set hdhr_discover_temp to ""
-		return false
-	end try
 	if hdhr_discover_temp is not "" then
 		set tunermax to length of hdhr_discover_temp
 		set temp to ""
@@ -973,7 +952,7 @@ on tuner_status(caller, device_id)
 		my logger(true, handlername, caller, "DEBUG", device_id & " tunermax:" & tunermax & ", tuneractive:" & tuneractive & ", SymbolQualityPercent: " & temp)
 		return {tunermax:tunermax, tuneractive:tuneractive}
 	else
-		my logger(true, handlername, caller, "WARN", "Did not get a result from " & statusURL of item tuner_offset of Hdhr_device_list)
+		my logger(true, handlername, caller, "WARN", "Did not get a result for tuner " & device_id)
 		return {tunermax:0, tuneractive:0}
 	end if
 end tuner_status
@@ -987,14 +966,9 @@ on tuner_mismatch(caller, device_id)
 		return
 	else
 		my logger(true, handlername, caller, "INFO", "tuner_mismatch started with " & device_id)
-		set tuner_offset to my HDHRDeviceSearch(my cm(handlername, caller), device_id)
 		set tuner_status2_result to my tuner_status(my cm(handlername, caller), device_id)
-		set temp_shows_recording to 0
-		repeat with i from 1 to length of Show_info
-			if hdhr_record of item i of Show_info is device_id and show_recording of item i of Show_info is true then
-				set temp_shows_recording to temp_shows_recording + 1
-			end if
-		end repeat
+		set scan_result to tuner_shows_recording_lib(my cm(handlername, caller), device_id) of LibScript
+		set temp_shows_recording to item 1 of scan_result
 		if temp_shows_recording is greater than tuneractive of tuner_status2_result then
 			my logger(true, handlername, caller, "WARN", "We are marked as having more shows recording then tuners in use")
 		else if temp_shows_recording is less than tuneractive of tuner_status2_result then
@@ -1011,6 +985,7 @@ on tuner_mismatch(caller, device_id)
 			my logger(true, handlername, caller, "WARN", "TRACK USE CASE")
 		end if
 		my logger(true, handlername, caller, "INFO", "Expected: " & temp_shows_recording & ", Actual: " & tuneractive of tuner_status2_result)
+		return tuner_status2_result
 	end if
 end tuner_mismatch
 
@@ -1700,7 +1675,7 @@ on setup(caller)
 				
 				try
 					if reload_script is "Yes" then
-						set loadlib_result to my setup_lib(handlername)
+						set loadlib_result to my setupLibrary(handlername)
 						
 						if loadlib_result is true then
 							my logger(true, handlername, caller, "INFO", "hdhr library reloaded")
@@ -3236,7 +3211,7 @@ on showPathVerify(caller, show_id)
 	else
 		set show_offset to HDHRShowSearch(my cm(handlername, caller), show_id) of LibScript
 		try
-			if my checkfileexists(my cm(handlername, caller), show_dir of item show_offset of Show_info) is false then
+			if checkfileexists(my cm(handlername, caller), show_dir of item show_offset of Show_info) of LibScript is false then
 				my logger(true, handlername, caller, "WARN", "The show, " & show_title of item show_offset of Show_info & " has a invalid save directory")
 			else
 				my logger(true, handlername, caller, "DEBUG", "The show, " & show_title of item show_offset of Show_info & " has a valid save directory")
@@ -3246,55 +3221,6 @@ on showPathVerify(caller, show_id)
 		end try
 	end if
 end showPathVerify
-
-on checkfileexists(caller, filepath)
-	set handlername to "checkfileexists"
-	try
-		set filepath_text to filepath as text
-		my logger(true, handlername, caller, "INFO", filepath_text)
-		my logger(true, handlername, caller, "DEBUG", "filepath class is " & class of filepath)
-
-		set filepath_posix to ""
-
-		-- Handle Mac alias format (e.g. "Raid6:DVR Tests:")
-		if filepath_text contains ":" and (character 1 of filepath_text) is not "/" then
-			try
-				set posix_attempt to filepath_text
-				set posix_attempt to text 1 through -2 of posix_attempt -- Remove trailing colon
-				set old_delim to AppleScript's text item delimiters
-				set AppleScript's text item delimiters to ":"
-				set path_parts to every text item of posix_attempt
-				set AppleScript's text item delimiters to "/"
-				set posix_attempt to path_parts as text
-				set AppleScript's text item delimiters to old_delim
-				set filepath_posix to "/Volumes/" & posix_attempt
-				my logger(true, handlername, caller, "DEBUG", "Converted alias format to POSIX: " & filepath_posix)
-			on error
-				set filepath_posix to filepath_text
-			end try
-		else if class of filepath is alias then
-			try
-				set filepath_posix to POSIX path of filepath
-				my logger(true, handlername, caller, "DEBUG", "Converted alias to POSIX: " & filepath_posix)
-			on error
-				set filepath_posix to filepath_text
-			end try
-		else
-			set filepath_posix to filepath_text
-		end if
-
-		do shell script "test -e " & quoted form of filepath_posix
-		return true
-
-	on error errmsg number errnum
-		if errnum is 1 then
-			my logger(true, handlername, caller, "DEBUG", "Path does not exist: " & filepath_posix)
-			return false
-		end if
-		my logger(true, handlername, caller, "ERROR", "checkfileexists error (" & errnum & "): " & errmsg)
-		return false
-	end try
-end checkfileexists
 
 on read_data(caller)
 	set handlername to "read_data"

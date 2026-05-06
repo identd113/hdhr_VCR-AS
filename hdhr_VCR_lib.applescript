@@ -14,7 +14,7 @@ end cm
 on load_hdhrVCR_vars()
 	set handlername to "load_hdhrVCR_vars_lib"
 	-- We need to receive states from the hdhr_vcr here
-	set vers_lib to "20260504"
+	set vers_lib to "20260506"
 	return vers_lib
 end load_hdhrVCR_vars
 
@@ -489,7 +489,7 @@ on getTfromN(this_number)
 end getTfromN
 
 on end_jsonhelper(caller, restart)
-	set handlername to "end_jsonhelper"
+	set handlername to "end_jsonhelper_lib"
 	logger(true, handlername, caller, "ERROR", "Attempting to restart JSONHelper") of ParentScript
 	tell application "JSON Helper" to quit
 	logger(true, handlername, caller, "INFO", "JSONHelper was killed") of ParentScript
@@ -543,7 +543,7 @@ on epoch2show_time(caller, epoch)
 end epoch2show_time
 
 on serialize_show(caller, show_rec)
-	set handlername to "serialize_show"
+	set handlername to "serialize_show_lib"
 	copy show_rec to s
 	logger(true, handlername, caller, "DEBUG", "Converting show: " & show_title of s) of ParentScript
 
@@ -618,7 +618,7 @@ on serialize_show(caller, show_rec)
 end serialize_show
 
 on deserialize_show(caller, show_rec)
-	set handlername to "deserialize_show"
+	set handlername to "deserialize_show_lib"
 	copy show_rec to s
 
 	-- Add missing fields for backward compatibility with old configs
@@ -789,7 +789,7 @@ on deserialize_show(caller, show_rec)
 end deserialize_show
 
 on deserializeShows(caller, shows_list)
-	set handlername to "deserializeShows"
+	set handlername to "deserializeShows_lib"
 	try
 		repeat with i from 1 to length of shows_list
 			if item i of shows_list is not "" then
@@ -805,7 +805,7 @@ on deserializeShows(caller, shows_list)
 end deserializeShows
 
 on serializeShows(caller, shows_list)
-	set handlername to "serializeShows"
+	set handlername to "serializeShows_lib"
 	try
 		repeat with i from 1 to length of shows_list
 			if item i of shows_list is not "" then
@@ -999,9 +999,41 @@ on date2touch(caller, datetime, filepath)
 	end if
 end date2touch
 
+on tuner_shows_recording_lib(caller, device_id)
+	set handlername to "tuner_shows_recording_lib"
+	set the_count to 0
+	set end_deltas to {}
+	copy (current date) to cd
+	set the_shows to Show_info of ParentScript
+	repeat with i from 1 to length of the_shows
+		if hdhr_record of item i of the_shows is device_id and show_recording of item i of the_shows is true then
+			set the_count to the_count + 1
+			set end of end_deltas to (show_end of item i of the_shows) - cd
+		end if
+	end repeat
+	return {the_count, end_deltas}
+end tuner_shows_recording_lib
+
+on tuner_fetch_status_lib(caller, device_id)
+	set handlername to "tuner_fetch_status_lib"
+	set tuner_offset to HDHRDeviceSearch(my cm(handlername, caller), device_id) of ParentScript
+	if tuner_offset is 0 then
+		logger(true, handlername, caller, "ERROR", "Device not found: " & device_id) of ParentScript
+		return {}
+	end if
+	try
+		with timeout of 8 seconds
+			return hdhr_api(my cm(handlername, caller), statusURL of item tuner_offset of (Hdhr_device_list of ParentScript)) of ParentScript
+		end timeout
+	on error errmsg
+		logger(true, handlername, caller, "WARN", "Timeout: " & errmsg) of ParentScript
+		return {}
+	end try
+end tuner_fetch_status_lib
+
 on time_set(caller, adate_object, time_shift)
 	## It returns the resulting date/time object. This is a convenient way to say, �I want this date, at that time of day.�
-	set handlername to "time_set"
+	set handlername to "time_set_lib"
 	if class of adate_object is not date then
 		logger(true, handlername, caller, "ERROR", (adate_object as text) & " is not a date object!") of ParentScript
 	end if
@@ -1015,7 +1047,7 @@ on time_set(caller, adate_object, time_shift)
 end time_set
 
 on midnight_of(caller, d)
-	set handlername to "midnight_of"
+	set handlername to "midnight_of_lib"
 	copy d to d2
 	set hours of d2 to 0
 	set minutes of d2 to 0
@@ -1024,7 +1056,7 @@ on midnight_of(caller, d)
 end midnight_of
 
 on corrupt_showinfo(caller)
-	set handlername to "corrupt_showinfo"
+	set handlername to "corrupt_showinfo_lib"
 	try
 		set Show_info of ParentScript to {}
 		return true
@@ -1035,7 +1067,7 @@ end corrupt_showinfo
 
 on iconEnumPopulate(caller, show_id) --NOT USED
 	--Takes a show_id and adds enums to show_status_icons
-	set handlername to "iconEnumPopulate"
+	set handlername to "iconEnumPopulate_lib"
 	set status_enums to {} --includes upnext, upnext2, film, recording, inactive, warning
 	set series_enums to {}
 	logger(true, handlername, caller, "INFO", "show_id1: " & show_id) of ParentScript
@@ -1159,7 +1191,7 @@ on rotate_logs(caller, filepath)
 end rotate_logs
 
 on update_record_urls(caller, the_device)
-	set handlername to "update_record_urls"
+	set handlername to "update_record_urls_lib"
 	set Show_info to Show_info of ParentScript
 	set HDHR_DEVICE_LIST to HDHR_DEVICE_LIST of ParentScript
 	set HDHR_DEVICE_LIST_length to length of HDHR_DEVICE_LIST
@@ -1482,7 +1514,7 @@ on updateSeriesID(caller, show_id, new_seriesid)
 end updateSeriesID
 
 on seriesStatusIcons(caller, show_id)
-	set handlername to "seriesStatus_Lib"
+	set handlername to "seriesStatus_Lib_lib"
 	set temp_series_status to {}
 	set Show_info to Show_info of ParentScript
 	set Icon_record to Icon_record of ParentScript
@@ -1820,7 +1852,7 @@ on nextday2(caller, the_show_id)
 end nextday2
 
 on enums2icons(caller, enumarray)
-	set handlername to "statusEnums"
+	set handlername to "statusEnums_lib"
 	set iconFinal to {}
 	set iconLength to length of IconList
 	if class of enumarray is list then
@@ -1839,7 +1871,7 @@ on enums2icons(caller, enumarray)
 end enums2icons
 
 on show_icons(caller, hdhr_device, thechan) -- not used
-	set handlername to "show_icons"
+	set handlername to "show_icons_lib"
 	repeat with i from 1 to length of Show_info
 		get_show_state(my cm(handlername, caller), hdhr_device, thechan, start_time, end_time) of ParentScript
 	end repeat
@@ -1973,7 +2005,7 @@ on choose_folder_with_fallback_v2(caller, prompt_msg, fallback_locs)
 end choose_folder_with_fallback_v2
 
 on log_recording_complete(caller, show_title, show_next, show_end, show_recording_path, show_transcode)
-	set handlername to "log_recording_complete"
+	set handlername to "log_recording_complete_lib"
 	try
 		set recording_duration to ((show_end) - (show_next))
 		set recording_path to show_recording_path
