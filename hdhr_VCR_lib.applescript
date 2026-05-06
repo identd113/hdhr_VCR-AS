@@ -8,13 +8,13 @@ on run {}
 end run
 
 on cm(handlername, caller)
-	return {handlername & "(" & caller & ")"} as text
+	return cm(handlername, caller) of ParentScript
 end cm
 
 on load_hdhrVCR_vars()
 	set handlername to "load_hdhrVCR_vars_lib"
 	-- We need to receive states from the hdhr_vcr here
-	set vers_lib to "20260426"
+	set vers_lib to "20260504"
 	return vers_lib
 end load_hdhrVCR_vars
 
@@ -2065,7 +2065,7 @@ on settings_dialog(caller)
 
 		set selected_text to item 1 of selected_setting
 
-		if selected_text contains "NOTIFICATIONS" or selected_text contains "GUIDE" or selected_text contains "DISK" or selected_text contains "RECORDING" or selected_text contains "SYSTEM" then
+		if character 1 of selected_text is not " " then
 			-- Section headers are not selectable
 
 		else if selected_text contains "Up Next" then
@@ -2091,14 +2091,12 @@ on settings_dialog(caller)
 			end try
 
 		else if selected_text contains "Guide Hours" then
-			set guide_hours_resp to button returned of (display dialog "Guide Hours (6-24)" default answer Guide_hours of ParentScript buttons {"24H", "12H", "6H", "Custom"} default button 1 with title check_version_dialog(cm) of ParentScript with icon note)
+			set guide_hours_resp to button returned of (display dialog "Guide Hours (6-24)" default answer Guide_hours of ParentScript buttons {"24H", "12H", "Custom"} default button 1 with title check_version_dialog(cm) of ParentScript with icon note)
 			set new_val to Guide_hours of ParentScript
 			if guide_hours_resp is "24H" then
 				set new_val to 24
 			else if guide_hours_resp is "12H" then
 				set new_val to 12
-			else if guide_hours_resp is "6H" then
-				set new_val to 6
 			else if guide_hours_resp is "Custom" then
 				try
 					set new_val to (text returned of (display dialog "Enter hours (6-24)" default answer Guide_hours of ParentScript buttons {"OK"} default button 1 with title check_version_dialog(cm) of ParentScript)) as integer
@@ -2123,14 +2121,12 @@ on settings_dialog(caller)
 			end try
 
 		else if selected_text contains "Max Disk" then
-			set max_disk_resp to button returned of (display dialog "Max disk usage before blocking recording" buttons {"93%", "90%", "85%", "Custom"} default button 1 with title check_version_dialog(cm) of ParentScript with icon note)
+			set max_disk_resp to button returned of (display dialog "Max disk usage before blocking recording" buttons {"93%", "90%", "Custom"} default button 1 with title check_version_dialog(cm) of ParentScript with icon note)
 			set new_val to Max_disk_percentage of ParentScript
 			if max_disk_resp is "93%" then
 				set new_val to 93
 			else if max_disk_resp is "90%" then
 				set new_val to 90
-			else if max_disk_resp is "85%" then
-				set new_val to 85
 			else if max_disk_resp is "Custom" then
 				try
 					set new_val to (text returned of (display dialog "Enter percentage (80-99)" default answer Max_disk_percentage of ParentScript buttons {"OK"} default button 1 with title check_version_dialog(cm) of ParentScript)) as integer
@@ -2176,7 +2172,7 @@ on settings_dialog(caller)
 			end try
 
 		else if selected_text contains "Transcode" then
-			set transcode_resp to button returned of (display dialog "Default Transcode Profile" & return & return & "Compress recordings on HDHomeRun device before saving" & return & "None = raw MPEG2 (largest files, best quality)" & return & "Heavy = same resolution, AVC compression" & return & "Mobile/Internet* = smaller files, lower quality" & return & return & "Choose:" buttons {"None", "Heavy", "Mobile", "Internet720", "Internet480", "Internet360"} default button 1 with title check_version_dialog(cm) of ParentScript with icon note)
+			set transcode_resp to button returned of (display dialog "Default Transcode Profile" & return & return & "Compress recordings on HDHomeRun device before saving" & return & "None = raw MPEG2 (largest files, best quality)" & return & "Heavy = same resolution, AVC compression" & return & "Mobile = smaller files, lower quality" & return & return & "Choose:" buttons {"None", "Heavy", "Mobile"} default button 1 with title check_version_dialog(cm) of ParentScript with icon note)
 			set Default_transcode_setting of ParentScript to transcode_resp
 			set Default_transcode of Hdhr_config of ParentScript to transcode_resp
 			sync_config(handlername, false) of ParentScript

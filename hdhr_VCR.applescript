@@ -289,7 +289,7 @@ on run {}
 	copy (current date) to Idle_timer_dateobj
 
 	set progress total steps to -1
-	set progress description to "Opening hdhr_VCR" & return & return & "Version: 20260503" & return & "Subversion: 10.09"
+	set progress description to "Opening hdhr_VCR" & return & return & "Version: 20260504" & return & "Subversion: 10.09"
 	delay 0.1
 
 	set Lib_script_version to "0"
