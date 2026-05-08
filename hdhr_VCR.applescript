@@ -1917,15 +1917,30 @@ on main(caller, emulated_button_press)
 			end if
 
 			-- Col 2: Next-show timing/status icon (exactly one, priority order)
-			set col2 to Futureshow_icon of Icon_record
-			try
-				if show_recording of item i of Show_info is true then
-					set col2 to Record_icon of Icon_record
-				else if (show_is_series of item i of Show_info is true) and ((show_use_seriesid of item i of Show_info is true) or (show_use_seriesid_all of item i of Show_info is true)) then
-					-- SeriesID show: check if no episodes found in guide (show_next at or beyond guide window)
-					set guide_end_epoch to (cd) + (Guide_hours * 3600)
-					if (show_next of item i of Show_info) is greater than or equal to (guide_end_epoch - 3600) then
-						set col2 to Magnify_icon of Icon_record
+			-- Deactivated shows don't display error icons; deactivated status shown in col3
+			if show_active of item i of Show_info is false then
+				set col2 to "      "
+			else
+				set col2 to Futureshow_icon of Icon_record
+				try
+					if show_recording of item i of Show_info is true then
+						set col2 to Record_icon of Icon_record
+					else if (show_is_series of item i of Show_info is true) and ((show_use_seriesid of item i of Show_info is true) or (show_use_seriesid_all of item i of Show_info is true)) then
+						-- SeriesID show: check if no episodes found in guide (show_next at or beyond guide window)
+						set guide_end_epoch to (cd) + (Guide_hours * 3600)
+						if (show_next of item i of Show_info) is greater than or equal to (guide_end_epoch - 3600) then
+							set col2 to Magnify_icon of Icon_record
+						else if ((show_next of item i of Show_info) - (cd)) is less than 0 then
+							set col2 to Warning_icon of Icon_record
+						else if ((show_next of item i of Show_info) - (cd)) is less than 1 * hours then
+							set col2 to Film_icon of Icon_record
+						else if ((show_next of item i of Show_info) - (cd)) is less than 4 * hours then
+							set col2 to Up_icon of Icon_record
+						else if (date (date string of (cd))) is (date (date string of (show_next of item i of Show_info))) then
+							set col2 to Up2_icon of Icon_record
+						else
+							set col2 to Futureshow_icon of Icon_record
+						end if
 					else if ((show_next of item i of Show_info) - (cd)) is less than 0 then
 						set col2 to Warning_icon of Icon_record
 					else if ((show_next of item i of Show_info) - (cd)) is less than 1 * hours then
@@ -1937,21 +1952,11 @@ on main(caller, emulated_button_press)
 					else
 						set col2 to Futureshow_icon of Icon_record
 					end if
-				else if ((show_next of item i of Show_info) - (cd)) is less than 0 then
+				on error errmsg
+					my logger(true, handlername, caller, "WARN", "Unable to determine status icon for " & quote & show_title of item i of Show_info & quote & ": " & errmsg)
 					set col2 to Warning_icon of Icon_record
-				else if ((show_next of item i of Show_info) - (cd)) is less than 1 * hours then
-					set col2 to Film_icon of Icon_record
-				else if ((show_next of item i of Show_info) - (cd)) is less than 4 * hours then
-					set col2 to Up_icon of Icon_record
-				else if (date (date string of (cd))) is (date (date string of (show_next of item i of Show_info))) then
-					set col2 to Up2_icon of Icon_record
-				else
-					set col2 to Futureshow_icon of Icon_record
-				end if
-			on error errmsg
-				my logger(true, handlername, caller, "WARN", "Unable to determine status icon for " & quote & show_title of item i of Show_info & quote & ": " & errmsg)
-				set col2 to Warning_icon of Icon_record
-			end try
+				end try
+			end if
 
 			-- Col 1: Recorded today (checkmark or multiple spaces for alignment)
 			set col1 to "      "
