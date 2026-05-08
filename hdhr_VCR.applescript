@@ -1661,6 +1661,7 @@ on validate_show_info(caller, show_to_check, should_edit)
 			set show_active_changed to false
 		end if
 	end if
+	return true
 end validate_show_info
 
 -- settings_dialog moved to hdhr_VCR_lib.applescript
