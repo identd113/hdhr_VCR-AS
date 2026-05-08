@@ -2151,6 +2151,7 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 				set progress total steps to 7
 				set progress completed steps to 0
 				set temp_show_progress to {}
+				set temp_is_series to missing value
 				set temp_show_info to {show_title:missing value, show_time:missing value, show_length:missing value, show_air_date:missing value, show_transcode:missing value, show_temp_dir:missing value, show_dir:missing value, show_channel:show_channel_temp, show_active:true, show_id:(do shell script "uuidgen | tr -d '-'") as text, show_recording:false, show_last:epoch(cd) of LibScript, show_next:missing value, show_end:missing value, notify_upnext_time:missing value, notify_recording_time:missing value, hdhr_record:hdhr_device, show_is_series:false, show_seriesid:"", show_tags:{}, show_time_orig:missing value, show_is_sport:false, show_recorded_today:false, show_recording_path:"", show_logo_url:"", show_url:"", show_fail_count:0, show_use_seriesid:false, show_use_seriesid_all:false, show_fail_reason:"", show_time_OriginalAirdate:""}
 				if length of hdhrGRID_response is 1 and hdhrGRID_response is {""} then
 					my logger(true, handlername, caller, "INFO", "(Manual) Adding show for " & hdhr_device)
