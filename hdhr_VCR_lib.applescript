@@ -2013,7 +2013,7 @@ on log_recording_complete(caller, show_title, show_next, show_end, show_recordin
 		set recording_file_exists to false
 
 		if recording_path is not in {missing value, {}, ""} then
-			set recording_file_exists to checkfileexists(my cm(handlername, caller), recording_path) of ParentScript
+			set recording_file_exists to my checkfileexists(my cm(handlername, caller), recording_path)
 			if recording_file_exists is true then
 				try
 					set file_info to (info for (POSIX file recording_path))
