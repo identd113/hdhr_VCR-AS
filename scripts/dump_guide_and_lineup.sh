@@ -6,7 +6,8 @@
 
 set -e
 
-OUTPUT_DIR="${1:-.}"
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+OUTPUT_DIR="${1:-$SCRIPT_DIR/data}"
 DEVICE_IP="${2:-hdhr-105404be.local}"
 GUIDE_HOURS="${3:-6}"
 
