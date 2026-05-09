@@ -1450,10 +1450,12 @@ on seriesScanUpdate(caller, show_id)
 
 						if item 1 of isdupe is false and item 3 of isdupe is false then
 							set new_showid to do shell script ("uuidgen | tr -d '-'")
-							logger(true, handlername, caller, "WARN", "The show, " & show_title of item show_offset of Show_info & " showid changed from " & show_id of item show_offset of Show_info & " to " & new_showid) of ParentScript
+							set old_title to show_title of item show_offset of Show_info
+							logger(true, handlername, caller, "WARN", "The show, " & old_title & " showid changed from " & show_id of item show_offset of Show_info & " to " & new_showid) of ParentScript
 							set show_id of item show_offset of Show_info to new_showid
 							set Show_info of ParentScript to Show_info
 							set show_offset to my HDHRShowSearch(my cm(handlername, caller), new_showid)
+							logger(true, handlername, caller, "DEBUG", "After search: show_offset=" & show_offset & " (was looking for " & new_showid & ")") of ParentScript
 							logger(true, handlername, caller, "INFO", "show channel: " & show_channel of item show_offset of Show_info) of ParentScript
 							
 							set show_title of item show_offset of Show_info to fixall of my show_name_fix(my cm(handlername, caller), new_showid, channel_record)
