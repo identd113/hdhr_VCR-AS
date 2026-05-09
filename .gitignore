@@ -15,3 +15,6 @@ whatsnew.txt
 *.pkg
 *claude
 /.claude
+
+# API response data and temporary files
+/data/
