@@ -796,9 +796,11 @@ on hdhrGRID(caller, hdhr_device, hdhr_channel)
 			set col2 to "     "
 		end if
 		set time_range to padnum(my cm(handlername, caller), word 2 of short_date(my cm(handlername, caller), temp_start, false, false) of LibScript, true) of LibScript & "-" & padnum(my cm(handlername, caller), word 2 of short_date(my cm(handlername, caller), temp_end, false, false) of LibScript, true) of LibScript
-		set end of hdhrGRID_sort to col1 & col2 & " " & time_range & " " & temp_title
+		set display_row to col1 & col2 & " " & time_range & " " & temp_title
+		set end of hdhrGRID_sort to display_row
+		my logger(true, handlername, caller, "DEBUG", "Guide row " & i & ": " & display_row)
 	end repeat
-	set hdhrGRID_selected to choose from list hdhrGRID_sort with prompt ("Channel " & hdhr_channel & " (" & GuideName of hdhrGRID_temp & ")" & return & "Current Time: " & word 2 of short_date(my cm(handlername, caller), (current date), false, false) of LibScript & return & return & Record_icon of Icon_record & "Recording  " & Warning_icon of Icon_record & "Error  " & Film_icon of Icon_record & "<1h  " & Up_icon of Icon_record & "<4h  " & Up2_icon of Icon_record & ">4h  " & Series_icon of Icon_record & "SeriesID  " & Update_icon of Icon_record & "Scanning  " & Futureshow_icon of Icon_record & "Future  " & Check_icon of Icon_record & "Done") cancel button name "Manual Add" OK button name "Next.." with title my check_version_dialog(caller) default items item 1 of hdhrGRID_sort with multiple selections allowed
+	set hdhrGRID_selected to choose from list hdhrGRID_sort with prompt ("Channel " & hdhr_channel & " (" & GuideName of hdhrGRID_temp & ")" & return & "Current Time: " & word 2 of short_date(my cm(handlername, caller), (current date), false, false) of LibScript & return & return & Record_icon of Icon_record & "Recording  " & Warning_icon of Icon_record & "Error  " & Film_icon of Icon_record & "<1h  " & Up_icon of Icon_record & "<4h  " & Futureshow_icon of Icon_record & "Future  " & Check_icon of Icon_record & "Done" & return & Single_icon of Icon_record & "Single  " & Series1_icon of Icon_record & "1-Day Series  " & Series_icon of Icon_record & "Multi-Day Series  " & Series3_icon of Icon_record & "SeriesID Series") cancel button name "Manual Add" OK button name "Next.." with title my check_version_dialog(caller) default items item 1 of hdhrGRID_sort with multiple selections allowed
 
 	if hdhrGRID_selected is false then
 		my logger(true, handlername, caller, "INFO", "User exited")
@@ -834,7 +836,7 @@ on hdhrGRID(caller, hdhr_device, hdhr_channel)
 			end if
 		end if
 	end repeat
-	if edited_show_count is length of hdhrGRID_selected_offsets then
+	if edited_show_count is length of hdhrGRID_selected then
 		return false
 	end if
 	if length of list_position_response is 0 then
@@ -1142,17 +1144,20 @@ on resolve_selected_offsets(caller, selected_items, source_items)
 	set handlername to "resolve_selected_offsets"
 	set used_offsets to {}
 	set selected_offsets to {}
+	my logger(true, handlername, caller, "DEBUG", "Selected items count: " & length of selected_items & ", Source items count: " & length of source_items)
 	try
 		if selected_items is false then
 			return {}
 		end if
 		repeat with i from 1 to length of selected_items
+			my logger(true, handlername, caller, "DEBUG", "Item " & i & " selected: " & (item i of selected_items as text))
 			set selected_offset to 0
 			repeat with i2 from 1 to length of source_items
 				if i2 is not in used_offsets then
 					if (item i2 of source_items as text) is (item i of selected_items as text) then
 						set selected_offset to i2
 						set end of used_offsets to i2
+						my logger(true, handlername, caller, "DEBUG", "Item " & i & " resolved to offset " & i2)
 						exit repeat
 					end if
 				end if
@@ -1160,12 +1165,13 @@ on resolve_selected_offsets(caller, selected_items, source_items)
 			if selected_offset is greater than 0 then
 				set end of selected_offsets to selected_offset
 			else
-				my logger(true, handlername, caller, "WARN", "Unable to resolve selected item to source offset")
+				my logger(true, handlername, caller, "WARN", "Unable to resolve selected item " & i & " to source offset: " & (item i of selected_items as text))
 			end if
 		end repeat
 	on error errmsg
 		my logger(true, handlername, caller, "ERROR", "Unable to resolve selected offsets: " & errmsg)
 	end try
+	my logger(true, handlername, caller, "DEBUG", "Resolved offsets: " & selected_offsets)
 	return selected_offsets
 end resolve_selected_offsets
 
@@ -2124,13 +2130,14 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 			set progress additional description to stringlistflip(cm, temp_show_progress, return, "string") of LibScript
 			my logger(true, handlername, caller, "DEBUG", "Before hdhrGRID_response")
 			set hdhrGRID_response to my hdhrGRID(cm, hdhr_device, show_channel_temp)
-			my logger(true, handlername, caller, "DEBUG", "After hdhrGRID_response")
+			my logger(true, handlername, caller, "DEBUG", "After hdhrGRID_response, got " & length of hdhrGRID_response & " episodes")
 		else
 			my logger(true, handlername, caller, "INFO", "User clicked " & quote & "Run" & quote)
 			return
 		end if
 	end repeat
 	if hdhrGRID_response is not false then
+		my logger(true, handlername, caller, "DEBUG", "hdhrGRID_response contains " & length of hdhrGRID_response & " episode(s)")
 		if length of hdhrGRID_response is greater than 1 then
 			try
 				set temp to (hdhrGRID_response as text)
@@ -2207,7 +2214,9 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 					my logger(true, handlername, caller, "INFO", "(Manual) show length: " & show_length of temp_show_info)
 				else
 					
+					my logger(true, handlername, caller, "DEBUG", "Extracting episode " & i3 & " from hdhrGRID_response (total " & length of hdhrGRID_response & ")")
 					set hdhr_response_channel_title to fixall of show_name_fix(cm, "", item i3 of hdhrGRID_response) of LibScript
+					my logger(true, handlername, caller, "DEBUG", "Episode " & i3 & " extracted title: " & hdhr_response_channel_title)
 					try
 						set default_record_day to (weekday of epoch2datetime(cm, getTfromN(StartTime of item i3 of hdhrGRID_response) of LibScript) of LibScript) as text
 					on error errmsg
@@ -2323,9 +2332,11 @@ on add_show_info(caller, hdhr_device, hdhr_channel)
 					
 					try
 						-- We need to note if the show start time was yesterday, and adjust as needed.
-						
+						my logger(true, handlername, caller, "DEBUG", "About to show Single/Series dialog for: " & show_title of temp_show_info)
+
 						set temp_show_info_series to (display dialog "Is this a single or a series recording? " & return & return & "Title: " & show_title of temp_show_info & return & "Type: " & tags_text & return & "SeriesID: " & seriesid_temp & return & return & "Synopsis: " & synopsis_temp & return & return & "Start: " & time string of time_set(cm, cd, show_time of temp_show_info) of LibScript & return & "Length: " & ms2time(cm, ((show_length of temp_show_info) * 60), "s", 2) of LibScript & return & "OriginalAirdate: " & show_originalairdate_real buttons {Running_icon of Icon_record & " Run", Series_icon of Icon_record & " Series", Single_icon of Icon_record & " Single"} default button temp_default_button cancel button 1 with title my check_version_dialog(caller) giving up after Dialog_timeout with icon temp_icon)
-						
+						my logger(true, handlername, caller, "DEBUG", "User selected: " & button returned of temp_show_info_series & " for " & show_title of temp_show_info)
+
 						if button returned of temp_show_info_series contains "Series" then
 							set show_is_series of temp_show_info to true
 							-- Ask what kind of series
