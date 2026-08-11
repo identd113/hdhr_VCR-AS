@@ -1,3 +1,15 @@
+# hdhr_VCR (AppleScript) — Deprecated
+
+> **⚠️ This repository is deprecated and no longer maintained.**
+>
+> hdhr_VCR has been rewritten from the ground up in Swift/SwiftUI — a native menu bar app with a cable guide, series recording, an in-app VLC player, a LAN web UI, and Discord notifications. All future development happens there.
+>
+> ### ➡️ Use [**identd113/hdhr_VCR_swift**](https://github.com/identd113/hdhr_VCR_swift) instead
+>
+> This repository is kept only for historical reference. It will not receive further updates, and its install script/instructions below are for the old AppleScript version.
+
+---
+
 # hdhr_VCR
 
 **Smart TV recording for HDHomeRun devices on macOS.** One app. One-click recording. No subscriptions, no cloud, no drama.
